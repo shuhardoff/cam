@@ -2,6 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -52,7 +55,7 @@
 </style>
 </head>
 <body>
-<header><h1>📷 ハードオフ 相場カメラ</h1><button id="cfgBtn">⚙ 設定</button></header>
+<header><h1>📷 ハードオフ 相場カメラ <span style="font-size:10px;color:#37e0a3;font-weight:700;vertical-align:middle">v1.1</span></h1><button id="cfgBtn">⚙ 設定</button></header>
 <main>
   <div id="cfg">
     <label>プロキシURL（…/exec まで。ラベルアプリの設定と同じもの）</label>
@@ -124,7 +127,8 @@ var upQ=[], upBusy=false;
 function queueMsg(){ var n=upQ.length+(upBusy?1:0); if(n>0) msg("送信中… 残り"+n+"件"); }
 function enqueuePhoto(d){
   if(!gasUrl()){ msg("先に ⚙設定 でプロキシURLを入れてください",1); showCfg(true); return; }
-  upQ.push(d);
+  var pid=Date.now().toString(36)+Math.random().toString(36).slice(2,8); // 写真ごとの一意ID（重複保存防止）
+  upQ.push({d:d, pid:pid, tries:0});
   $("last").src=d; $("last").style.display="block";
   queueMsg();
   pumpUpload();
@@ -132,13 +136,24 @@ function enqueuePhoto(d){
 function pumpUpload(){
   if(upBusy || !upQ.length) return;
   upBusy=true;
-  var d=upQ.shift();
+  var it=upQ[0]; // 成功するまでキューから消さない（再送のため）
+  var ctrl=("AbortController" in window)? new AbortController(): null;
+  var to=setTimeout(function(){ try{ ctrl&&ctrl.abort(); }catch(e){} }, 25000); // 25秒で打ち切り→再送
   fetch(gasUrl(), { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
-    body: JSON.stringify({ action:"photo", b64:d, key:conf("cam_key"), dest:conf("cam_dest") }) })
+    body: JSON.stringify({ action:"photo", b64:it.d, key:conf("cam_key"), dest:conf("cam_dest"), pid:it.pid }),
+    signal: ctrl? ctrl.signal: undefined })
   .then(function(r){ return r.json(); })
-  .then(function(o){ if(!(o&&o.ok)) msg("送信失敗: "+((o&&o.error)||"不明なエラー"),1); })
-  .catch(function(e){ msg("送信失敗: "+e,1); })
-  .finally(function(){ upBusy=false; if(upQ.length){ queueMsg(); pumpUpload(); } else { msg("送信しました ✓"); } });
+  .then(function(o){
+    clearTimeout(to);
+    if(o&&o.ok){ upQ.shift(); upBusy=false; if(upQ.length){ queueMsg(); pumpUpload(); } else { msg("送信しました ✓"); } }
+    else { throw new Error((o&&o.error)||"不明なエラー"); }
+  })
+  .catch(function(e){
+    clearTimeout(to);
+    it.tries=(it.tries||0)+1; upBusy=false;
+    if(it.tries<4){ msg("電波が不安定です。自動で再送中…（"+it.tries+"回目）",1); setTimeout(pumpUpload, 1500*it.tries); }
+    else { upQ.shift(); msg("送信できませんでした。電波の良い場所でもう一度撮影してください。",1); if(upQ.length){ queueMsg(); pumpUpload(); } }
+  });
 }
 /* 旧名互換 */
 function sendPhoto(d){ enqueuePhoto(d); }

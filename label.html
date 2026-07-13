@@ -76,6 +76,15 @@
   @media(max-width:680px){.mbody{grid-template-columns:1fr}}
   .seclbl{font-weight:900;font-size:13.5px;margin-bottom:8px}
   select#brandSel{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:11px 12px;font-size:14px;background:#fff;font-family:inherit;color:var(--ink)}
+  /* 付属品ラベル */
+  .acctgl{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:7px 10px;cursor:pointer;white-space:nowrap;user-select:none}
+  .acctgl input{accent-color:var(--a1);width:15px;height:15px;margin:0}
+  #accPanel{margin-top:10px;border:1.5px dashed var(--line);border-radius:12px;padding:10px;background:rgba(255,255,255,.55)}
+  #accPanel .apttl{font-size:12px;font-weight:800;margin-bottom:8px}
+  .accpv{display:flex;gap:8px;margin-top:8px;align-items:flex-start}
+  .accpv canvas{width:48%;height:auto;background:#fff;border:1px solid var(--line);border-radius:8px}
+  .kbdcap{cursor:pointer;text-align:center;font-weight:800;letter-spacing:.5px}
+  .kbdcap:focus{border-color:var(--a1);box-shadow:0 0 0 3px rgba(0,0,0,.06)}
   .seg-tools{display:flex;gap:8px;margin-bottom:8px;align-items:center}
   .seg-tools .ghostbtn{padding:7px 10px;font-size:11.5px}
   .seg-tools input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px}
@@ -380,12 +389,13 @@
       <span id="gpReg" class="gpreg">—</span>
     </div>
     <div class="bar-actions">
-      <button class="printbtn hdrprint" id="printBtn">印刷する</button>
+      <button class="printbtn hdrprint" id="printBtn" title="ショートカット：F2 または Ctrl+Enter">印刷する</button>
       <div class="copywrap">
         <label>枚数</label>
         <input id="copies" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="1" autocomplete="off">
       </div>
-      <button class="resetbtn" id="resetAllBtn">全てリセット</button>
+      <label class="acctgl" title="値札＋付属品ラベル（QRなし）＋裏ラベル（保管場所）の3枚を印刷（F4で切替）"><input type="checkbox" id="accOn"> 付属品</label>
+      <button class="resetbtn" id="resetAllBtn" title="ショートカット：F8">全てリセット</button>
       <span class="badge brandbadge" id="storeBadge">HARD-OFF</span>
       <button class="gear" id="settingsBtn">⚙ 設定</button>
     </div>
@@ -490,6 +500,17 @@
           <div class="stage" id="stage"><canvas id="cv"></canvas></div>
           <div class="codepill" id="codepill"></div>
 
+          <!-- 付属品ラベル（ヘッダーの「付属品」チェックで表示） -->
+          <div id="accPanel" style="display:none">
+            <div class="apttl">📎 付属品ラベル（QRなし）＋ 裏ラベル（保管場所）を一緒に印刷</div>
+            <div class="g2">
+              <div class="f"><label>保管場所名（自動学習・変更可）</label><input id="accPlace" list="accPlaceList" autocomplete="off" placeholder="例：ジャンクカメラ関連品"><datalist id="accPlaceList"></datalist></div>
+              <div class="f"><label>管理番号（保管場所ごとに自動連番）</label><input id="accNo" inputmode="numeric" maxlength="5" autocomplete="off"></div>
+            </div>
+            <div class="accpv"><canvas id="accCv1"></canvas><canvas id="accCv2"></canvas></div>
+            <div class="hint">番号は保管場所ごとに増え、99999 の次は自動で 00001 に戻ります。保管場所名は 区分・ジャンル・商品名 から学習し、次回は自動で入ります（手で直せば、その組み合わせを次から覚えます）。</div>
+          </div>
+
           <!-- よく使う印刷設定：常時表示 -->
           <div class="printset">
             <div class="psrow">
@@ -559,10 +580,10 @@
       <div style="grid-column:1/-1">
         <div class="seclbl">ラベル・コードの詳細設定</div>
         <div class="g2">
-          <div class="f"><label>コード種別</label><select id="setCode"><option value="bar">バーコード</option><option value="qr">QRコード</option><option value="both">両方</option></select></div>
-          <div class="f"><label>ロール幅 (mm)</label><input id="setW" inputmode="decimal" value="38"></div>
+          <div class="f"><label>コード種別</label><select id="setCode"><option value="bar">バーコード</option><option value="qr" selected>QRコード</option><option value="both">両方</option></select></div>
+          <div class="f"><label>ロール幅 (mm)</label><input id="setW" inputmode="decimal" value="35"></div>
           <div class="f"><label>QRサイズ (mm)</label><input id="setQr" inputmode="decimal" value="12"></div>
-          <div class="f"><label>文字の大きさ</label><input id="setFs" inputmode="decimal" value="1.1"></div>
+          <div class="f"><label>文字の大きさ</label><input id="setFs" inputmode="decimal" value="1"></div>
           <div class="f"><label>解像度(dpi)</label><select id="setDpi"><option>203</option><option>180</option></select></div>
         </div>
       </div>
@@ -592,6 +613,20 @@
         <div class="hint" style="margin-top:6px">番号はレジのジャンル番号に合わせてください（QRに使われます）。</div>
       </div>
       <div style="grid-column:1/-1">
+        <div class="seclbl">付属品ラベル・保管場所</div>
+        <div class="hint" style="margin-bottom:6px">保管場所名を登録すると入力時に候補として出ます。<b>番号グループ</b>に同じ言葉を入れた保管場所どうしは<b>5桁の管理番号を共有</b>します（例：工具-1／工具-2／工具-3 のグループを全部「工具」にすると通し番号＝渡し間違い防止）。空欄なら場所ごとに独立の連番。学習・連番はこのPC内だけで完結し、APIは消費しません。</div>
+        <div id="accPlaceEditor"></div>
+        <div class="addrow"><input id="addAccPlace" placeholder="保管場所名を追加（例：工具-1）"><input id="addAccGroup" placeholder="番号グループ（任意）" style="max-width:150px"><button class="ghostbtn" id="addAccPlaceBtn">追加</button></div>
+
+        <div class="seclbl">ショートカットキー</div>
+        <div class="hint" style="margin-bottom:6px">枠をクリックしてから、割り当てたいキーを押すと変更できます。使えるのは <b>F1〜F12</b>（単体OK）と、<b>Ctrl または Alt を組み合わせたキー</b>（例：Ctrl+P）。文字キー単体は文字入力と衝突するため設定できません。Ctrl+Enter＝印刷 は常に使えます。</div>
+        <div class="g2">
+          <div class="f"><label>印刷</label><input id="kbdPrint" class="kbdcap" readonly placeholder="クリックしてキーを押す"></div>
+          <div class="f"><label>付属品ラベル ON/OFF</label><input id="kbdAcc" class="kbdcap" readonly placeholder="クリックしてキーを押す"></div>
+          <div class="f"><label>全てリセット</label><input id="kbdReset" class="kbdcap" readonly placeholder="クリックしてキーを押す"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px;flex-wrap:wrap"><button class="ghostbtn" id="kbdDefault">既定（F2／Ctrl+F／Ctrl+Delete）に戻す</button><span class="hint" id="kbdMsg" style="margin:0"></span></div>
+
         <div class="seclbl">設定の保存・別PCへの移行</div>
         <div class="hint" style="margin-bottom:8px">カスタムした区分・ジャンル、コメント履歴、店名、プリンターIP、サイズ設定などをファイルに保存できます。別のPCでは、このHTMLを開いて読み込むだけで同じ設定に揃います。</div>
         <div class="row">
@@ -3336,6 +3371,25 @@ const GENRES=[
  [42,42,"スケール"],[43,43,"プラモデル"],[44,44,"モデルガン"],[45,45,"おもちゃ"],[46,46,"アクセサリー"],[47,47,"雑貨"],[48,48,"ぬいぐるみ"],
  [49,93,"配達料"],[50,94,"レジ袋"],[51,95,"送料"],[52,96,"手数料"],[53,97,"リサイクル料"]
 ];
+/* OFF HOUSE 用ジャンル。[レジ番号(=QR・印字に使う), 表示番号(=ラベラーの番号), 名前]
+   ※手数料16・リサイクル料23・配達料25 はレジ番号なし（-）のため一覧から除外 */
+const OFFHOUSE_GENRES=[
+ [1,1,"家具"],[2,2,"家電"],[32,3,"インテリア"],[4,4,"子供服"],[5,5,"バッグ"],
+ [25,6,"アクセサリー"],[7,7,"器類"],[8,8,"繊維類"],[30,11,"スポーツ・アウトドア"],[12,12,"釣具"],
+ [14,14,"自転車"],[24,15,"腕時計H"],[17,17,"ベビー用品"],[18,18,"その他雑貨"],[19,19,"婦人服"],
+ [20,20,"和服"],[21,21,"靴"],[22,22,"メンズ"],[3,24,"健康器具"],[34,26,"J家具"],
+ [35,27,"J家電"],[23,29,"高級バッグ"],[6,30,"貴金属"],[36,53,"フィギュア"],[37,57,"スケール"],
+ [38,59,"プラモデル"],[39,60,"モデルガン"],[40,61,"おもちゃ"],[41,70,"ホビー雑貨"],[42,71,"ぬいぐるみ"]
+];
+/* 現在の店舗ブランド（設定モーダル未オープンでも localStorage の cfg から判定） */
+function currentBrand(){
+  try{ const c=JSON.parse(localStorage.getItem("hf3_cfg")||"null"); if(c&&c.store) return c.store; }catch(e){}
+  const el=document.getElementById("setStore"); return (el&&el.value)||"HARD-OFF";
+}
+function isOffHouse(){ return currentBrand()==="OFF-HOUSE"; }
+/* OFF HOUSE：表示番号とレジ番号が違う時は両方見せる（印字・QRはレジ番号） */
+function genreOptText(g){ const rj=g[0],disp=g[1],name=g[2];
+  return (String(rj)===String(disp))?`${rj}　${name}`:`${disp}　${name}（レジ${rj}）`; }
 const PREFIX="チェック時、", FOOTER="現状お渡しとなります";
 const store={get(k,d){try{const v=localStorage.getItem("hf3_"+k);return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem("hf3_"+k,JSON.stringify(v));}catch(e){}}};
 
@@ -3504,8 +3558,8 @@ function paint(measureOnly){
   const bandH=Math.round(mm(5.0)*FS);
   if(!measureOnly){
     ctx.fillStyle=dark; ctx.fillRect(mx,y,cw,bandH);
-    if(kub){ const fpx=mm(3.4)*FS; ctx.font=kubunFont(fpx,"900",kub); ctx.textBaseline="middle"; ctx.fillStyle="#fff"; ctx.fillText(kub,mx+Math.round(mm(1.6)),y+bandH/2); }
-    { const fpx=mm(2.0)*FS; ctx.font=monoFont(fpx,"900"); ctx.textBaseline="middle"; ctx.fillStyle="#fff"; const tw=ctx.measureText(slash).width; ctx.fillText(slash,W8-mx-tw-Math.round(mm(1.2)),y+bandH/2); }
+    if(kub){ const fpx=mm(3.4)*FS; ctx.font=kubunFont(fpx,"900",kub); ctx.textBaseline="middle"; ctx.fillStyle="#fff"; ctx.strokeStyle="#fff"; ctx.lineJoin="round"; ctx.lineWidth=Math.max(1.2,mm(0.18)); const kx=mx+Math.round(mm(1.6)), ky=y+bandH/2; ctx.strokeText(kub,kx,ky); ctx.fillText(kub,kx,ky); }
+    { const fpx=mm(2.0)*FS; ctx.font=monoFont(fpx,"900"); ctx.textBaseline="middle"; ctx.fillStyle="#fff"; ctx.strokeStyle="#fff"; ctx.lineJoin="round"; ctx.lineWidth=Math.max(1,mm(0.14)); const tw=ctx.measureText(slash).width; const dx=W8-mx-tw-Math.round(mm(1.2)), dy=y+bandH/2; ctx.strokeText(slash,dx,dy); ctx.fillText(slash,dx,dy); }
     ctx.fillStyle=dark; ctx.textBaseline="top";
   }
   y+=bandH+Math.round(mm(1.4));
@@ -3891,7 +3945,10 @@ function autoKubunForGenre(){
   const no=parseInt($("genre").value,10)||0;
   const sel=$("kubun"); if(!sel) return;
   // おもちゃ・ホビー系ジャンル → 中古品 ／ ハードオフ部門（家電・AV・PC・ゲーム機など）→ ジャンク品
-  const want=(HOBBY_GENRES.indexOf(no)>=0)?"中古品":"ジャンク品";
+  // OFF HOUSE：J家具34・J家電35のみジャンク品、他は中古品
+  const want=isOffHouse()
+    ? (([34,35].indexOf(no)>=0)?"ジャンク品":"中古品")
+    : ((HOBBY_GENRES.indexOf(no)>=0)?"中古品":"ジャンク品");
   const opt=[...sel.options].find(o=>o.value===want); if(opt) sel.value=want;
 }
 function applyTheme(){
@@ -3942,6 +3999,7 @@ function draw(){
   syncPrintSet();
   updateCondCap();
   updateNoteHighlight();
+  if(typeof renderSpecChip==="function") try{renderSpecChip();}catch(e){}
   persist();
 }
 function fitPreview(){
@@ -3974,12 +4032,14 @@ function trimTopBottom(c){
     o.getContext("2d").drawImage(c,0,top,W,nh,0,0,W,nh); return o;
   }catch(e){ return c; }
 }
-function outputCanvas(){
-  let src=cv;
-  if(orient()==="landscape"){
-    const rot=document.createElement("canvas"); rot.width=cv.height; rot.height=cv.width;
+function outputCanvas(srcCanvas,noRotate){
+  let src=srcCanvas||cv;
+  // 付属品ラベル等（縦レイアウト固定）は横向き設定でも回転しない（回転すると用紙幅を超えて白紙になる）
+  if(orient()==="landscape" && !noRotate){
+    const base=src;
+    const rot=document.createElement("canvas"); rot.width=base.height; rot.height=base.width;
     const rc=rot.getContext("2d"); rc.fillStyle="#fff"; rc.fillRect(0,0,rot.width,rot.height);
-    rc.save(); rc.translate(rot.width,0); rc.rotate(Math.PI/2); rc.drawImage(cv,0,0); rc.restore();
+    rc.save(); rc.translate(rot.width,0); rc.rotate(Math.PI/2); rc.drawImage(base,0,0); rc.restore();
     src=rot;
   }
   src=trimTopBottom(src);
@@ -3989,8 +4049,8 @@ function outputCanvas(){
   const oc=o.getContext("2d"); oc.fillStyle="#fff"; oc.fillRect(0,0,o.width,o.height); oc.drawImage(src,off,offY);
   return o;
 }
-function rasterFromCanvas(){
-  const oc=outputCanvas(),octx=oc.getContext("2d");
+function rasterFromCanvas(srcCanvas,noRotate){
+  const oc=outputCanvas(srcCanvas,noRotate),octx=oc.getContext("2d");
   const W=oc.width,H=oc.height,img=octx.getImageData(0,0,W,H).data,bpr=W/8,out=new Uint8Array(bpr*H);
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4;const lum=0.299*img[i]+0.587*img[i+1]+0.114*img[i+2];if(img[i+3]>40&&lum<128)out[y*bpr+(x>>3)]|=(0x80>>(x&7));}
   let bin="";for(let i=0;i<out.length;i++)bin+=String.fromCharCode(out[i]);
@@ -4008,8 +4068,8 @@ async function eposPrint(copies){
     const t=await res.text();status(/success="true"/.test(t)?"印刷しました ✓":"プリンターから応答がありました。確認してください","ok");
   }catch(e){status("プリンターに接続できませんでした（IP・同じLAN・ePOS-Print有効化を確認）","err");}
 }
-function browserPrint(){
-  const oc=outputCanvas();
+function browserPrint(preOc){
+  const oc=preOc||outputCanvas();
   const url=oc.toDataURL("image/png");
   const Wmm=oc.width/DPMM,Hmm=oc.height/DPMM;
   let st=$("pagestyle");if(!st){st=document.createElement("style");st.id="pagestyle";document.head.appendChild(st);}
@@ -4018,6 +4078,352 @@ function browserPrint(){
   img.onload=()=>{status("印刷ダイアログで送信先＝EPSON TM-L90M を選択","");window.print();setTimeout(()=>status("印刷を送信しました（ダイアログで実行してください）","ok"),400);};
   img.src=url;
 }
+/* ===== 付属品ラベル =====
+   ヘッダーの「付属品」チェックONで、値札に加えて
+   ①付属品ラベル（QR・バーコードなし＝レジ打ち防止）②裏ラベル（保管場所＋管理番号）を印刷。
+   ・管理番号：保管場所名ごとの5桁連番（99999の次は00001）。このPCに保存。
+   ・保管場所名：区分×ジャンル×商品名キーワードから学習して自動入力。未学習時は
+     「（ジャンク）＋ジャンル語＋関連品」を自動生成（例：ジャンクカメラ関連品）。 */
+function accCounters(){return store.get("accCounters",{});}
+/* 保管場所マスタ：[{name,group}]。group が同じ場所どうしは5桁番号を共有（例：工具-1/2/3→「工具」）。
+   学習・連番はすべてこのPC内（localStorage）で完結し、APIは一切消費しない。 */
+function accPlacesCfg(){return store.get("accPlacesCfg",[]);}
+function accSavePlacesCfg(a){store.set("accPlacesCfg",a);}
+function accGroupOf(place){ place=(place||"").trim(); if(!place) return "";
+  const e=accPlacesCfg().find(x=>x&&x.name===place);
+  return (e&&e.group&&String(e.group).trim())?String(e.group).trim():place; }
+function accRegisterPlace(place){ place=(place||"").trim(); if(!place) return;
+  const a=accPlacesCfg(); if(!a.some(x=>x&&x.name===place)){ a.push({name:place,group:""}); accSavePlacesCfg(a); } }
+function accNextNo(place){ const c=accCounters(); const k=accGroupOf(place);
+  let last=parseInt(c[k],10);
+  if(isNaN(last)){
+    last=parseInt(c[place],10)||0;
+    // グループを後から設定した場合：同グループ各場所の既存番号の最大を引き継ぐ（番号の重複防止）
+    accPlacesCfg().forEach(e=>{ if(e&&e.name&&accGroupOf(e.name)===k){ const v=parseInt(c[e.name],10)||0; if(v>last) last=v; } });
+  }
+  return last>=99999?1:last+1; }
+function accGetLearn(){return store.get("accLearn",{});}
+function accPlaces(){return store.get("accPlaces",[]);}
+function accNorm(t){ t=String(t||""); try{t=t.normalize("NFKC");}catch(e){} return t.toLowerCase(); }
+function accTokens(){
+  let s=((($("pname")&&$("pname").value)||"")+" "+(($("model")&&$("model").value)||""));
+  s=accNorm(s);
+  const out=[]; const re=/[a-z0-9][a-z0-9\-]{2,}|[ァ-ヶー]{2,}|[一-龠々]{2,}/g; let m;
+  while((m=re.exec(s))&&out.length<4){ const t=m[0]; if(out.indexOf(t)<0) out.push(t); }
+  return out;
+}
+function accRuleName(){
+  const g=$("genre").selectedOptions[0]; let nm=g?String(g.dataset.name||""):"";
+  const mj=nm.match(/^ジャンク[（(](.+?)[）)]/); let base=mj?mj[1]:nm.replace(/[（(].*$/,"").trim();
+  if(!base) base="その他";
+  const junk=((($("kubun")&&$("kubun").value)||"")==="ジャンク品")||/^ジャンク/.test(nm);
+  return ((junk&&base.indexOf("ジャンク")!==0)?"ジャンク":"")+base+"関連品";
+}
+/* 学習は4種類のキーを重み付きで合算（具体的なものほど強い）：
+   kw|区分|語 ×4 ＞ kg|区分|ジャンル ×3 ＞ w|語 ×2 ＞ g|ジャンル ×1。同点は新しい方 */
+function accPlaceSuggest(){
+  const L=accGetLearn(); const ku=(($("kubun")&&$("kubun").value)||""); const g=String(($("genre")&&$("genre").value)||"");
+  const score={}, ts={};
+  function add(k,w){ const e=L[k]; if(e&&e.place){ score[e.place]=(score[e.place]||0)+w*(e.n||1); if(!ts[e.place]||((e.t||0)>ts[e.place])) ts[e.place]=e.t||0; } }
+  accTokens().forEach(t=>{ add("kw|"+ku+"|"+t,4); add("w|"+t,2); });
+  add("kg|"+ku+"|"+g,3); add("g|"+g,1);
+  let best="",bs=-1;
+  Object.keys(score).forEach(p=>{ if(score[p]>bs || (score[p]===bs && (ts[p]||0)>(ts[best]||0))){ best=p; bs=score[p]; } });
+  if(best) return best;
+  return accRuleName();
+}
+function accCommit(place,no){
+  if(!place) return;
+  accRegisterPlace(place); // 使った保管場所は自動でマスタ登録（設定で番号グループを付けられる）
+  const c=accCounters(); c[accGroupOf(place)]=no; store.set("accCounters",c);
+  const L=accGetLearn(); const ku=(($("kubun")&&$("kubun").value)||""); const g=String(($("genre")&&$("genre").value)||"");
+  const now=Date.now();
+  function bump(k){ const e=L[k]; if(e&&e.place===place){ e.n=(e.n||0)+1; e.t=now; } else L[k]={place:place,n:1,t:now}; }
+  bump("kg|"+ku+"|"+g); bump("g|"+g);
+  accTokens().forEach(t=>{ bump("kw|"+ku+"|"+t); bump("w|"+t); });
+  const ks=Object.keys(L); if(ks.length>600){ ks.sort((a,b)=>(L[a].t||0)-(L[b].t||0)); for(let i=0;i<ks.length-600;i++) delete L[ks[i]]; }
+  store.set("accLearn",L);
+  let pl=accPlaces().filter(x=>x!==place); pl.unshift(place); if(pl.length>40)pl=pl.slice(0,40); store.set("accPlaces",pl);
+  if($("accPlace")) $("accPlace").dataset.man="";
+  accRefresh(true);
+}
+/* 付属品ラベル・裏ラベルの描画（値札と同じ幅・解像度。QR/バーコードは載せない） */
+function accCanvas(kind,place,no5){
+  const Wmm=parseFloat($("setW").value)||38;
+  DPMM=(parseInt($("setDpi").value,10)||203)/25.4;
+  FS=parseFloat($("setFs").value)||1;
+  const W8=Math.ceil(Math.round(Wmm*DPMM)/8)*8;
+  const c=document.createElement("canvas"); c.width=W8; c.height=Math.round(mm(95));
+  const g2=c.getContext("2d");
+  g2.fillStyle="#fff"; g2.fillRect(0,0,c.width,c.height);
+  const mx=Math.round(mm(2.2)), cw=W8-2*mx;
+  const {slash}=dateParts(); const p=placeholders();
+  let y=Math.round(mm(1.2));
+  function txt(t,font,x,yy){ g2.font=font; g2.textBaseline="top"; g2.fillStyle="#000"; g2.fillText(t,x,yy); }
+  function center(t,font,yy){ g2.font=font; const w=g2.measureText(t).width; txt(t,font,Math.max(mx,(W8-w)/2),yy); }
+  function fitPx(t,basePx,weight,maxW,fontFn){ fontFn=fontFn||jpFont; g2.font=fontFn(basePx,weight); const w=g2.measureText(String(t)).width; return (w>maxW)?Math.max(basePx*0.55,basePx*maxW/w):basePx; }
+  function wrap2(text,font,maxw){ g2.font=font; const out=[]; let line=""; for(const ch of String(text)){ const t=line+ch; if(g2.measureText(t).width>maxw&&line){out.push(line);line=ch;} else line=t; } if(line)out.push(line); return out.length?out:[""]; }
+  function hline(yy){ g2.fillStyle="#000"; g2.fillRect(mx,yy,cw,Math.max(1,Math.round(mm(0.2)))); }
+  function dline(yy){ g2.save(); g2.strokeStyle="#000"; g2.lineWidth=Math.max(1,Math.round(mm(0.16))); g2.setLineDash([mm(0.6),mm(0.6)]); g2.beginPath(); g2.moveTo(mx,yy+0.5); g2.lineTo(W8-mx,yy+0.5); g2.stroke(); g2.restore(); }
+  function band(text,fpx,h){ g2.fillStyle="#000"; g2.fillRect(mx,y,cw,h);
+    const px=fitPx(text,fpx,"900",cw-mm(2));
+    g2.font=jpFont(px,"900"); g2.textBaseline="middle"; g2.fillStyle="#fff";
+    g2.strokeStyle="#fff"; g2.lineJoin="round"; g2.lineWidth=Math.max(1.2,mm(0.18));
+    const w=g2.measureText(text).width; const tx=Math.max(mx+mm(1),(W8-w)/2), ty=y+h/2;
+    g2.strokeText(text,tx,ty); g2.fillText(text,tx,ty);
+    g2.textBaseline="top"; y+=h; }
+  if(kind==="fuzoku"){
+    // 黒帯（付属品＋日付）
+    const bandH=Math.round(mm(5.0)*FS);
+    g2.fillStyle="#000"; g2.fillRect(mx,y,cw,bandH);
+    g2.font=jpFont(mm(3.3)*FS,"900"); g2.textBaseline="middle"; g2.fillStyle="#fff";
+    g2.strokeStyle="#fff"; g2.lineJoin="round"; g2.lineWidth=Math.max(1.2,mm(0.18));
+    g2.strokeText("付 属 品",mx+Math.round(mm(1.6)),y+bandH/2);
+    g2.fillText("付 属 品",mx+Math.round(mm(1.6)),y+bandH/2);
+    g2.font=monoFont(mm(2.0)*FS,"900"); const dw=g2.measureText(slash).width;
+    g2.lineWidth=Math.max(1,mm(0.14));
+    g2.strokeText(slash,W8-mx-dw-Math.round(mm(1.2)),y+bandH/2);
+    g2.fillText(slash,W8-mx-dw-Math.round(mm(1.2)),y+bandH/2);
+    g2.textBaseline="top";
+    y+=bandH+Math.round(mm(1.3));
+    // 型番・品名・メーカー（本体との対応が分かる最小限）
+    const rows=[["型番",p.model],["品名",p.pname],["メーカー",p.maker]].filter(r=>r[1]);
+    const fpx=mm(2.1)*FS, keyw=mm(13), valW=cw-keyw;
+    rows.forEach(([k,v])=>{
+      v=String(v).replace(/\n+/g," ");
+      const vp=fitPx(v,fpx,"900",valW);
+      g2.font=jpFont(vp,"900");
+      const lines=(g2.measureText(v).width<=valW)?[v]:wrap2(v,jpFont(vp,"900"),valW).slice(0,2);
+      lines.forEach((ln,li)=>{ if(li===0) txt(k,jpFont(fpx,"900"),mx,y); txt(ln,jpFont(vp,"900"),mx+keyw,y); y+=Math.round(mm(2.9)*FS); });
+    });
+    const g=$("genre").selectedOptions[0];
+    if(g){ hline(y); y+=Math.round(mm(0.9));
+      txt(`${$("genre").value}　${g.dataset.name}`,jpFont(mm(2.2)*FS,"600"),mx,y); y+=Math.round(mm(2.9)*FS); }
+    if(p.priceEx!==""){ txt(`本体 ¥${comma(p.priceIn)}（税込）`,jpFont(mm(2.0)*FS,"700"),mx,y); y+=Math.round(mm(2.9)*FS); }
+    // 保管場所＋管理番号
+    dline(y); y+=Math.round(mm(1.2));
+    txt("保管場所",jpFont(mm(1.9)*FS,"900"),mx,y); y+=Math.round(mm(2.6)*FS);
+    if(place){ const pp=fitPx(place,mm(3.0)*FS,"900",cw);
+      wrap2(place,jpFont(pp,"900"),cw).slice(0,2).forEach(ln=>{ txt(ln,jpFont(pp,"900"),mx,y); y+=Math.round(pp*1.25); });
+      y+=Math.round(mm(0.4)); }
+    const noT="No."+no5; center(noT,monoFont(mm(5.2)*FS,"900"),y); y+=Math.round(mm(5.2)*FS*1.15)+Math.round(mm(1.0));
+    // レジ注意帯（白抜き＝目立たせる）
+    band("レジ打ち不可・値札は本体",mm(2.2)*FS,Math.round(mm(4.2)*FS));
+    y+=Math.round(mm(1.0));
+    if($("secBrand").checked){ center($("setStore").value,monoFont(mm(2.5)*FS,"bold"),y); y+=Math.round(mm(3.0)*FS); }
+  }else{
+    // 裏ラベル（値札の裏に貼る：付属品の保管場所＋番号）
+    band("付属品 保管場所",mm(2.4)*FS,Math.round(mm(4.2)*FS));
+    y+=Math.round(mm(1.6));
+    if(place){ const pp=fitPx(place,mm(3.6)*FS,"900",cw);
+      wrap2(place,jpFont(pp,"900"),cw).slice(0,3).forEach(ln=>{ g2.font=jpFont(pp,"900"); const w=g2.measureText(ln).width; txt(ln,jpFont(pp,"900"),Math.max(mx,(W8-w)/2),y); y+=Math.round(pp*1.25); });
+      y+=Math.round(mm(0.6)); }
+    center(no5,monoFont(mm(7.0)*FS,"900"),y); y+=Math.round(mm(7.0)*FS*1.12)+Math.round(mm(1.0));
+    if(p.pname){ const s=String(p.pname).replace(/\n+/g," ");
+      const sp=fitPx(s,mm(2.0)*FS,"700",cw); center(wrap2(s,jpFont(sp,"700"),cw)[0],jpFont(sp,"700"),y); y+=Math.round(mm(2.8)*FS); }
+    center(slash,monoFont(mm(1.9)*FS,"700"),y); y+=Math.round(mm(2.6)*FS);
+  }
+  const H=Math.min(c.height,y+Math.round(mm(1.2)));
+  const out=document.createElement("canvas"); out.width=W8; out.height=H;
+  out.getContext("2d").fillStyle="#fff"; out.getContext("2d").fillRect(0,0,W8,H);
+  out.getContext("2d").drawImage(c,0,0,W8,H,0,0,W8,H);
+  return out;
+}
+/* 複数ラベルの一括印刷（IP直接印刷：1リクエストで枚数分カットまで） */
+async function eposPrintMulti(jobs){
+  const ip=$("printerIp").value.trim();
+  let body="", total=0;
+  jobs.forEach(j=>{ const {b64,W,H}=rasterFromCanvas(j.canvas,j.noRotate); const n=Math.max(1,Math.min(50,j.copies||1)); total+=n;
+    for(let i=0;i<n;i++){ body+=`<image width="${W}" height="${H}" color="color_1" mode="mono" align="center">${b64}</image><feed unit="24"/><cut type="feed"/>`; } });
+  const xml='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'+
+    '<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">'+body+'</epos-print></s:Body></s:Envelope>';
+  status("印刷を送信中…（付属品ラベル込み・計"+total+"枚）","");
+  try{const res=await fetch(`http://${ip}/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000`,{method:"POST",headers:{"Content-Type":"text/xml; charset=utf-8","SOAPAction":'""'},body:xml});
+    const t=await res.text();status(/success="true"/.test(t)?"印刷しました ✓（値札＋付属品＋裏ラベル）":"プリンターから応答がありました。確認してください","ok");
+  }catch(e){status("プリンターに接続できませんでした（IP・同じLAN・ePOS-Print有効化を確認）","err");}
+}
+/* ダイアログ印刷：3枚を点線区切りで1枚につなげて出す（点線でカット） */
+function browserPrintMulti(jobs){
+  const ocs=[]; jobs.forEach(j=>{ const o=outputCanvas(j.canvas,j.noRotate); const n=Math.max(1,Math.min(50,j.copies||1)); for(let i=0;i<n;i++) ocs.push(o); });
+  if(!ocs.length) return;
+  const gap=Math.round(mm(4)); const W=Math.max.apply(null,ocs.map(o=>o.width));
+  const H=ocs.reduce((a,o)=>a+o.height,0)+gap*(ocs.length-1);
+  const c=document.createElement("canvas"); c.width=W; c.height=H; const g=c.getContext("2d");
+  g.fillStyle="#fff"; g.fillRect(0,0,W,H); let y=0;
+  ocs.forEach((o,i)=>{ g.drawImage(o,Math.round((W-o.width)/2),y); y+=o.height;
+    if(i<ocs.length-1){ g.strokeStyle="#000"; g.setLineDash([6,6]); g.beginPath(); g.moveTo(0,y+gap/2+0.5); g.lineTo(W,y+gap/2+0.5); g.stroke(); g.setLineDash([]); y+=gap; } });
+  browserPrint(c);
+}
+/* 付属品UIの制御 */
+var _accPvT=null;
+function accFillDatalist(){ const dl=$("accPlaceList"); if(!dl)return; dl.innerHTML="";
+  const seen={}; const push=p=>{ p=(p||"").trim(); if(!p||seen[p])return; seen[p]=1; const o=document.createElement("option"); o.value=p; dl.appendChild(o); };
+  accPlacesCfg().forEach(e=>push(e&&e.name)); accPlaces().forEach(push); }
+function accSyncNo(){ const pl=$("accPlace"), noEl=$("accNo"); if(!pl||!noEl)return; noEl.value=String(accNextNo(pl.value.trim())).padStart(5,"0"); }
+function accPreviewSoon(){ clearTimeout(_accPvT); _accPvT=setTimeout(accPreview,250); }
+function accPreview(){
+  if(!($("accOn")&&$("accOn").checked)) return;
+  const place=(($("accPlace")&&$("accPlace").value)||"").trim();
+  const no5=String(parseInt(($("accNo")&&$("accNo").value)||"1",10)||1).padStart(5,"0");
+  [["accCv1","fuzoku"],["accCv2","back"]].forEach(([id,kind])=>{
+    const el=$(id); if(!el) return; const src=accCanvas(kind,place,no5);
+    el.width=src.width; el.height=src.height; el.getContext("2d").drawImage(src,0,0);
+  });
+}
+function accRefresh(force){
+  const on=($("accOn")&&$("accOn").checked); const pn=$("accPanel"); if(pn) pn.style.display=on?"":"none";
+  if(!on) return;
+  const pl=$("accPlace");
+  if(pl && (force || !pl.dataset.man || !pl.value.trim())){ pl.value=accPlaceSuggest(); pl.dataset.man=""; }
+  accSyncNo(); accFillDatalist(); accPreviewSoon();
+}
+function accInit(){
+  const on=$("accOn"); if(!on) return;
+  on.addEventListener("change",()=>accRefresh(true));
+  const pl=$("accPlace"); if(pl) pl.addEventListener("input",()=>{ pl.dataset.man="1"; accSyncNo(); accPreviewSoon(); });
+  const noEl=$("accNo"); if(noEl) noEl.addEventListener("input",accPreviewSoon);
+  ["genre","kubun"].forEach(id=>{ const el=$(id); if(el) el.addEventListener("change",()=>accRefresh(false)); });
+  ["pname","model"].forEach(id=>{ const el=$(id); if(el) el.addEventListener("input",()=>{ accRefresh(false); clearTimeout(window._rhT); window._rhT=setTimeout(renderHistory,400); }); });
+  const ab=$("addAccPlaceBtn");
+  if(ab) ab.onclick=()=>{ const n=($("addAccPlace").value||"").trim(); const g=($("addAccGroup").value||"").trim(); if(!n) return;
+    const a=accPlacesCfg(); const ex=a.find(x=>x&&x.name===n); if(ex){ ex.group=g; } else a.push({name:n,group:g});
+    accSavePlacesCfg(a); $("addAccPlace").value=""; $("addAccGroup").value=""; renderAccPlaceEditor(); accFillDatalist(); };
+}
+/* 設定内の保管場所エディタ（名前・番号グループ・次番号・削除） */
+function renderAccPlaceEditor(){
+  const box=$("accPlaceEditor"); if(!box) return; box.innerHTML="";
+  const list=accPlacesCfg();
+  if(!list.length){ box.innerHTML='<div class="hint" style="margin-bottom:6px">まだ登録がありません。下で追加できます（付属品ラベルを印刷すると、使った保管場所は自動でここに登録されます）。</div>'; return; }
+  const c=accCounters();
+  list.forEach((e,i)=>{
+    const row=document.createElement("div"); row.style.cssText="display:flex;gap:6px;align-items:center;margin-bottom:6px";
+    const n=document.createElement("input"); n.value=e.name||""; n.placeholder="保管場所名"; n.style.cssText="flex:1 1 auto;min-width:0";
+    const g=document.createElement("input"); g.value=e.group||""; g.placeholder="番号グループ"; g.style.cssText="flex:0 0 130px;min-width:0";
+    const cur=document.createElement("span");
+    cur.textContent="次 "+String(accNextNo(e.name||"")).padStart(5,"0");
+    cur.style.cssText="font-size:11px;color:var(--sub);white-space:nowrap;flex:0 0 auto";
+    const d=document.createElement("button"); d.type="button"; d.className="ghostbtn"; d.textContent="×"; d.title="この保管場所を削除（学習・番号は残ります）"; d.style.cssText="flex:0 0 auto;padding:8px 12px";
+    const save=()=>{ const a=accPlacesCfg(); a[i]={name:n.value.trim(),group:g.value.trim()}; accSavePlacesCfg(a); renderAccPlaceEditor(); accFillDatalist(); };
+    n.onchange=save; g.onchange=save;
+    d.onclick=()=>{ const a=accPlacesCfg(); a.splice(i,1); accSavePlacesCfg(a); renderAccPlaceEditor(); accFillDatalist(); };
+    row.appendChild(n); row.appendChild(g); row.appendChild(cur); row.appendChild(d); box.appendChild(row);
+  });
+}
+
+/* ===== 拡張ジャンル（HARD-OFF番号）→ OFF HOUSEレジ番号 =====
+   対応が明確なものだけ変換。無いものはジャンルを変えない（誤ったQR防止）。 */
+var EXT2OH={3:2,6:2,9:2,16:2,27:2,28:2,           // オーディオ/ビジュアル/PC/カメラ/携帯/家電 → 家電2
+ 19:24,                                            // 時計 → 腕時計H(レジ24)
+ 36:30,17:30,                                      // スポーツ/ゴルフ → スポーツ・アウトドア(レジ30)
+ 30:12,                                            // 釣り具 → 釣具12
+ 40:36,41:36,                                      // フィギュア → 36
+ 39:37,42:37,                                      // ミニチュア/スケール → 37
+ 43:38,44:39,45:40,48:42,                          // プラモ38/モデルガン39/おもちゃ40/ぬいぐるみ42
+ 47:41,23:41,24:41,                                // 雑貨・ホビー他・カード → ホビー雑貨41
+ 46:25};                                           // アクセサリー → 25
+/* サイズが必要なOFF HOUSEジャンル（レジ番号）：家具1・家電2・インテリア32・J家具34・J家電35 */
+var OH_SIZE_GENRES={1:1,2:1,32:1,34:1,35:1};
+/* 「＋サイズ・重量」チップ：OFF HOUSEで拡張からサイズ情報が届いた時の制御。
+   ジャンルが家具・家電・インテリア系なら自動でコメントへ追記（後からジャンルを変えた時も反応）、
+   それ以外はチップを出してワンタップで追加。他ブランドでは何も出さない。 */
+function renderSpecChip(){
+  var nt=$("notes"); if(!nt||!nt.parentElement) return;
+  var chip=document.getElementById("specChip");
+  if(!chip){
+    chip=document.createElement("button"); chip.type="button"; chip.id="specChip"; chip.className="chip";
+    chip.style.cssText="margin-top:6px;display:none";
+    chip.onclick=function(){ var sp=window.__inSpec||""; if(!sp) return;
+      var cur=nt.value.replace(/\s+$/,""); if(cur.indexOf(sp)<0){ nt.value=cur?(cur+"\n"+sp):sp; }
+      if(typeof autoGrowNotes==="function")autoGrowNotes(); draw(); renderSpecChip(); };
+    nt.parentElement.appendChild(chip);
+  }
+  var sp=window.__inSpec||"";
+  var pending=!!sp && isOffHouse() && nt.value.indexOf(sp)<0;
+  if(pending && OH_SIZE_GENRES[parseInt($("genre").value,10)]){
+    // 家具・家電・インテリア系 → 自動追記（次の再描画でプレビューにも反映）
+    var cur=nt.value.replace(/\s+$/,"");
+    nt.value=cur?(cur+"\n"+sp):sp;
+    chip.style.display="none";
+    setTimeout(function(){ try{ if(typeof autoGrowNotes==="function")autoGrowNotes(); draw(); }catch(e){} },0);
+    return;
+  }
+  chip.style.display=pending?"":"none";
+  if(pending) chip.textContent="＋ サイズ・重量をコメントへ（"+sp.split("\n")[0].replace(/^サイズ：/,"")+"）";
+}
+
+/* ===== キーボード操作 =====
+   Enter：税抜価格→ジャンル→区分→型番→メーカー→シリアル→品名→本文 の順に移動
+   （本文はEnter=改行のまま／品名で改行したい時は Shift+Enter）
+   ショートカットは⚙設定で変更可（既定：F2＝印刷／Ctrl+F＝付属品／Ctrl+Delete＝全リセット。Ctrl+Enter＝印刷は固定） */
+const ENTER_CHAIN=["priceEx","genre","kubun","model","maker","serial","pname","notes"];
+function focusNext(id){ const i=ENTER_CHAIN.indexOf(id); if(i<0||i>=ENTER_CHAIN.length-1) return;
+  const nx=$(ENTER_CHAIN[i+1]); if(!nx) return; nx.focus();
+  try{ if(nx.tagName==="INPUT"&&nx.select) nx.select(); }catch(e){} }
+/* ショートカット設定（このPCに保存・設定の書き出し/読み込みにも含まれる） */
+function kbdCfg(){ const d={print:"F2",acc:"Ctrl+F",reset:"Ctrl+Delete"}; const c=store.get("kbdCfg",{})||{};
+  return {print:c.print||d.print, acc:c.acc||d.acc, reset:c.reset||d.reset}; }
+function kbdSave(c){ store.set("kbdCfg",c); applyKbdTitles(); }
+function comboFromEvent(e){
+  let k=e.key; if(k===" ")k="Space";
+  if(["Control","Shift","Alt","Meta"].indexOf(k)>=0) return null; // 修飾キー単体は無視
+  const parts=[]; if(e.ctrlKey||e.metaKey)parts.push("Ctrl"); if(e.altKey)parts.push("Alt"); if(e.shiftKey)parts.push("Shift");
+  if(k.length===1) k=k.toUpperCase();
+  parts.push(k); return parts.join("+");
+}
+function kbdAllowed(combo){ if(!combo) return false;
+  const key=combo.split("+").pop();
+  if(["Enter","Tab","Escape"].indexOf(key)>=0) return false;       // 入力移動と衝突
+  if(/^F([1-9]|1[0-2])$/.test(key)) return true;                    // Fキーは単体でもOK
+  return combo.indexOf("Ctrl+")===0||combo.indexOf("Alt+")===0;     // それ以外は Ctrl/Alt 併用のみ
+}
+function applyKbdTitles(){ const c=kbdCfg();
+  const pb=$("printBtn"); if(pb) pb.title="ショートカット："+c.print+" または Ctrl+Enter";
+  const rb=$("resetAllBtn"); if(rb) rb.title="ショートカット："+c.reset;
+  const at=document.querySelector(".acctgl"); if(at) at.title="値札＋付属品ラベル（QRなし）＋裏ラベル（保管場所）の3枚を印刷（"+c.acc+"で切替）";
+}
+function kbdFill(){ const c=kbdCfg();
+  if($("kbdPrint"))$("kbdPrint").value=c.print; if($("kbdAcc"))$("kbdAcc").value=c.acc; if($("kbdReset"))$("kbdReset").value=c.reset; }
+function kbdCapInit(){
+  const map=[["kbdPrint","print"],["kbdAcc","acc"],["kbdReset","reset"]];
+  map.forEach(([id,slot])=>{
+    const el=$(id); if(!el) return;
+    el.addEventListener("keydown",function(e){
+      e.preventDefault(); e.stopPropagation();
+      if(e.isComposing) return;
+      const combo=comboFromEvent(e); if(!combo) return;
+      const msg=$("kbdMsg");
+      if(!kbdAllowed(combo)){ if(msg) msg.textContent="「"+combo+"」は文字入力と衝突するため設定できません（F1〜F12 か、Ctrl／Alt を組み合わせてください）"; return; }
+      const c=kbdCfg();
+      const dup=map.find(([id2,s2])=>s2!==slot&&c[s2]===combo);
+      if(dup){ if(msg) msg.textContent="「"+combo+"」は別の操作に割り当て済みです"; return; }
+      c[slot]=combo; kbdSave(c); el.value=combo;
+      if(msg) msg.textContent="設定しました：「"+combo+"」";
+    });
+    el.addEventListener("focus",function(){ const msg=$("kbdMsg"); if(msg) msg.textContent="キーを押してください…"; });
+  });
+  const db=$("kbdDefault"); if(db) db.onclick=function(){ kbdSave({print:"F2",acc:"Ctrl+F",reset:"Ctrl+Delete"}); kbdFill();
+    const msg=$("kbdMsg"); if(msg) msg.textContent="既定に戻しました（F2＝印刷／Ctrl+F＝付属品／Ctrl+Delete＝全リセット）"; };
+}
+function kbdInit(){
+  applyKbdTitles(); kbdCapInit();
+  document.addEventListener("keydown",function(e){
+    const modalOpen=$("settingsModal")&&$("settingsModal").classList.contains("open");
+    if(e.isComposing) return; // IME変換中は何もしない
+    if(!modalOpen){
+      const c=kbdCfg(); const combo=comboFromEvent(e);
+      if(combo===c.print || combo==="Ctrl+Enter"){ e.preventDefault(); doPrint(); return; }
+      if(combo===c.acc){ e.preventDefault(); const a=$("accOn"); if(a){ a.checked=!a.checked; a.dispatchEvent(new Event("change",{bubbles:true})); } return; }
+      if(combo===c.reset){ e.preventDefault(); const rb=$("resetAllBtn"); if(rb){ rb.click(); const pe=$("priceEx"); if(pe){ pe.focus(); try{pe.select();}catch(x){} } } return; }
+    }
+    if(e.key!=="Enter"||e.ctrlKey||e.metaKey||e.altKey) return;
+    const t=e.target; if(!t||!t.id) return;
+    if(ENTER_CHAIN.indexOf(t.id)<0) return;
+    if(t.id==="notes") return;               // 本文：Enter＝改行（1行＝1コメント）
+    if(t.id==="pname"&&e.shiftKey) return;   // 品名：Shift+Enter＝改行
+    e.preventDefault(); focusNext(t.id);
+  });
+}
+
 var DEFAULT_SITES=[["Google","https://www.google.com/search?q=%s"],["営業管理","https://item3.hardoff.co.jp/?searchKeyword=%s&salesStatus=7&sort=DTSALE"],["オークフリー","https://aucfree.com/search?o=t2&from=2015-06&to=2026-06&c=&q=%s"],["価格コム","https://kakaku.com/search_results/%s/"],["メルカリ","https://jp.mercari.com/search?keyword=%s&sort=created_time&order=desc&status=sold_out"],["駿河屋","https://www.suruga-ya.jp/search?category=&search_word=%s&searchbox=1"]];
 function defaultSitesText(){ return DEFAULT_SITES.map(function(s){return s[0]+"|"+s[1];}).join("\n"); }
 function parseSitesText(){ var raw=(($("setSites")&&$("setSites").value)||"").trim(); var out=[];
@@ -4445,6 +4851,7 @@ function detectGenreFromName(text){
 }
 function setGenreAuto(no){
   if(no==null||no==="") return false;
+  if(isOffHouse()) return false; // 番号体系が違うため OFF HOUSE では自動切替しない
   var gs=$("genre"); if(!gs) return false;
   var gv=String(no);
   if(![...gs.options].some(function(o){return o.value===gv;})) return false; // 非表示のジャンルへは切替しない
@@ -4643,11 +5050,18 @@ function applyIncomingLabel(){
     var pp=String(o.price||"").replace(/[^0-9]/g,"");
     $("priceEx").value=pp;
     try{ $("priceEx").dispatchEvent(new Event("input",{bubbles:true})); }catch(e){}
-    if(o.genre){ var gs=$("genre"), gv=String(o.genre); if(gs){
-      if(![...gs.options].some(op=>op.value===gv)){ var row=GENRES.find(function(g){return String(g[0])===gv;}); var op=document.createElement("option"); op.value=gv; op.textContent=gv+"　"+(row?row[2]:""); gs.appendChild(op); }
+    if(o.genre!==""&&o.genre!=null){ var gs=$("genre"), gv=String(o.genre);
+      // OFF HOUSE選択中：拡張のジャンル（HARD-OFF番号）を OFF HOUSEのレジ番号へ変換（対応が明確なものだけ）
+      if(isOffHouse()){ var _mp=EXT2OH[parseInt(gv,10)]; gv=(_mp!=null)?String(_mp):""; }
+      if(gs&&gv){
+      if(![...gs.options].some(op=>op.value===gv)){ var row=allGenres().find(function(g){return String(g[0])===gv;}); var op=document.createElement("option"); op.value=gv; op.dataset.name=(row?row[2]:""); op.textContent=gv+"　"+(row?row[2]:""); gs.appendChild(op); }
       gs.value=gv; if(typeof autoKubunForGenre==="function") autoKubunForGenre();
     } }
-    var nt=$("notes"); if(nt){ nt.value=o.notes||""; }
+    var nt=$("notes"); if(nt){
+      // サイズ・重量（spec）は保持だけして、追記判定は renderSpecChip が行う
+      //（OFF HOUSE×家具・家電・インテリア系ジャンル＝自動、その他OFF HOUSE＝チップでワンタップ）
+      window.__inSpec=(o.spec||"").trim();
+      nt.value=o.notes||""; }
     if(typeof autoGrowNotes==="function") autoGrowNotes();
     try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){}
     autoGrowPname(); draw(); if(typeof renderHistory==="function") renderHistory();
@@ -4805,7 +5219,17 @@ async function modelSearch(){ const q=($("model").value||"").trim()||($("pname")
 function doPrint(){ if($("autoDate").checked){setToday();} $("notes").value.split("\n").map(s=>s.trim()).filter(Boolean).reverse().forEach(histAdd);
   // 自動検索で使った語＋採用した結果を学習（次回同じ語で即入力）
   try{ var q=($("janCode").value||"").trim(); if(q) learnSave(q,$("maker").value,$("pname").value,$("model").value,$("genre").value); }catch(e){}
-  draw(); const n=Math.max(1,Math.min(50,parseInt($("copies")&&$("copies").value,10)||1)); const ip=$("printerIp").value.trim(); if(ip) eposPrint(n); else browserPrint(); }
+  draw(); const n=Math.max(1,Math.min(50,parseInt($("copies")&&$("copies").value,10)||1)); const ip=$("printerIp").value.trim();
+  const acc=($("accOn")&&$("accOn").checked);
+  if(!acc){ if(ip) eposPrint(n); else browserPrint(); return; }
+  // 付属品ON：値札×枚数＋付属品ラベル＋裏ラベル（保管場所）
+  const place=((($("accPlace")&&$("accPlace").value)||"").trim())||accPlaceSuggest();
+  let no=parseInt((($("accNo")&&$("accNo").value)||""),10); if(!no||no<1) no=accNextNo(place); if(no>99999) no=1;
+  const no5=String(no).padStart(5,"0");
+  const cAcc=accCanvas("fuzoku",place,no5), cBack=accCanvas("back",place,no5);
+  const jobs=[{canvas:cv,copies:n},{canvas:cAcc,copies:1,noRotate:true},{canvas:cBack,copies:1,noRotate:true}];
+  if(ip) eposPrintMulti(jobs); else browserPrintMulti(jobs);
+  accCommit(place,no); }
 function status(t,cls){const s=$("status");s.textContent=t;s.style.color=cls==="ok"?"var(--ok)":cls==="err"?"var(--err)":"var(--sub)";}
 
 function calibrate(){
@@ -4821,15 +5245,19 @@ function calibrate(){
 const KUBUN_MASTER=["中古品","ジャンク品","未使用品","新古品","新品","Gケース"];
 function customGenres(){return store.get("customGenres",[]);}
 function customKubun(){return store.get("customKubun",[]);}
-function allGenres(){return GENRES.concat(customGenres().map(([rj,name])=>[rj,rj,name]));}
+function baseGenres(){return isOffHouse()?OFFHOUSE_GENRES:GENRES;}
+function genreStoreKey(brand){return (brand||currentBrand())==="OFF-HOUSE"?"enabledGenresOH":"enabledGenres";}
+function allGenres(){return baseGenres().concat(customGenres().map(([rj,name])=>[rj,rj,name]));}
 function allKubun(){return KUBUN_MASTER.concat(customKubun());}
-function enabledGenres(){return store.get("enabledGenres",GENRES.map(g=>g[0]));}
+function enabledGenres(){return store.get(genreStoreKey(),baseGenres().map(g=>g[0]));}
 function enabledKubun(){return store.get("enabledKubun",KUBUN_MASTER.slice());}
 function buildGenre(){
   const s=$("genre"); const cur=s.value||String(store.get("genre",15)); s.innerHTML="";
   const en=enabledGenres();
-  allGenres().filter(g=>en.indexOf(g[0])>=0).forEach(([rj,csv,name])=>{
-    const o=document.createElement("option");o.value=rj;o.dataset.csv=csv;o.dataset.name=name;o.textContent=`${rj}　${name}`;s.appendChild(o);
+  const oh=isOffHouse();
+  allGenres().filter(g=>en.indexOf(g[0])>=0).forEach(g=>{
+    const [rj,csv,name]=g;
+    const o=document.createElement("option");o.value=rj;o.dataset.csv=csv;o.dataset.name=name;o.textContent=oh?genreOptText(g):`${rj}　${name}`;s.appendChild(o);
   });
   if([...s.options].some(o=>o.value===String(cur))) s.value=cur;
   else if(s.options.length) s.selectedIndex=0;
@@ -4845,21 +5273,34 @@ function renderSettingsLists(){
   const kl=$("kubunList"); kl.innerHTML=""; const enK=enabledKubun();
   allKubun().forEach(k=>{const r=document.createElement("label");r.className="checkitem";
     r.innerHTML='<input type="checkbox"> '+k; r.querySelector("input").value=k; r.querySelector("input").checked=enK.indexOf(k)>=0; kl.appendChild(r);});
-  const gl=$("genreList"); gl.innerHTML=""; const enG=enabledGenres();
-  allGenres().forEach(([rj,csv,name])=>{const r=document.createElement("label");r.className="checkitem";
-    r.innerHTML='<input type="checkbox"> '+rj+'　'+name; r.querySelector("input").value=rj; r.querySelector("input").checked=enG.indexOf(rj)>=0; gl.appendChild(r);});
-  const q=$("genreFilter").value.trim(); if(q){[...gl.children].forEach(row=>{row.style.display=row.textContent.indexOf(q)>=0?"":"none";});}
+  renderGenreList(currentBrand());
+  if(typeof renderAccPlaceEditor==="function") renderAccPlaceEditor();
+  if(typeof kbdFill==="function") kbdFill();
   const bsel=$("brandSel"); const cur=($("setStore").value||"HARD-OFF"); const opts=["HARD-OFF","HOBBY-OFF","OFF-HOUSE"]; if(opts.indexOf(cur)<0)opts.push(cur);
   bsel.innerHTML=""; opts.forEach(o=>{const op=document.createElement("option");op.value=o;op.textContent=o;bsel.appendChild(op);}); bsel.value=cur;
+  bsel.onchange=function(){ renderGenreList(bsel.value); };
+}
+/* ジャンル一覧はブランドごとに別管理（OFF HOUSEは専用リスト＋専用の保存キー） */
+var _glBrand="HARD-OFF";
+function renderGenreList(brand){
+  _glBrand=brand||currentBrand();
+  const oh=(_glBrand==="OFF-HOUSE");
+  const base=oh?OFFHOUSE_GENRES:GENRES;
+  const all=base.concat(customGenres().map(([rj,name])=>[rj,rj,name]));
+  const enG=store.get(genreStoreKey(_glBrand),base.map(g=>g[0]));
+  const gl=$("genreList"); gl.innerHTML="";
+  all.forEach(g=>{const [rj,csv,name]=g; const r=document.createElement("label");r.className="checkitem";
+    r.innerHTML='<input type="checkbox"> '+(oh?genreOptText(g):(rj+'　'+name)); r.querySelector("input").value=rj; r.querySelector("input").checked=enG.indexOf(rj)>=0; gl.appendChild(r);});
+  const q=$("genreFilter").value.trim(); if(q){[...gl.children].forEach(row=>{row.style.display=row.textContent.indexOf(q)>=0?"":"none";});}
 }
 function openSettings(){renderSettingsLists();$("settingsModal").classList.add("open");}
 function closeSettings(){$("settingsModal").classList.remove("open");}
 function saveSettings(){
   const enK=[...$("kubunList").querySelectorAll("input:checked")].map(i=>i.value);
   const enG=[...$("genreList").querySelectorAll("input:checked")].map(i=>parseInt(i.value,10));
-  store.set("enabledKubun",enK); store.set("enabledGenres",enG);
+  store.set("enabledKubun",enK); store.set(genreStoreKey(_glBrand),enG);
   if($("brandSel"))$("setStore").value=$("brandSel").value;
-  buildKubun(); buildGenre(); persist(); closeSettings(); draw();
+  persist(); buildKubun(); buildGenre(); autoKubunForGenre(); closeSettings(); draw();
 }
 function wireSettings(){
   $("settingsBtn").onclick=openSettings; $("closeSettings").onclick=closeSettings; $("cancelSettings").onclick=closeSettings;
@@ -4899,7 +5340,7 @@ function importSettings(file){
   r.readAsText(file);
 }
 function persist(){store.set("genre",$("genre").value);store.set("cfg",{w:$("setW").value,dpi:$("setDpi").value,fs:$("setFs").value,qr:$("setQr").value,store:$("setStore").value,ip:$("printerIp").value,orient:orient(),code:codeType(),scale:($("setScale")&&$("setScale").value),shift:($("setShiftX")&&$("setShiftX").value),shiftY:($("setShiftY")&&$("setShiftY").value),proxy:($("setProxy")&&$("setProxy").value),sites:($("setSites")&&$("setSites").value),dispFont:($("dispFontSel")&&$("dispFontSel").value),dispBold:($("dispBold")?$("dispBold").checked:true),dispSize:($("dispSize")&&$("dispSize").value)});}
-function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"38";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1.1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"bar";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);}
+function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);}
 function histGet(){return store.get("histLines",[]);}
 function curGenreKey(){ return String(($("genre")&&$("genre").value)||""); }
 function histAdd(line){
@@ -4911,6 +5352,18 @@ function histAdd(line){
   m[g][line]=(m[g][line]||0)+1;
   let keys=Object.keys(m[g]); if(keys.length>80){ keys.sort((x,y)=>m[g][x]-m[g][y]); for(let i=0;i<keys.length-80;i++) delete m[g][keys[i]]; }
   store.set("histByGenre",m);
+  // 商品名キーワード別の使用回数（例：「3DS」→チェック時、ゲームできました）
+  try{
+    const toks=accTokens().slice(0,3).map(t=>t.toLowerCase());
+    if(toks.length){
+      let mn=store.get("histByName",{});
+      toks.forEach(t=>{ if(t==="_t")return; if(!mn[t])mn[t]={}; mn[t][line]=(mn[t][line]||0)+1; mn[t]._t=Date.now();
+        const ks=Object.keys(mn[t]).filter(k=>k!=="_t");
+        if(ks.length>40){ ks.sort((x,y)=>mn[t][x]-mn[t][y]); for(let i=0;i<ks.length-40;i++) delete mn[t][ks[i]]; } });
+      const tk=Object.keys(mn); if(tk.length>200){ tk.sort((a,b)=>((mn[a]&&mn[a]._t)||0)-((mn[b]&&mn[b]._t)||0)); for(let i=0;i<tk.length-200;i++) delete mn[tk[i]]; }
+      store.set("histByName",mn);
+    }
+  }catch(e){}
   renderHistory();
 }
 function insertComment(line){const t=$("notes");const cur=t.value.replace(/\s+$/,"");t.value=cur?(cur+"\n"+line):line;autoGrowNotes();draw();}
@@ -4918,14 +5371,23 @@ function renderHistory(){
   const box=$("histList"); if(!box)return; box.innerHTML="";
   const g=curGenreKey();
   const m=store.get("histByGenre",{}); const gm=m[g]||{};
-  // このジャンルでよく使った順
+  // ① 今の商品名・型番のキーワードでよく使った順（最優先）
+  const mn=store.get("histByName",{}); const nameScore={};
+  try{ accTokens().map(t=>t.toLowerCase()).forEach(t=>{ const e=mn[t]; if(e) Object.keys(e).forEach(k=>{ if(k==="_t")return; nameScore[k]=(nameScore[k]||0)+e[k]; }); }); }catch(e){}
+  let nameList=Object.keys(nameScore).sort((x,y)=>nameScore[y]-nameScore[x]);
+  // ② このジャンルでよく使った順 → ③ 全体の直近
   let genreList=Object.keys(gm).sort((x,y)=>gm[y]-gm[x]);
   const glob=histGet();
   let shown=[], seen={};
+  nameList.forEach(t=>{ if(!seen[t]){ seen[t]=1; shown.push({t:t,n:true}); } });
   genreList.forEach(t=>{ if(!seen[t]){ seen[t]=1; shown.push({t:t,g:true}); } });
-  glob.forEach(t=>{ if(!seen[t] && shown.length<28){ seen[t]=1; shown.push({t:t,g:false}); } });
-  if(!shown.length){ box.innerHTML='<span class="histempty">印刷したコメントがここに記録され、タップで再利用できます。ジャンルごとに「よく使った順」で表示されます。</span>'; return; }
-  shown.slice(0,28).forEach(o=>{ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=o.t; b.title=(o.g?("このジャンルで"+(gm[o.t]||1)+"回使用"):"")+o.t; if(o.g) b.style.borderColor="var(--a1)"; b.onclick=()=>{ insertComment(o.t); histAdd(o.t); }; box.appendChild(b); });
+  glob.forEach(t=>{ if(!seen[t] && shown.length<28){ seen[t]=1; shown.push({t:t}); } });
+  if(!shown.length){ box.innerHTML='<span class="histempty">印刷したコメントがここに記録され、タップで再利用できます。商品名・ジャンルごとに「よく使った順」で表示されます。</span>'; return; }
+  shown.slice(0,28).forEach(o=>{ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=o.t;
+    b.title=(o.n?("この商品名で"+(nameScore[o.t]||1)+"回使用："):o.g?("このジャンルで"+(gm[o.t]||1)+"回使用："):"")+o.t;
+    if(o.n){ b.style.borderColor="var(--ok)"; b.style.borderWidth="2px"; }
+    else if(o.g) b.style.borderColor="var(--a1)";
+    b.onclick=()=>{ insertComment(o.t); histAdd(o.t); }; box.appendChild(b); });
 }
 function addClear(id){
   const el=$(id); if(!el) return; const f=el.parentElement; if(!f) return;
@@ -4988,7 +5450,7 @@ function wire(){
   }
   renderSiteButtons();
 }
-buildFontSel(); buildGenre(); buildKubun(); restore(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname();
+buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); kbdInit();
 </script>
 <script>
 /* ===== 進化UI v5：操作レイヤー（検証済みエンジン・既存関数には触れない、追加のみ） ===== */
