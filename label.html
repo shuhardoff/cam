@@ -4608,8 +4608,8 @@ function renderBakList(){
 }
 
 /* ===== キーボード操作 =====
-   Enter：税抜価格→ジャンル→区分→型番→メーカー→シリアル→品名→本文 の順に移動
-   （本文はEnter=改行のまま／品名で改行したい時は Shift+Enter）
+   Enter：税抜価格→ジャンル→区分→型番→メーカー→シリアル→品名 の順に移動
+   （品名・本文はEnter=改行のまま＝移動しない。改行を多用するため）
    ショートカットは⚙設定で変更可（既定：Ctrl+P＝印刷／Ctrl+F＝付属品／Ctrl+Delete＝全リセット。Ctrl+Enter＝印刷は固定）
    付属品のみ画面を開いている間は、印刷キー＝その画面の「この2枚を印刷」になる */
 const ENTER_CHAIN=["priceEx","genre","kubun","model","maker","serial","pname","notes"];
@@ -4683,7 +4683,7 @@ function kbdInit(){
     const t=e.target; if(!t||!t.id) return;
     if(ENTER_CHAIN.indexOf(t.id)<0) return;
     if(t.id==="notes") return;               // 本文：Enter＝改行（1行＝1コメント）
-    if(t.id==="pname"&&e.shiftKey) return;   // 品名：Shift+Enter＝改行
+    if(t.id==="pname") return;               // 品名：Enter＝改行（手動改行で使うため移動しない）
     e.preventDefault(); focusNext(t.id);
   });
 }
