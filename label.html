@@ -3458,13 +3458,14 @@ function checkDigit(p12){ let w=2,s=0; for(let i=0;i<p12.length;i++){ s+=(+p12[i
 function nonpluCode(){ const reji=parseInt($("genre").value,10)||0; const ex=num($("priceEx").value)||0;
   if(isOffHouse()){
     // OFF HOUSE のPOSレジ実測ルール（2026-07 実証実験で確認）：
-    // 「30」＋レジ番号2桁＋税抜価格7桁＋末尾「9」固定＝12桁（チェックデジット無し）
-    return "30"+String(reji).padStart(2,"0")+String(ex).padStart(7,"0")+"9";
+    // 先頭「0」＋「30」＋レジ番号2桁＋税抜価格7桁＋末尾「9」＝13桁
+    //（先頭の0が無いとPOSが読まないことを実機で確認）
+    return "030"+String(reji).padStart(2,"0")+String(ex).padStart(7,"0")+"9";
   }
   if(isHobbyOff()){
     // HOBBY-OFF 単独店のPOSレジ実測ルール（2026-07 レジ表より）：
-    // 「80」＋レジ番号2桁＋税抜価格7桁＋末尾「9」固定＝12桁
-    return "80"+String(reji).padStart(2,"0")+String(ex).padStart(7,"0")+"9";
+    // 先頭「0」＋「80」＋レジ番号2桁＋税抜価格7桁＋末尾「9」＝13桁
+    return "080"+String(reji).padStart(2,"0")+String(ex).padStart(7,"0")+"9";
   }
   const p12="01"+String(reji).padStart(3,"0")+String(ex).padStart(7,"0"); return p12+checkDigit(p12); }
 
