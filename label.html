@@ -5194,6 +5194,7 @@ var NAME2GENRE=[
   ["ゲームソフト",14],["3dsソフト",14],["dsソフト",14],["switchソフト",14],["wiiソフト",14],["ゲームカセット",14],
   ["電子キーボード",22],["シンセサイザー",22],["電子ピアノ",22],["ウクレレ",22],["バイオリン",22],["フルート",22],["サックス",22],["トランペット",22],
   ["エレキギター",37],["アコースティックギター",37],["アコギ",37],["エレキベース",37],["ギター",37],
+  ["スマートスピーカー",3],["echo dot",3],["echo show",3],["amazon echo",3],["google nest",3],["google home",3],["homepod",3],["アレクサ",3],
   ["スピーカー",3],["アンプ",3],["イヤホン",3],["ヘッドホン",3],["ヘッドフォン",3],["ウォークマン",3],["コンポ",3],["ラジカセ",3],["ターンテーブル",3],["レコードプレーヤー",3],["ラジオ",3],
   ["プロジェクター",6],["ブルーレイ",6],["dvdプレーヤー",6],["dvdレコーダー",6],["ビデオカメラ",6],["ビデオデッキ",6],["テレビ",6],
   ["ノートパソコン",9],["デスクトップパソコン",9],["パソコン",9],["プリンター",9],["プリンタ",9],["ルーター",9],["タブレット",9],["ipad",9],["macbook",9],["モニター",9],["ディスプレイ",9],["キーボード",9],["マウス",9],["ssd",9],["スキャナー",9],
@@ -5203,7 +5204,8 @@ var NAME2GENRE=[
   ["腕時計",19],["掛け時計",19],["置き時計",19],["時計",19],
   ["インパクトドライバー",29],["電動ドリル",29],["グラインダー",29],["チェーンソー",29],["サンダー",29],["工具",29],
   ["釣り竿",30],["リール",30],["釣具",30],
-  ["ぬいぐるみ",48],["ねんどろいど",41],["figma",41],["フィギュア",41],["プライズ",40],["景品",40],
+  ["ぬいぐるみ",48],["ねんどろいど",41],["figma",41],["フィギュアーツ",41],["figuarts",41],["メタルビルド",41],["ホットトイズ",41],["フィギュア",41],["一番くじ",40],["プライズ",40],["景品",40],
+  ["hguc",43],["ズゴック",43],
   ["ガンプラ",43],["プラモデル",43],["プラモ",43],["ミニカー",42],["トミカ",42],["鉄道模型",42],["nゲージ",42],["ラジコン",42],
   ["ポケモンカード",24],["遊戯王",24],["トレーディングカード",24],["トレカ",24],
   ["ボードゲーム",45],["ソフビ",45],["パズル",45],["レゴ",45],["lego",45],["おもちゃ",45]
@@ -5407,6 +5409,49 @@ function applyIncomingLabel(){
   try{
     var hh=location.hash||""; var m=hh.match(/hsslabel=([^&]+)/); if(!m) return;
     var o=JSON.parse(decodeURIComponent(m[1]));
+    // ===== 相場カメラ等から「名前だけ」で届いた時：学習→ローカル解析で メーカー/型番/品名/ジャンル に自動振り分け =====
+    try{
+      window.__inName=(o&&o.name)?String(o.name):"";
+      if(o && o.name && !o.maker && !o.model){
+        var lk=(typeof learnLookup==="function")?learnLookup(o.name):null;
+        if(lk){ // ①この名前で以前印刷した内容（学習）をそのまま使う
+          if(lk.brand) o.maker=lk.brand;
+          if(lk.model) o.model=lk.model;
+          if(lk.name)  o.name=lk.name;
+          if((o.genre===""||o.genre==null)&&lk.genre!==""&&lk.genre!=null) o.genre=lk.genre;
+        }else{ // ②ローカル解析
+          var hg=detectGenreFromName(String(o.name));
+          var HOBBY_G={23:1,24:1,39:1,40:1,41:1,42:1,43:1,44:1,45:1,46:1,47:1,48:1};
+          if(hg!==""&&HOBBY_G[hg]){
+            // ホビー：いつも通りのホビー入力形式（品名＝作品名・キャラ名等をそのまま）。型番分解はしない
+            if(o.genre===""||o.genre==null) o.genre=hg;
+            var hmk=deriveMaker("",o.name);
+            if(hmk) o.maker=hmk; // 辞書メーカー（BANDAI等）が名前に含まれる時だけ。品名からは削らない
+          }else{
+            // 一般商材：メーカー語・型番トークンを振り分け
+            var mk=deriveMaker("",o.name);
+            var md=extractModel(o.name);
+            if(!mk&&md){ // 辞書に無いブランド（GrassRoots等）：型番が取れた時だけ先頭の英字語をメーカー扱い
+              var toks=String(o.name).trim().split(/[\s\u3000]+/);
+              if(toks.length>=2 && /^[A-Za-z][A-Za-z&.\-]{2,}$/.test(toks[0]) && toks[0].toUpperCase()!==md) mk=toks[0];
+            }
+            if(mk||md){
+              var nm=dedupeName(o.name,mk,"",md);
+              if(nm===o.name){ // dedupeNameは空になると原文を返すため、その場合は自前で除去
+                var t=String(o.name);
+                if(md) t=t.replace(new RegExp(escRe(md),"ig")," ");
+                if(mk) t=t.replace(new RegExp("^[\\s\\u3000]*"+escRe(mk)+"[\\s\\u3000]*","i")," ");
+                nm=t.replace(/[\s\u3000]{2,}/g," ").trim();
+              }
+              if(mk) o.maker=mk;
+              if(md) o.model=md;
+              o.name=nm;
+            }
+            if(o.genre===""||o.genre==null){ if(hg!=="") o.genre=hg; }
+          }
+        }
+      }
+    }catch(e){}
     // タブ再利用で届くため「新しい商品」として全入れ替え（前の商品の取り残し防止）。
     $("maker").value=o.maker||"";
     $("pname").value=o.name||"";
@@ -5585,6 +5630,8 @@ async function modelSearch(){ const q=($("model").value||"").trim()||($("pname")
 function doPrint(){ if($("autoDate").checked){setToday();} $("notes").value.split("\n").map(s=>s.trim()).filter(Boolean).reverse().forEach(histAdd);
   // 自動検索で使った語＋採用した結果を学習（次回同じ語で即入力）
   try{ var q=($("janCode").value||"").trim(); if(q) learnSave(q,$("maker").value,$("pname").value,$("model").value,$("genre").value); }catch(e){}
+  try{ var inm=(window.__inName||"").trim();
+    if(inm){ learnSave(inm,$("maker").value,$("pname").value,$("model").value,$("genre").value); window.__inName=""; } }catch(e){}
   draw(); const n=Math.max(1,Math.min(50,parseInt($("copies")&&$("copies").value,10)||1)); const ip=$("printerIp").value.trim();
   const acc=($("accOn")&&$("accOn").checked);
   if(!acc){ if(ip) eposPrint(n); else browserPrint(); histPrintAdd(n,null); return; }
@@ -5789,6 +5836,7 @@ function setupClears(){ ["priceEx","model","maker","pname","serial"].forEach(add
 function resetCond(){ $("notes").value=""; autoGrowNotes(); draw(); $("notes").focus(); }
 function resetAll(){
   if(!confirm("入力内容を全てリセットしますか？（履歴・設定は残ります）")) return;
+  window.__inName="";
   ["priceEx","model","maker","pname","serial","notes"].forEach(id=>{$(id).value="";});
   if($("kubun").options.length)$("kubun").selectedIndex=0;
   if([...$("genre").options].some(o=>o.value==="15"))$("genre").value="15"; else if($("genre").options.length)$("genre").selectedIndex=0;
