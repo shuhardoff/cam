@@ -83,6 +83,13 @@
   #accPanel .apttl{font-size:12px;font-weight:800;margin-bottom:8px}
   .accpv{display:flex;gap:8px;margin-top:8px;align-items:flex-start}
   .accpv canvas{width:48%;height:auto;background:#fff;border:1px solid var(--line);border-radius:8px}
+  .histrow{display:flex;gap:10px;align-items:center;padding:9px 10px;border:1.5px solid var(--line);border-radius:10px;margin-bottom:7px;cursor:pointer;font-size:13px}
+  .histrow:hover{border-color:var(--a1);background:rgba(0,0,0,.02)}
+  .histrow .hr-t{color:var(--sub);font-size:11.5px;white-space:nowrap;font-weight:700}
+  .histrow .hr-p{font-weight:900;white-space:nowrap;min-width:64px}
+  .histrow .hr-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+  .histrow .hr-a{color:var(--sub);font-size:11.5px;white-space:nowrap}
+  .histrow .hr-b{background:#1c2340;color:#fff;border-radius:5px;font-size:10.5px;padding:1px 6px;font-weight:800}
   .kbdcap{cursor:pointer;text-align:center;font-weight:800;letter-spacing:.5px}
   .kbdcap:focus{border-color:var(--a1);box-shadow:0 0 0 3px rgba(0,0,0,.06)}
   .seg-tools{display:flex;gap:8px;margin-bottom:8px;align-items:center}
@@ -395,6 +402,8 @@
         <input id="copies" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="1" autocomplete="off">
       </div>
       <label class="acctgl" title="値札＋付属品ラベル（QRなし）＋裏ラベル（保管場所）の3枚を印刷（F4で切替）"><input type="checkbox" id="accOn"> 付属品</label>
+      <button class="acctgl" id="accSoloBtn" type="button" title="値札なしで、付属品ラベル＋裏ラベル（保管場所・管理番号）だけを印刷する画面を開く">📎 付属品のみ</button>
+      <button class="acctgl" id="histBtn" type="button" title="印刷履歴：クリックで内容を呼び出して再印刷。前回の値付けも価格欄の下に自動表示">📜 履歴</button>
       <button class="resetbtn" id="resetAllBtn" title="ショートカット：F8">全てリセット</button>
       <span class="badge brandbadge" id="storeBadge">HARD-OFF</span>
       <button class="gear" id="settingsBtn">⚙ 設定</button>
@@ -556,6 +565,44 @@
   </div>
 </div>
 
+<!-- 印刷履歴（呼び出し・再印刷） -->
+<div class="modal-bg" id="histModal">
+  <div class="modal" style="max-width:680px">
+    <div class="mhead">
+      <div><h3>📜 印刷履歴</h3><div class="mhint">クリックすると内容が呼び出されます（修正して印刷＝再印刷）。履歴は店内のPCどうしで共有されます（プロキシURL設定時）。</div></div>
+      <button class="xbtn" id="histClose" aria-label="閉じる">×</button>
+    </div>
+    <div style="padding:14px 22px 20px">
+      <input id="histFilter" placeholder="絞り込み（品名・型番・メーカー・保管場所）" autocomplete="off" style="margin-bottom:10px">
+      <div id="histList2" style="max-height:56vh;overflow:auto"></div>
+    </div>
+  </div>
+</div>
+<!-- 付属品ラベル単独印刷（値札は別システムで印刷している商品用） -->
+<div class="modal-bg" id="accSoloModal">
+  <div class="modal" style="max-width:560px">
+    <div class="mhead">
+      <div><h3>📎 付属品ラベルのみ印刷</h3><div class="mhint">値札なしで「付属品ラベル」＋「裏ラベル（保管場所・管理番号）」だけを印刷します。番号・学習は通常の付属品機能と共通です。</div></div>
+      <button class="xbtn" id="accSoloClose" aria-label="閉じる">×</button>
+    </div>
+    <div style="padding:18px 22px">
+      <div class="g2">
+        <div class="f"><label>品名（任意・ラベルに印字＆学習に使用）</label><input id="accSoloName" autocomplete="off" placeholder="例：スーパーファミコン"></div>
+        <div class="f"><label>型番（任意）</label><input id="accSoloModel" autocomplete="off" placeholder="例：SHVC-001"></div>
+      </div>
+      <div class="g2" style="margin-top:10px">
+        <div class="f"><label>保管場所名</label><input id="accSoloPlace" list="accPlaceList" autocomplete="off" placeholder="例：ジャンクカメラ関連品"></div>
+        <div class="f"><label>管理番号（保管場所ごとに自動連番）</label><input id="accSoloNo" inputmode="numeric" maxlength="5" autocomplete="off"></div>
+      </div>
+      <div class="accpv" style="margin-top:12px"><canvas id="accSoloCv1"></canvas><canvas id="accSoloCv2"></canvas></div>
+      <div class="hint" style="margin-top:8px">印刷すると番号が進み、保管場所名を品名から学習します（99999の次は00001）。Enterでも印刷できます。</div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
+        <button class="ghostbtn" id="accSoloCancel">閉じる</button>
+        <button class="printbtn" id="accSoloPrint" style="padding:12px 26px">この2枚を印刷</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="settingsModal">
   <div class="modal">
     <div class="mhead">
@@ -614,7 +661,7 @@
       </div>
       <div style="grid-column:1/-1">
         <div class="seclbl">付属品ラベル・保管場所</div>
-        <div class="hint" style="margin-bottom:6px">保管場所名を登録すると入力時に候補として出ます。<b>番号グループ</b>に同じ言葉を入れた保管場所どうしは<b>5桁の管理番号を共有</b>します（例：工具-1／工具-2／工具-3 のグループを全部「工具」にすると通し番号＝渡し間違い防止）。空欄なら場所ごとに独立の連番。学習・連番はこのPC内だけで完結し、APIは消費しません。</div>
+        <div class="hint" style="margin-bottom:6px">保管場所名を登録すると入力時に候補として出ます。<b>番号グループ</b>に同じ言葉を入れた保管場所どうしは<b>5桁の管理番号を共有</b>します（例：工具-1／工具-2／工具-3 のグループを全部「工具」にすると通し番号＝渡し間違い防止）。空欄なら場所ごとに独立の連番。学習はこのPC内で完結し、APIは消費しません。<b>管理番号は、⚙設定のプロキシURL（GAS v6.43以降）を設定したPCどうしで店内共有</b>され、複数PCでも重複しません（未設定PCはこのPC内の連番）。</div>
         <div id="accPlaceEditor"></div>
         <div class="addrow"><input id="addAccPlace" placeholder="保管場所名を追加（例：工具-1）"><input id="addAccGroup" placeholder="番号グループ（任意）" style="max-width:150px"><button class="ghostbtn" id="addAccPlaceBtn">追加</button></div>
 
@@ -625,7 +672,11 @@
           <div class="f"><label>付属品ラベル ON/OFF</label><input id="kbdAcc" class="kbdcap" readonly placeholder="クリックしてキーを押す"></div>
           <div class="f"><label>全てリセット</label><input id="kbdReset" class="kbdcap" readonly placeholder="クリックしてキーを押す"></div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:4px;flex-wrap:wrap"><button class="ghostbtn" id="kbdDefault">既定（F2／Ctrl+F／Ctrl+Delete）に戻す</button><span class="hint" id="kbdMsg" style="margin:0"></span></div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px;flex-wrap:wrap"><button class="ghostbtn" id="kbdDefault">既定（Ctrl+P／Ctrl+F／Ctrl+Delete）に戻す</button><span class="hint" id="kbdMsg" style="margin:0"></span></div>
+
+        <div class="seclbl">自動バックアップ</div>
+        <div class="hint" style="margin-bottom:6px">1日1回、学習・履歴・設定をこのPCの中に自動保存します（直近2日分）。動きがおかしくなった時はここから戻せます。学習・履歴はGAS経由でも店内共有されているため、PC入れ替え時はプロキシURLを設定すれば自動で復元されます。</div>
+        <div id="bakList"></div>
 
         <div class="seclbl">設定の保存・別PCへの移行</div>
         <div class="hint" style="margin-bottom:8px">カスタムした区分・ジャンル、コメント履歴、店名、プリンターIP、サイズ設定などをファイルに保存できます。別のPCでは、このHTMLを開いて読み込むだけで同じ設定に揃います。</div>
@@ -3377,8 +3428,8 @@ const OFFHOUSE_GENRES=[
  [1,1,"家具"],[2,2,"家電"],[32,3,"インテリア"],[4,4,"子供服"],[5,5,"バッグ"],
  [25,6,"アクセサリー"],[7,7,"器類"],[8,8,"繊維類"],[30,11,"スポーツ・アウトドア"],[12,12,"釣具"],
  [14,14,"自転車"],[24,15,"腕時計H"],[17,17,"ベビー用品"],[18,18,"その他雑貨"],[19,19,"婦人服"],
- [20,20,"和服"],[21,21,"靴"],[22,22,"メンズ"],[3,24,"健康器具"],[34,26,"J家具"],
- [35,27,"J家電"],[23,29,"高級バッグ"],[6,30,"貴金属"],[36,53,"フィギュア"],[37,57,"スケール"],
+ [20,20,"和服"],[21,21,"靴"],[22,22,"メンズ"],[3,24,"健康器具"],[34,26,"ジャンク(家具)"],
+ [35,27,"ジャンク(家電)"],[23,29,"バッグH"],[6,30,"貴金属"],[36,53,"フィギュア"],[37,57,"スケール"],
  [38,59,"プラモデル"],[39,60,"モデルガン"],[40,61,"おもちゃ"],[41,70,"ホビー雑貨"],[42,71,"ぬいぐるみ"]
 ];
 /* 現在の店舗ブランド（設定モーダル未オープンでも localStorage の cfg から判定） */
@@ -3395,7 +3446,13 @@ const store={get(k,d){try{const v=localStorage.getItem("hf3_"+k);return v===null
 
 /* NONPLU code */
 function checkDigit(p12){ let w=2,s=0; for(let i=0;i<p12.length;i++){ s+=(+p12[i])*w; w=w>=7?2:w+1; } return String((s%11)%10); }
-function nonpluCode(){ const reji=parseInt($("genre").value,10)||0; const ex=num($("priceEx").value)||0; const p12="01"+String(reji).padStart(3,"0")+String(ex).padStart(7,"0"); return p12+checkDigit(p12); }
+function nonpluCode(){ const reji=parseInt($("genre").value,10)||0; const ex=num($("priceEx").value)||0;
+  if(isOffHouse()){
+    // OFF HOUSE のPOSレジ実測ルール（2026-07 実証実験で確認）：
+    // 「30」＋レジ番号2桁＋税抜価格7桁＋末尾「9」固定＝12桁（チェックデジット無し）
+    return "30"+String(reji).padStart(2,"0")+String(ex).padStart(7,"0")+"9";
+  }
+  const p12="01"+String(reji).padStart(3,"0")+String(ex).padStart(7,"0"); return p12+checkDigit(p12); }
 
 function num(v){const n=parseInt(String(v).replace(/[^\d]/g,""),10);return isNaN(n)?null:n;}
 function comma(n){return n==null?"":n.toLocaleString("ja-JP");}
@@ -3485,9 +3542,10 @@ function learnGet(){ return store.get("learnedItems",{}); }
 function learnSave(q, brand, name, model, genre){
   q=normQuery(q); if(!q||q.length<2) return;
   if(!brand && !name && !model) return;
-  var m=learnGet(); m[q]={brand:brand||"",name:name||"",model:model||"",genre:(genre==null?"":String(genre)),n:((m[q]&&m[q].n)||0)+1};
+  var m=learnGet(); m[q]={brand:brand||"",name:name||"",model:model||"",genre:(genre==null?"":String(genre)),n:((m[q]&&m[q].n)||0)+1,t:Date.now()};
   var keys=Object.keys(m); if(keys.length>800){ delete m[keys[0]]; }
   store.set("learnedItems",m);
+  try{shareSoon();}catch(e){}
 }
 function learnLookup(q){ var e=learnGet()[normQuery(q)]; return (e&&(e.brand||e.name||e.model))?{brand:e.brand,name:e.name,model:e.model,genre:(e.genre||"")}:null; }
 
@@ -4088,12 +4146,12 @@ function accCounters(){return store.get("accCounters",{});}
 /* 保管場所マスタ：[{name,group}]。group が同じ場所どうしは5桁番号を共有（例：工具-1/2/3→「工具」）。
    学習・連番はすべてこのPC内（localStorage）で完結し、APIは一切消費しない。 */
 function accPlacesCfg(){return store.get("accPlacesCfg",[]);}
-function accSavePlacesCfg(a){store.set("accPlacesCfg",a);}
+function accSavePlacesCfg(a){store.set("accPlacesCfg",a); try{shareSoon();}catch(e){}}
 function accGroupOf(place){ place=(place||"").trim(); if(!place) return "";
   const e=accPlacesCfg().find(x=>x&&x.name===place);
   return (e&&e.group&&String(e.group).trim())?String(e.group).trim():place; }
 function accRegisterPlace(place){ place=(place||"").trim(); if(!place) return;
-  const a=accPlacesCfg(); if(!a.some(x=>x&&x.name===place)){ a.push({name:place,group:""}); accSavePlacesCfg(a); } }
+  const a=accPlacesCfg(); if(!a.some(x=>x&&x.name===place)){ a.push({name:place,group:"",t:Date.now()}); accSavePlacesCfg(a); } }
 function accNextNo(place){ const c=accCounters(); const k=accGroupOf(place);
   let last=parseInt(c[k],10);
   if(isNaN(last)){
@@ -4102,6 +4160,36 @@ function accNextNo(place){ const c=accCounters(); const k=accGroupOf(place);
     accPlacesCfg().forEach(e=>{ if(e&&e.name&&accGroupOf(e.name)===k){ const v=parseInt(c[e.name],10)||0; if(v>last) last=v; } });
   }
   return last>=99999?1:last+1; }
+/* ===== 店内共有カウンタ（GAS v6.43以降・プロキシURL設定時のみ） =====
+   印刷時にGASから次番号を採番するため、同じ店の複数PCでも番号が重複しない。
+   GASに届かない時はこのPCのローカル番号で印刷し、警告を表示する。 */
+function accSeedOf(place){ const c=accCounters(); const k=accGroupOf(place);
+  let last=parseInt(c[k],10); if(isNaN(last)) last=parseInt(c[place],10)||0; return last; }
+function accSharedNo(place,mode){
+  return new Promise(res=>{
+    try{
+      const url=proxyURL(); const g=accGroupOf((place||"").trim());
+      if(!url||!g){ res(null); return; }
+      const ctl=(typeof AbortController!=="undefined")?new AbortController():null;
+      const t=setTimeout(()=>{ try{ctl&&ctl.abort();}catch(e){} res(null); },1800);
+      fetch(url+(url.indexOf("?")>=0?"&":"?")+"acc="+encodeURIComponent(mode)+"&g="+encodeURIComponent(g)+"&seed="+accSeedOf(place),{signal:ctl?ctl.signal:undefined})
+        .then(r=>r.json()).then(j=>{ clearTimeout(t); res((j&&j.ok&&j.no)?j:null); })
+        .catch(()=>{ clearTimeout(t); res(null); });
+    }catch(e){ res(null); }
+  });
+}
+function accPeekShared(pl,noEl,after){
+  if(!pl||!noEl) return;
+  const place=(pl.value||"").trim(); if(!place) return;
+  const tk=String(Date.now()); noEl.dataset.tk=tk;
+  accSharedNo(place,"peek").then(j=>{
+    if(!j||noEl.dataset.tk!==tk) return;
+    if(noEl.dataset.nman==="1") return;              // 手入力は上書きしない
+    if(document.activeElement===noEl) return;
+    noEl.value=String(j.no).padStart(5,"0");
+    if(after) after();
+  });
+}
 function accGetLearn(){return store.get("accLearn",{});}
 function accPlaces(){return store.get("accPlaces",[]);}
 function accNorm(t){ t=String(t||""); try{t=t.normalize("NFKC");}catch(e){} return t.toLowerCase(); }
@@ -4122,7 +4210,7 @@ function accRuleName(){
 /* 学習は4種類のキーを重み付きで合算（具体的なものほど強い）：
    kw|区分|語 ×4 ＞ kg|区分|ジャンル ×3 ＞ w|語 ×2 ＞ g|ジャンル ×1。同点は新しい方 */
 function accPlaceSuggest(){
-  const L=accGetLearn(); const ku=(($("kubun")&&$("kubun").value)||""); const g=String(($("genre")&&$("genre").value)||"");
+  const L=accGetLearn(); const ku=(($("kubun")&&$("kubun").value)||""); const g=(isOffHouse()?"OH":"")+String(($("genre")&&$("genre").value)||"");
   const score={}, ts={};
   function add(k,w){ const e=L[k]; if(e&&e.place){ score[e.place]=(score[e.place]||0)+w*(e.n||1); if(!ts[e.place]||((e.t||0)>ts[e.place])) ts[e.place]=e.t||0; } }
   accTokens().forEach(t=>{ add("kw|"+ku+"|"+t,4); add("w|"+t,2); });
@@ -4136,7 +4224,7 @@ function accCommit(place,no){
   if(!place) return;
   accRegisterPlace(place); // 使った保管場所は自動でマスタ登録（設定で番号グループを付けられる）
   const c=accCounters(); c[accGroupOf(place)]=no; store.set("accCounters",c);
-  const L=accGetLearn(); const ku=(($("kubun")&&$("kubun").value)||""); const g=String(($("genre")&&$("genre").value)||"");
+  const L=accGetLearn(); const ku=(($("kubun")&&$("kubun").value)||""); const g=(isOffHouse()?"OH":"")+String(($("genre")&&$("genre").value)||"");
   const now=Date.now();
   function bump(k){ const e=L[k]; if(e&&e.place===place){ e.n=(e.n||0)+1; e.t=now; } else L[k]={place:place,n:1,t:now}; }
   bump("kg|"+ku+"|"+g); bump("g|"+g);
@@ -4145,10 +4233,11 @@ function accCommit(place,no){
   store.set("accLearn",L);
   let pl=accPlaces().filter(x=>x!==place); pl.unshift(place); if(pl.length>40)pl=pl.slice(0,40); store.set("accPlaces",pl);
   if($("accPlace")) $("accPlace").dataset.man="";
+  try{shareSoon();}catch(e){}
   accRefresh(true);
 }
 /* 付属品ラベル・裏ラベルの描画（値札と同じ幅・解像度。QR/バーコードは載せない） */
-function accCanvas(kind,place,no5){
+function accCanvas(kind,place,no5,ov){
   const Wmm=parseFloat($("setW").value)||38;
   DPMM=(parseInt($("setDpi").value,10)||203)/25.4;
   FS=parseFloat($("setFs").value)||1;
@@ -4157,7 +4246,9 @@ function accCanvas(kind,place,no5){
   const g2=c.getContext("2d");
   g2.fillStyle="#fff"; g2.fillRect(0,0,c.width,c.height);
   const mx=Math.round(mm(2.2)), cw=W8-2*mx;
-  const {slash}=dateParts(); const p=placeholders();
+  const {slash}=dateParts();
+  // ov指定時（付属品のみモード）＝フォームを使わず、渡された品名・型番だけで描く
+  const p=ov?{model:ov.model||"",pname:ov.pname||"",maker:ov.maker||"",priceEx:"",priceIn:""}:placeholders();
   let y=Math.round(mm(1.2));
   function txt(t,font,x,yy){ g2.font=font; g2.textBaseline="top"; g2.fillStyle="#000"; g2.fillText(t,x,yy); }
   function center(t,font,yy){ g2.font=font; const w=g2.measureText(t).width; txt(t,font,Math.max(mx,(W8-w)/2),yy); }
@@ -4196,7 +4287,7 @@ function accCanvas(kind,place,no5){
       const lines=(g2.measureText(v).width<=valW)?[v]:wrap2(v,jpFont(vp,"900"),valW).slice(0,2);
       lines.forEach((ln,li)=>{ if(li===0) txt(k,jpFont(fpx,"900"),mx,y); txt(ln,jpFont(vp,"900"),mx+keyw,y); y+=Math.round(mm(2.9)*FS); });
     });
-    const g=$("genre").selectedOptions[0];
+    const g=ov?null:$("genre").selectedOptions[0];
     if(g){ hline(y); y+=Math.round(mm(0.9));
       txt(`${$("genre").value}　${g.dataset.name}`,jpFont(mm(2.2)*FS,"600"),mx,y); y+=Math.round(mm(2.9)*FS); }
     if(p.priceEx!==""){ txt(`本体 ¥${comma(p.priceIn)}（税込）`,jpFont(mm(2.0)*FS,"700"),mx,y); y+=Math.round(mm(2.9)*FS); }
@@ -4211,6 +4302,8 @@ function accCanvas(kind,place,no5){
     band("レジ打ち不可・値札は本体",mm(2.2)*FS,Math.round(mm(4.2)*FS));
     y+=Math.round(mm(1.0));
     if($("secBrand").checked){ center($("setStore").value,monoFont(mm(2.5)*FS,"bold"),y); y+=Math.round(mm(3.0)*FS); }
+    { const st="— 付属品側 —"; const sp=mm(1.8)*FS; g2.font=jpFont(sp,"700");
+      const stw=g2.measureText(st).width; txt(st,jpFont(sp,"700"),W8-mx-stw,y); y+=Math.round(sp*1.4); }
   }else{
     // 裏ラベル（値札の裏に貼る：付属品の保管場所＋番号）
     band("付属品 保管場所",mm(2.4)*FS,Math.round(mm(4.2)*FS));
@@ -4222,6 +4315,8 @@ function accCanvas(kind,place,no5){
     if(p.pname){ const s=String(p.pname).replace(/\n+/g," ");
       const sp=fitPx(s,mm(2.0)*FS,"700",cw); center(wrap2(s,jpFont(sp,"700"),cw)[0],jpFont(sp,"700"),y); y+=Math.round(mm(2.8)*FS); }
     center(slash,monoFont(mm(1.9)*FS,"700"),y); y+=Math.round(mm(2.6)*FS);
+    { const st="— 値札側 —"; const sp=mm(1.8)*FS; g2.font=jpFont(sp,"700");
+      const stw=g2.measureText(st).width; txt(st,jpFont(sp,"700"),W8-mx-stw,y); y+=Math.round(sp*1.4); }
   }
   const H=Math.min(c.height,y+Math.round(mm(1.2)));
   const out=document.createElement("canvas"); out.width=W8; out.height=H;
@@ -4259,7 +4354,9 @@ var _accPvT=null;
 function accFillDatalist(){ const dl=$("accPlaceList"); if(!dl)return; dl.innerHTML="";
   const seen={}; const push=p=>{ p=(p||"").trim(); if(!p||seen[p])return; seen[p]=1; const o=document.createElement("option"); o.value=p; dl.appendChild(o); };
   accPlacesCfg().forEach(e=>push(e&&e.name)); accPlaces().forEach(push); }
-function accSyncNo(){ const pl=$("accPlace"), noEl=$("accNo"); if(!pl||!noEl)return; noEl.value=String(accNextNo(pl.value.trim())).padStart(5,"0"); }
+function accSyncNo(){ const pl=$("accPlace"), noEl=$("accNo"); if(!pl||!noEl)return;
+  noEl.value=String(accNextNo(pl.value.trim())).padStart(5,"0"); noEl.dataset.nman="";
+  accPeekShared(pl,noEl,accPreviewSoon); }
 function accPreviewSoon(){ clearTimeout(_accPvT); _accPvT=setTimeout(accPreview,250); }
 function accPreview(){
   if(!($("accOn")&&$("accOn").checked)) return;
@@ -4281,12 +4378,12 @@ function accInit(){
   const on=$("accOn"); if(!on) return;
   on.addEventListener("change",()=>accRefresh(true));
   const pl=$("accPlace"); if(pl) pl.addEventListener("input",()=>{ pl.dataset.man="1"; accSyncNo(); accPreviewSoon(); });
-  const noEl=$("accNo"); if(noEl) noEl.addEventListener("input",accPreviewSoon);
+  const noEl=$("accNo"); if(noEl) noEl.addEventListener("input",()=>{ noEl.dataset.nman="1"; accPreviewSoon(); });
   ["genre","kubun"].forEach(id=>{ const el=$(id); if(el) el.addEventListener("change",()=>accRefresh(false)); });
-  ["pname","model"].forEach(id=>{ const el=$(id); if(el) el.addEventListener("input",()=>{ accRefresh(false); clearTimeout(window._rhT); window._rhT=setTimeout(renderHistory,400); }); });
+  ["pname","model"].forEach(id=>{ const el=$(id); if(el) el.addEventListener("input",()=>{ accRefresh(false); clearTimeout(window._rhT); window._rhT=setTimeout(function(){ renderHistory(); try{renderPrevPrice();}catch(e){} },400); }); });
   const ab=$("addAccPlaceBtn");
   if(ab) ab.onclick=()=>{ const n=($("addAccPlace").value||"").trim(); const g=($("addAccGroup").value||"").trim(); if(!n) return;
-    const a=accPlacesCfg(); const ex=a.find(x=>x&&x.name===n); if(ex){ ex.group=g; } else a.push({name:n,group:g});
+    const a=accPlacesCfg(); const ex=a.find(x=>x&&x.name===n); if(ex){ ex.group=g; ex.t=Date.now(); } else a.push({name:n,group:g,t:Date.now()});
     accSavePlacesCfg(a); $("addAccPlace").value=""; $("addAccGroup").value=""; renderAccPlaceEditor(); accFillDatalist(); };
 }
 /* 設定内の保管場所エディタ（名前・番号グループ・次番号・削除） */
@@ -4303,7 +4400,7 @@ function renderAccPlaceEditor(){
     cur.textContent="次 "+String(accNextNo(e.name||"")).padStart(5,"0");
     cur.style.cssText="font-size:11px;color:var(--sub);white-space:nowrap;flex:0 0 auto";
     const d=document.createElement("button"); d.type="button"; d.className="ghostbtn"; d.textContent="×"; d.title="この保管場所を削除（学習・番号は残ります）"; d.style.cssText="flex:0 0 auto;padding:8px 12px";
-    const save=()=>{ const a=accPlacesCfg(); a[i]={name:n.value.trim(),group:g.value.trim()}; accSavePlacesCfg(a); renderAccPlaceEditor(); accFillDatalist(); };
+    const save=()=>{ const a=accPlacesCfg(); a[i]={name:n.value.trim(),group:g.value.trim(),t:Date.now()}; accSavePlacesCfg(a); renderAccPlaceEditor(); accFillDatalist(); };
     n.onchange=save; g.onchange=save;
     d.onclick=()=>{ const a=accPlacesCfg(); a.splice(i,1); accSavePlacesCfg(a); renderAccPlaceEditor(); accFillDatalist(); };
     row.appendChild(n); row.appendChild(g); row.appendChild(cur); row.appendChild(d); box.appendChild(row);
@@ -4351,16 +4448,176 @@ function renderSpecChip(){
   if(pending) chip.textContent="＋ サイズ・重量をコメントへ（"+sp.split("\n")[0].replace(/^サイズ：/,"")+"）";
 }
 
+/* ===== 学習・履歴の店内共有（GAS v6.44・プロキシURL設定時のみ） =====
+   起動2.5秒後と、学習・印刷のたび（15秒デバウンス）にGASへ送信→マージ結果を受け取って反映。
+   マージは「回数は大きい方・訂正は新しい方」なので何度送っても二重計上されない。オフラインでも通常動作。 */
+var _shareT=null,_shareBusy=false;
+function shareCollect(){
+  return {
+    histByGenre:store.get("histByGenre",{}), histByName:store.get("histByName",{}),
+    accLearn:accGetLearn(), accPlacesCfg:accPlacesCfg(), accPlaces:accPlaces(),
+    histLines:histGet(), learnedItems:store.get("learnedItems",{}), printHist:store.get("printHist",[])
+  };
+}
+function shareApply(d){
+  if(!d) return;
+  ["histByGenre","histByName","accLearn","accPlacesCfg","accPlaces","histLines","learnedItems","printHist"]
+    .forEach(k=>{ if(d[k]!==undefined) store.set(k,d[k]); });
+  try{ renderHistory(); accFillDatalist(); renderPrevPrice(); }catch(e){}
+}
+async function shareSync(){
+  const url=proxyURL(); if(!url||_shareBusy) return;
+  _shareBusy=true;
+  try{
+    const r=await fetch(url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({action:"share",data:shareCollect()})});
+    const j=await r.json();
+    if(j&&j.ok&&j.data) shareApply(j.data);
+  }catch(e){}
+  _shareBusy=false;
+}
+function shareSoon(){ clearTimeout(_shareT); _shareT=setTimeout(function(){try{shareSync();}catch(e){}},15000); }
+
+/* ===== 印刷履歴（呼び出し・再印刷・前回値付け。店内共有） ===== */
+function histPrintAdd(copies,acc){
+  try{
+    const g=$("genre").selectedOptions[0];
+    const rec={t:Date.now(),brand:currentBrand(),pname:$("pname").value.trim(),model:$("model").value.trim(),
+      maker:$("maker").value.trim(),serial:($("serial")&&$("serial").value.trim())||"",
+      genre:$("genre").value,genreName:g?String(g.dataset.name||""):"",
+      kubun:$("kubun").value,priceEx:String(num($("priceEx").value)||""),notes:$("notes").value,
+      jan:($("janCode")&&$("janCode").value.trim())||"",copies:copies||1,acc:acc||null};
+    if(!rec.pname&&!rec.model&&!rec.priceEx) return;
+    let h=store.get("printHist",[]); h.unshift(rec); if(h.length>400)h=h.slice(0,400); store.set("printHist",h);
+    try{shareSoon();}catch(e){}
+    renderPrevPrice();
+  }catch(e){}
+}
+function fmtYMD(t){ const d=new Date(t||0);
+  return String(d.getFullYear()%100).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0"); }
+function fmtYMDHM(t){ const d=new Date(t||0);
+  return fmtYMD(t)+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+/* ② 前回値付け：型番が完全一致した時だけ、控えめに1行表示（サブ機能。品名だけでは出さない） */
+function prevNormModel(v){ let t=accNorm(v||""); return t.replace(/[\s\u3000\-]/g,""); } // 空白とハイフンの揺れだけ吸収
+function renderPrevPrice(){
+  const pf=$("priceEx"); if(!pf||!pf.parentElement) return;
+  let box=document.getElementById("prevPrice");
+  if(!box){ box=document.createElement("div"); box.id="prevPrice";
+    box.style.cssText="margin-top:3px;display:flex;gap:5px;flex-wrap:nowrap;align-items:center;overflow:hidden;white-space:nowrap;max-height:22px"; pf.parentElement.appendChild(box); }
+  box.innerHTML="";
+  const md=prevNormModel(($("model")&&$("model").value)||"");
+  if(md.length<3) return;                             // 型番が入っている時だけ
+  const H=store.get("printHist",[]); const hits=[]; const seen={};
+  for(const r of H){
+    if(!r||!r.priceEx||!r.model) continue;
+    if(prevNormModel(r.model)!==md) continue;         // 型番の完全一致のみ
+    const key=r.priceEx+"|"+fmtYMD(r.t);
+    if(seen[key]) continue; seen[key]=1;
+    hits.push(r); if(hits.length>=2) break;
+  }
+  if(!hits.length) return;
+  const lab=document.createElement("span"); lab.textContent="前回:";
+  lab.style.cssText="font-size:10.5px;color:var(--sub);font-weight:800;flex:0 0 auto"; box.appendChild(lab);
+  hits.forEach(r=>{ const b=document.createElement("button"); b.type="button"; b.className="chip";
+    b.style.cssText="font-size:11px;padding:2px 8px;border-radius:8px;line-height:1.5;flex:0 0 auto";
+    b.textContent="¥"+comma(parseInt(r.priceEx,10)||0)+"（"+fmtYMD(r.t)+"）";
+    b.title="同じ型番 "+(r.model||"")+" の前回値付け："+(r.pname||"")+"／"+(r.kubun||"")+"　クリックで税抜価格に入力";
+    b.onclick=()=>{ pf.value=r.priceEx; pf.dispatchEvent(new Event("input",{bubbles:true})); };
+    box.appendChild(b); });
+}
+/* ① 履歴モーダル：クリックで全項目を呼び出し */
+function histPrintRestore(r){
+  const set=(id,v)=>{const el=$(id); if(el) el.value=(v==null?"":v);};
+  set("pname",r.pname); set("model",r.model); set("maker",r.maker); set("serial",r.serial||"");
+  set("priceEx",r.priceEx); set("notes",r.notes||""); if($("janCode"))$("janCode").value=r.jan||"";
+  if(r.kubun){ const k=$("kubun"); if(k&&[...k.options].some(o=>o.value===r.kubun)) k.value=r.kubun; }
+  if(r.genre!=null&&r.genre!==""&&r.brand===currentBrand()){ const gs=$("genre"); const gv=String(r.genre);
+    if(gs){ if(![...gs.options].some(o=>o.value===gv)){ const row=allGenres().find(g=>String(g[0])===gv);
+        const op=document.createElement("option"); op.value=gv; op.dataset.name=row?row[2]:""; op.textContent=gv+"　"+(row?row[2]:""); gs.appendChild(op); }
+      gs.value=gv; } }
+  try{autoGrowPname();}catch(e){} try{autoGrowNotes();}catch(e){}
+  try{renderHistory();}catch(e){} try{accRefresh(false);}catch(e){} try{renderPrevPrice();}catch(e){}
+  draw();
+}
+function renderHistModal(){
+  const box=$("histList2"); if(!box) return; box.innerHTML="";
+  const q=accNorm(($("histFilter")&&$("histFilter").value)||"").trim();
+  const H=store.get("printHist",[]);
+  let n=0;
+  for(const r of H){
+    if(!r) continue;
+    const hay=accNorm([r.pname,r.model,r.maker,(r.acc&&r.acc.place)||"",r.genreName].join(" "));
+    if(q&&hay.indexOf(q)<0) continue;
+    const row=document.createElement("div"); row.className="histrow";
+    const price=r.priceEx?("¥"+comma(parseInt(r.priceEx,10)||0)):"—";
+    row.innerHTML='<span class="hr-t">'+fmtYMDHM(r.t)+'</span><span class="hr-p">'+price+'</span>'+
+      '<span class="hr-n"></span>'+(r.acc?('<span class="hr-a">📎'+(r.acc.place||"")+" "+(r.acc.no||"")+'</span>'):"")+
+      (r.brand==="OFF-HOUSE"?'<span class="hr-b">OH</span>':"");
+    row.querySelector(".hr-n").textContent=(r.kubun?r.kubun+"　":"")+(r.pname||"")+"　"+(r.model||"");
+    row.onclick=()=>{ histPrintRestore(r); $("histModal").classList.remove("open"); };
+    box.appendChild(row);
+    if(++n>=200) break;
+  }
+  if(!n) box.innerHTML='<div class="hint">履歴がありません（印刷すると自動で記録されます）。</div>';
+}
+function histUiInit(){
+  const b=$("histBtn"); if(!b) return;
+  b.onclick=()=>{ $("histModal").classList.add("open"); const f=$("histFilter"); if(f){f.value="";} renderHistModal(); if(f) f.focus(); };
+  $("histClose").onclick=()=>$("histModal").classList.remove("open");
+  const f=$("histFilter"); if(f) f.addEventListener("input",()=>{ clearTimeout(window._hmT); window._hmT=setTimeout(renderHistModal,200); });
+}
+
+/* ===== 自動バックアップ（1日1回・直近2日分をこのPC内に保存） ===== */
+function backupNow(){
+  try{
+    const all={};
+    Object.keys(localStorage).forEach(k=>{ if(k.indexOf("hf3_")===0&&k.indexOf("hf3_bak_")!==0) all[k]=localStorage.getItem(k); });
+    const d=new Date(); const key="hf3_bak_"+d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");
+    localStorage.setItem(key,JSON.stringify(all));
+    const baks=Object.keys(localStorage).filter(k=>k.indexOf("hf3_bak_")===0).sort();
+    while(baks.length>2){ localStorage.removeItem(baks.shift()); }
+  }catch(e){}
+}
+function backupInit(){
+  try{
+    const d=new Date(); const key="hf3_bak_"+d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");
+    if(!localStorage.getItem(key)) backupNow();
+  }catch(e){}
+}
+function renderBakList(){
+  const box=$("bakList"); if(!box) return; box.innerHTML="";
+  const baks=Object.keys(localStorage).filter(k=>k.indexOf("hf3_bak_")===0).sort().reverse();
+  if(!baks.length){ box.innerHTML='<div class="hint">まだバックアップがありません（明日から自動で作られます）。</div>'; return; }
+  baks.forEach(k=>{
+    const d=k.slice(8);
+    const row=document.createElement("div"); row.style.cssText="display:flex;gap:10px;align-items:center;margin-bottom:6px";
+    const t=document.createElement("span"); t.textContent=d.slice(0,4)+"/"+d.slice(4,6)+"/"+d.slice(6,8)+" のバックアップ";
+    t.style.cssText="font-size:13px;font-weight:700";
+    const btn=document.createElement("button"); btn.type="button"; btn.className="ghostbtn"; btn.textContent="この状態に復元";
+    btn.onclick=()=>{
+      if(!confirm("学習・履歴・設定を "+t.textContent+" に戻します。よろしいですか？（現在の状態は上書きされます）")) return;
+      try{
+        const snap=JSON.parse(localStorage.getItem(k)||"{}");
+        Object.keys(localStorage).forEach(x=>{ if(x.indexOf("hf3_")===0&&x.indexOf("hf3_bak_")!==0) localStorage.removeItem(x); });
+        Object.keys(snap).forEach(x=>localStorage.setItem(x,snap[x]));
+        location.reload();
+      }catch(e){ alert("復元に失敗しました: "+e); }
+    };
+    row.appendChild(t); row.appendChild(btn); box.appendChild(row);
+  });
+}
+
 /* ===== キーボード操作 =====
    Enter：税抜価格→ジャンル→区分→型番→メーカー→シリアル→品名→本文 の順に移動
    （本文はEnter=改行のまま／品名で改行したい時は Shift+Enter）
-   ショートカットは⚙設定で変更可（既定：F2＝印刷／Ctrl+F＝付属品／Ctrl+Delete＝全リセット。Ctrl+Enter＝印刷は固定） */
+   ショートカットは⚙設定で変更可（既定：Ctrl+P＝印刷／Ctrl+F＝付属品／Ctrl+Delete＝全リセット。Ctrl+Enter＝印刷は固定）
+   付属品のみ画面を開いている間は、印刷キー＝その画面の「この2枚を印刷」になる */
 const ENTER_CHAIN=["priceEx","genre","kubun","model","maker","serial","pname","notes"];
 function focusNext(id){ const i=ENTER_CHAIN.indexOf(id); if(i<0||i>=ENTER_CHAIN.length-1) return;
   const nx=$(ENTER_CHAIN[i+1]); if(!nx) return; nx.focus();
   try{ if(nx.tagName==="INPUT"&&nx.select) nx.select(); }catch(e){} }
 /* ショートカット設定（このPCに保存・設定の書き出し/読み込みにも含まれる） */
-function kbdCfg(){ const d={print:"F2",acc:"Ctrl+F",reset:"Ctrl+Delete"}; const c=store.get("kbdCfg",{})||{};
+function kbdCfg(){ const d={print:"Ctrl+P",acc:"Ctrl+F",reset:"Ctrl+Delete"}; const c=store.get("kbdCfg",{})||{};
   return {print:c.print||d.print, acc:c.acc||d.acc, reset:c.reset||d.reset}; }
 function kbdSave(c){ store.set("kbdCfg",c); applyKbdTitles(); }
 function comboFromEvent(e){
@@ -4401,14 +4658,21 @@ function kbdCapInit(){
     });
     el.addEventListener("focus",function(){ const msg=$("kbdMsg"); if(msg) msg.textContent="キーを押してください…"; });
   });
-  const db=$("kbdDefault"); if(db) db.onclick=function(){ kbdSave({print:"F2",acc:"Ctrl+F",reset:"Ctrl+Delete"}); kbdFill();
-    const msg=$("kbdMsg"); if(msg) msg.textContent="既定に戻しました（F2＝印刷／Ctrl+F＝付属品／Ctrl+Delete＝全リセット）"; };
+  const db=$("kbdDefault"); if(db) db.onclick=function(){ kbdSave({print:"Ctrl+P",acc:"Ctrl+F",reset:"Ctrl+Delete"}); kbdFill();
+    const msg=$("kbdMsg"); if(msg) msg.textContent="既定に戻しました（Ctrl+P＝印刷／Ctrl+F＝付属品／Ctrl+Delete＝全リセット）"; };
 }
 function kbdInit(){
   applyKbdTitles(); kbdCapInit();
   document.addEventListener("keydown",function(e){
-    const modalOpen=$("settingsModal")&&$("settingsModal").classList.contains("open");
+    const modalOpen=($("settingsModal")&&$("settingsModal").classList.contains("open"))||($("histModal")&&$("histModal").classList.contains("open"));
+    const soloOpen=$("accSoloModal")&&$("accSoloModal").classList.contains("open");
     if(e.isComposing) return; // IME変換中は何もしない
+    if(soloOpen){
+      // 付属品のみ画面：印刷ショートカット＝「この2枚を印刷」。他のショートカットは無効
+      const cs=kbdCfg(); const cb=comboFromEvent(e);
+      if(cb===cs.print || cb==="Ctrl+Enter"){ e.preventDefault(); if(typeof accSoloDoPrint==="function") accSoloDoPrint(); }
+      return;
+    }
     if(!modalOpen){
       const c=kbdCfg(); const combo=comboFromEvent(e);
       if(combo===c.print || combo==="Ctrl+Enter"){ e.preventDefault(); doPrint(); return; }
@@ -4422,6 +4686,108 @@ function kbdInit(){
     if(t.id==="pname"&&e.shiftKey) return;   // 品名：Shift+Enter＝改行
     e.preventDefault(); focusNext(t.id);
   });
+}
+
+/* ===== 付属品ラベル単独モード（値札は別システムの商品用） =====
+   通常の付属品機能と 連番カウンタ・保管場所マスタ・学習 を共有する。
+   区分・ジャンルはフォームを使わないため、品名キーワード学習（w|語）と登録済み保管場所で提案する。 */
+function accSoloTokens(){
+  let s=accNorm(((($("accSoloName")&&$("accSoloName").value)||"")+" "+(($("accSoloModel")&&$("accSoloModel").value)||"")));
+  const out=[]; const re=/[a-z0-9][a-z0-9\-]{2,}|[ァ-ヶー]{2,}|[一-龠々]{2,}/g; let m;
+  while((m=re.exec(s))&&out.length<4){ const t=m[0]; if(out.indexOf(t)<0) out.push(t); }
+  return out;
+}
+function accSoloSuggest(){
+  const L=accGetLearn(); const score={}, ts={};
+  accSoloTokens().forEach(t=>{
+    Object.keys(L).forEach(k=>{ // w|語 と kw|区分|語 の両方から拾う（区分は問わない）
+      if(k==="w|"+t || (k.indexOf("kw|")===0 && k.slice(k.lastIndexOf("|")+1)===t)){
+        const e=L[k]; if(e&&e.place){ score[e.place]=(score[e.place]||0)+(e.n||1); if(!ts[e.place]||((e.t||0)>ts[e.place])) ts[e.place]=e.t||0; } }
+    });
+  });
+  let best="",bs=-1;
+  Object.keys(score).forEach(p=>{ if(score[p]>bs||(score[p]===bs&&(ts[p]||0)>(ts[best]||0))){best=p;bs=score[p];} });
+  return best;
+}
+var _accSoloPvT=null;
+function accSoloSyncNo(){ const pl=$("accSoloPlace"),noEl=$("accSoloNo"); if(!pl||!noEl)return;
+  noEl.value=String(accNextNo(pl.value.trim())).padStart(5,"0"); noEl.dataset.nman="";
+  accPeekShared(pl,noEl,accSoloPreviewSoon); }
+function accSoloPreviewSoon(){ clearTimeout(_accSoloPvT); _accSoloPvT=setTimeout(accSoloPreview,250); }
+function accSoloPreview(){
+  const place=(($("accSoloPlace")&&$("accSoloPlace").value)||"").trim();
+  const no5=String(parseInt(($("accSoloNo")&&$("accSoloNo").value)||"1",10)||1).padStart(5,"0");
+  const ov={pname:($("accSoloName")&&$("accSoloName").value)||"",model:($("accSoloModel")&&$("accSoloModel").value)||""};
+  [["accSoloCv1","fuzoku"],["accSoloCv2","back"]].forEach(([id,kind])=>{
+    const el=$(id); if(!el)return;
+    const src=accCanvas(kind,place,no5,ov);
+    el.width=src.width; el.height=src.height; el.getContext("2d").drawImage(src,0,0);
+  });
+}
+function accSoloOpen(){
+  $("accSoloModal").classList.add("open");
+  accFillDatalist();
+  const pl=$("accSoloPlace");
+  if(pl&&!pl.value.trim()){ const s=accSoloSuggest(); if(s) pl.value=s; }
+  accSoloSyncNo(); accSoloPreview();
+  const nm=$("accSoloName"); if(nm){ nm.focus(); try{nm.select();}catch(e){} }
+}
+function accSoloClose(){ $("accSoloModal").classList.remove("open"); }
+async function accSoloDoPrint(){
+  const place=(($("accSoloPlace")&&$("accSoloPlace").value)||"").trim();
+  if(!place){ alert("保管場所名を入力してください"); $("accSoloPlace").focus(); return; }
+  const noEl=$("accSoloNo");
+  let no=0;
+  const manual=(noEl&&noEl.dataset.nman==="1"&&parseInt(noEl.value,10)>0);
+  if(manual){ no=parseInt(noEl.value,10); if(no>99999) no=1; }
+  else{
+    const j=await accSharedNo(place,"next");
+    if(j){ no=j.no; }
+    else{
+      no=accNextNo(place);
+      if(proxyURL()){ const w="⚠ 共有番号が取れなかったため、このPCの番号 No."+String(no).padStart(5,"0")+" で印刷しました（他PCとの重複に注意）"; status(w,"err"); setTimeout(function(){status(w,"err");},1800); }
+    }
+  }
+  if(!no||no<1) no=accNextNo(place); if(no>99999) no=1;
+  const no5=String(no).padStart(5,"0");
+  const ov={pname:($("accSoloName")&&$("accSoloName").value)||"",model:($("accSoloModel")&&$("accSoloModel").value)||""};
+  const jobs=[
+    {canvas:accCanvas("fuzoku",place,no5,ov),copies:1,noRotate:true},
+    {canvas:accCanvas("back",place,no5,ov),copies:1,noRotate:true}
+  ];
+  const ip=$("printerIp").value.trim();
+  if(ip) eposPrintMulti(jobs); else browserPrintMulti(jobs);
+  // カウンタ＋品名キーワード学習＋保管場所マスタ登録（通常の付属品機能と共通のデータ）
+  accRegisterPlace(place);
+  const c=accCounters(); c[accGroupOf(place)]=no; store.set("accCounters",c);
+  const L=accGetLearn(); const now=Date.now();
+  accSoloTokens().forEach(t=>{ const k="w|"+t; const e=L[k];
+    if(e&&e.place===place){ e.n=(e.n||0)+1; e.t=now; } else L[k]={place:place,n:1,t:now}; });
+  store.set("accLearn",L);
+  let pls=accPlaces().filter(x=>x!==place); pls.unshift(place); if(pls.length>40)pls=pls.slice(0,40); store.set("accPlaces",pls);
+  // 連続作業：番号を進め、品名をクリアして次の商品へ（保管場所は維持）
+  accSoloSyncNo();
+  const nm=$("accSoloName"); if(nm){ nm.value=""; } const md=$("accSoloModel"); if(md){ md.value=""; }
+  accSoloPreview(); accFillDatalist();
+  if(nm){ nm.focus(); }
+}
+function accSoloInit(){
+  const b=$("accSoloBtn"); if(!b) return;
+  b.onclick=accSoloOpen;
+  $("accSoloClose").onclick=accSoloClose; $("accSoloCancel").onclick=accSoloClose;
+  $("accSoloPrint").onclick=accSoloDoPrint;
+  const pl=$("accSoloPlace");
+  if(pl) pl.addEventListener("input",()=>{ accSoloSyncNo(); accSoloPreviewSoon(); });
+  const noEl=$("accSoloNo"); if(noEl) noEl.addEventListener("input",()=>{ noEl.dataset.nman="1"; accSoloPreviewSoon(); });
+  ["accSoloName","accSoloModel"].forEach(id=>{ const el=$(id); if(el) el.addEventListener("input",()=>{
+    const p=$("accSoloPlace"); if(p&&!p.dataset.man){ const s=accSoloSuggest(); if(s&&!p.value.trim()) p.value=s; accSoloSyncNo(); }
+    accSoloPreviewSoon(); }); });
+  if(pl) pl.addEventListener("change",()=>{ pl.dataset.man="1"; });
+  // Enterで印刷（品名→型番→保管場所→番号のどこからでも）
+  ["accSoloName","accSoloModel","accSoloPlace","accSoloNo"].forEach(id=>{ const el=$(id); if(el)
+    el.addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.isComposing&&!e.ctrlKey&&!e.metaKey){ e.preventDefault(); accSoloDoPrint(); } }); });
+  // #accsolo 付きURLで開いたら最初からこの画面（ブックマーク運用）
+  try{ if(/accsolo/.test(location.hash)) setTimeout(accSoloOpen,300); }catch(e){}
 }
 
 var DEFAULT_SITES=[["Google","https://www.google.com/search?q=%s"],["営業管理","https://item3.hardoff.co.jp/?searchKeyword=%s&salesStatus=7&sort=DTSALE"],["オークフリー","https://aucfree.com/search?o=t2&from=2015-06&to=2026-06&c=&q=%s"],["価格コム","https://kakaku.com/search_results/%s/"],["メルカリ","https://jp.mercari.com/search?keyword=%s&sort=created_time&order=desc&status=sold_out"],["駿河屋","https://www.suruga-ya.jp/search?category=&search_word=%s&searchbox=1"]];
@@ -5221,15 +5587,30 @@ function doPrint(){ if($("autoDate").checked){setToday();} $("notes").value.spli
   try{ var q=($("janCode").value||"").trim(); if(q) learnSave(q,$("maker").value,$("pname").value,$("model").value,$("genre").value); }catch(e){}
   draw(); const n=Math.max(1,Math.min(50,parseInt($("copies")&&$("copies").value,10)||1)); const ip=$("printerIp").value.trim();
   const acc=($("accOn")&&$("accOn").checked);
-  if(!acc){ if(ip) eposPrint(n); else browserPrint(); return; }
-  // 付属品ON：値札×枚数＋付属品ラベル＋裏ラベル（保管場所）
+  if(!acc){ if(ip) eposPrint(n); else browserPrint(); histPrintAdd(n,null); return; }
+  accPrintFlow(n,ip); }
+/* 付属品ON：値札×枚数＋付属品ラベル＋裏ラベル。番号は店内共有（GAS）→ダメならこのPC */
+async function accPrintFlow(n,ip){
   const place=((($("accPlace")&&$("accPlace").value)||"").trim())||accPlaceSuggest();
-  let no=parseInt((($("accNo")&&$("accNo").value)||""),10); if(!no||no<1) no=accNextNo(place); if(no>99999) no=1;
+  const noEl=$("accNo");
+  let no=0;
+  const manual=(noEl&&noEl.dataset.nman==="1"&&parseInt(noEl.value,10)>0);
+  if(manual){ no=parseInt(noEl.value,10); if(no>99999) no=1; }
+  else{
+    const j=await accSharedNo(place,"next");
+    if(j){ no=j.no; }
+    else{
+      no=accNextNo(place);
+      if(proxyURL()){ const w="⚠ 共有番号が取れなかったため、このPCの番号 No."+String(no).padStart(5,"0")+" で印刷しました（他PCとの重複に注意）"; status(w,"err"); setTimeout(function(){status(w,"err");},1800); }
+    }
+  }
   const no5=String(no).padStart(5,"0");
   const cAcc=accCanvas("fuzoku",place,no5), cBack=accCanvas("back",place,no5);
   const jobs=[{canvas:cv,copies:n},{canvas:cAcc,copies:1,noRotate:true},{canvas:cBack,copies:1,noRotate:true}];
   if(ip) eposPrintMulti(jobs); else browserPrintMulti(jobs);
-  accCommit(place,no); }
+  accCommit(place,no);
+  histPrintAdd(n,{place:place,no:String(no).padStart(5,"0")});
+}
 function status(t,cls){const s=$("status");s.textContent=t;s.style.color=cls==="ok"?"var(--ok)":cls==="err"?"var(--err)":"var(--sub)";}
 
 function calibrate(){
@@ -5276,6 +5657,7 @@ function renderSettingsLists(){
   renderGenreList(currentBrand());
   if(typeof renderAccPlaceEditor==="function") renderAccPlaceEditor();
   if(typeof kbdFill==="function") kbdFill();
+  if(typeof renderBakList==="function") renderBakList();
   const bsel=$("brandSel"); const cur=($("setStore").value||"HARD-OFF"); const opts=["HARD-OFF","HOBBY-OFF","OFF-HOUSE"]; if(opts.indexOf(cur)<0)opts.push(cur);
   bsel.innerHTML=""; opts.forEach(o=>{const op=document.createElement("option");op.value=o;op.textContent=o;bsel.appendChild(op);}); bsel.value=cur;
   bsel.onchange=function(){ renderGenreList(bsel.value); };
@@ -5342,7 +5724,7 @@ function importSettings(file){
 function persist(){store.set("genre",$("genre").value);store.set("cfg",{w:$("setW").value,dpi:$("setDpi").value,fs:$("setFs").value,qr:$("setQr").value,store:$("setStore").value,ip:$("printerIp").value,orient:orient(),code:codeType(),scale:($("setScale")&&$("setScale").value),shift:($("setShiftX")&&$("setShiftX").value),shiftY:($("setShiftY")&&$("setShiftY").value),proxy:($("setProxy")&&$("setProxy").value),sites:($("setSites")&&$("setSites").value),dispFont:($("dispFontSel")&&$("dispFontSel").value),dispBold:($("dispBold")?$("dispBold").checked:true),dispSize:($("dispSize")&&$("dispSize").value)});}
 function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);}
 function histGet(){return store.get("histLines",[]);}
-function curGenreKey(){ return String(($("genre")&&$("genre").value)||""); }
+function curGenreKey(){ return (isOffHouse()?"OH":"")+String(($("genre")&&$("genre").value)||""); }
 function histAdd(line){
   line=(line||"").trim(); if(!line) return;
   // 全体の直近履歴
@@ -5364,6 +5746,7 @@ function histAdd(line){
       store.set("histByName",mn);
     }
   }catch(e){}
+  try{shareSoon();}catch(e){}
   renderHistory();
 }
 function insertComment(line){const t=$("notes");const cur=t.value.replace(/\s+$/,"");t.value=cur?(cur+"\n"+line):line;autoGrowNotes();draw();}
@@ -5450,7 +5833,7 @@ function wire(){
   }
   renderSiteButtons();
 }
-buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); kbdInit();
+buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
 </script>
 <script>
 /* ===== 進化UI v5：操作レイヤー（検証済みエンジン・既存関数には触れない、追加のみ） ===== */
