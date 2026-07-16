@@ -628,6 +628,8 @@
         <div class="seclbl">ラベル・コードの詳細設定</div>
         <div class="g2">
           <div class="f"><label>コード種別</label><select id="setCode"><option value="bar">バーコード</option><option value="qr" selected>QRコード</option><option value="both">両方</option></select></div>
+          <div class="f"><label>ラベルの形式</label><select id="setLayout"><option value="std" selected>標準（情報たっぷり）</option><option value="simple">シンプル（会社の値札風・固定長）</option></select></div>
+          <div class="f"><label>シンプル時のラベル長（mm）</label><input id="setSimpleLen" inputmode="numeric" value="28"></div>
           <div class="f"><label>ロール幅 (mm)</label><input id="setW" inputmode="decimal" value="35"></div>
           <div class="f"><label>QRサイズ (mm)</label><input id="setQr" inputmode="decimal" value="12"></div>
           <div class="f"><label>文字の大きさ</label><input id="setFs" inputmode="decimal" value="1"></div>
@@ -4042,6 +4044,53 @@ function applyTheme(){
   if(ic){ const cat=genreCat(no); if(ic.dataset.cat!==cat){ ic.innerHTML=genreIconSVG(cat); ic.dataset.cat=cat;
     ic.classList.remove("pop"); void ic.offsetWidth; ic.classList.add("pop"); } }
 }
+function isSimpleLayout(){ return $("setLayout")&&$("setLayout").value==="simple"; }
+/* ===== シンプル値札モード：会社ツールの値札とほぼ同じ見た目・短さで印刷 =====
+   1行目=ジャンル番号＋名前 ／ 2行目=税込を大きく＋（税抜） ／ QR（実証済みの3ブランドPOS番号）／ 店舗ブランド。
+   ロールの節約と、レジ・スタッフが見慣れた形式のための代替レイアウト。 */
+function paintSimple(){
+  const Wmm=parseFloat($("setW").value)||35;
+  const W8=Math.ceil(Math.round(Wmm*DPMM)/8)*8;
+  const mx=Math.round(mm(2.2));
+  // ★固定長：会社の値札と同じ長さで出す（⚙設定「シンプル時のラベル長」・既定28mm）
+  const lenMm=Math.max(20,Math.min(60,parseFloat(($("setSimpleLen")&&$("setSimpleLen").value)||"28")||28));
+  const H=Math.round(mm(lenMm));
+  const hGenre=Math.round(mm(3.9)*FS), hPrice=Math.round(mm(6.6)*FS), hBrand=Math.round(mm(3.4)*FS);
+  const top=Math.round(mm(1.6)), gap=Math.round(mm(0.8)), bottom=Math.round(mm(1.4));
+  // QRは残りスペースに合わせて自動サイズ（固定長の中で最大化）
+  let mat=null; try{ mat=QRMini.generate(nonpluCode(),"H",true); }catch(e){ mat=null; }
+  const avail=H-top-hGenre-hPrice-gap*2-hBrand-bottom;
+  const cell=mat?Math.max(2,Math.floor(avail/mat.length)):0;
+  const qrPx=mat?cell*mat.length:0;
+  cv.width=W8; cv.height=H;
+  ctx.fillStyle="#fff"; ctx.fillRect(0,0,W8,H);
+  ctx.fillStyle="#000"; ctx.textBaseline="top";
+  let y=top;
+  // ジャンル行（OFF HOUSE / HOBBY-OFF はレジ番号3桁詰め＝会社ツールの表記に合わせる）
+  const gsel=$("genre"); const gname=gsel&&gsel.selectedOptions[0]?String(gsel.selectedOptions[0].dataset.name||""):"";
+  const gno=(isOffHouse()||isHobbyOff())?String(parseInt(gsel.value,10)||0).padStart(3,"0"):String(gsel?gsel.value:"");
+  ctx.font=jpFont(mm(2.7)*FS,"700");
+  ctx.fillText(gno+"　"+gname, mx, y);
+  y+=hGenre;
+  // 価格行：税込を大きく＋（税抜）
+  const ex=num($("priceEx").value)||0; const inc=Math.round(ex*1.1);
+  ctx.font=monoFont(mm(5.4)*FS,"900");
+  const big="¥"+comma(inc);
+  ctx.fillText(big, mx, y);
+  const bw=ctx.measureText(big).width;
+  ctx.font=monoFont(mm(2.7)*FS,"700");
+  ctx.fillText("（¥"+comma(ex)+"）", mx+bw+Math.round(mm(2.5)), y+Math.round(mm(2.4)*FS));
+  y+=hPrice+gap;
+  // QR（中央・残りスペースの真ん中）
+  if(mat&&qrPx>0){ const ox=Math.round((W8-qrPx)/2);
+    const qy=y+Math.max(0,Math.round((avail-qrPx)/2));
+    for(let r=0;r<mat.length;r++)for(let c=0;c<mat.length;c++){ if(mat[r][c]) ctx.fillRect(ox+c*cell, qy+r*cell, cell, cell); }
+  }
+  // 店舗ブランド（最下段に固定）
+  ctx.font=monoFont(mm(2.9)*FS,"bold");
+  const bn=$("setStore").value||""; const bw2=ctx.measureText(bn).width;
+  ctx.fillText(bn, Math.round((W8-bw2)/2), H-bottom-hBrand+Math.round(mm(0.4)));
+}
 function draw(){
   if($("autoDate").checked) setToday(); else window.__date="";
   $("mgmt").value=mgmtNum();
@@ -4049,7 +4098,9 @@ function draw(){
   applyPnameScale();
   DPMM=(parseInt($("setDpi").value,10)||203)/25.4;
   const Wmm=parseFloat($("setW").value)||38;
-  if(orient()==="landscape"){
+  if(isSimpleLayout()){
+    paintSimple();                 // 会社の値札風（短い）。向き設定に関わらず縦で描く
+  }else if(orient()==="landscape"){
     const HH=Math.ceil(Math.round(Wmm*DPMM)/8)*8;
     cv.width=2600; cv.height=HH;
     const m=paint(true);
@@ -4109,6 +4160,7 @@ function trimTopBottom(c){
 }
 function outputCanvas(srcCanvas,noRotate){
   let src=srcCanvas||cv;
+  const _noTrim=(typeof isSimpleLayout==="function"&&isSimpleLayout()&&src===cv); // シンプル＝固定長を維持
   // 付属品ラベル等（縦レイアウト固定）は横向き設定でも回転しない（回転すると用紙幅を超えて白紙になる）
   if(orient()==="landscape" && !noRotate){
     const base=src;
@@ -4117,7 +4169,7 @@ function outputCanvas(srcCanvas,noRotate){
     rc.save(); rc.translate(rot.width,0); rc.rotate(Math.PI/2); rc.drawImage(base,0,0); rc.restore();
     src=rot;
   }
-  src=trimTopBottom(src);
+  if(!_noTrim) src=trimTopBottom(src);
   const off=printOffsetPx(), offY=printOffsetPxY();
   if(!off && !offY) return src;
   const o=document.createElement("canvas"); o.width=src.width; o.height=src.height;
@@ -5789,8 +5841,8 @@ function importSettings(file){
   }catch(e){ ioMsg("読み込みに失敗しました。正しい設定ファイル（.json）を選んでください。"); } };
   r.readAsText(file);
 }
-function persist(){store.set("genre",$("genre").value);store.set("cfg",{w:$("setW").value,dpi:$("setDpi").value,fs:$("setFs").value,qr:$("setQr").value,store:$("setStore").value,ip:$("printerIp").value,orient:orient(),code:codeType(),scale:($("setScale")&&$("setScale").value),shift:($("setShiftX")&&$("setShiftX").value),shiftY:($("setShiftY")&&$("setShiftY").value),proxy:($("setProxy")&&$("setProxy").value),sites:($("setSites")&&$("setSites").value),dispFont:($("dispFontSel")&&$("dispFontSel").value),dispBold:($("dispBold")?$("dispBold").checked:true),dispSize:($("dispSize")&&$("dispSize").value)});}
-function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);}
+function persist(){store.set("genre",$("genre").value);store.set("cfg",{w:$("setW").value,dpi:$("setDpi").value,fs:$("setFs").value,qr:$("setQr").value,store:$("setStore").value,ip:$("printerIp").value,orient:orient(),code:codeType(),scale:($("setScale")&&$("setScale").value),shift:($("setShiftX")&&$("setShiftX").value),shiftY:($("setShiftY")&&$("setShiftY").value),proxy:($("setProxy")&&$("setProxy").value),sites:($("setSites")&&$("setSites").value),dispFont:($("dispFontSel")&&$("dispFontSel").value),dispBold:($("dispBold")?$("dispBold").checked:true),dispSize:($("dispSize")&&$("dispSize").value),layout:($("setLayout")&&$("setLayout").value),simpleLen:($("setSimpleLen")&&$("setSimpleLen").value)});}
+function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);if($("setLayout"))$("setLayout").value=(c.layout==="simple")?"simple":"std";if($("setSimpleLen"))$("setSimpleLen").value=c.simpleLen||"28";}
 function histGet(){return store.get("histLines",[]);}
 function curGenreKey(){ return brandGenrePrefix()+String(($("genre")&&$("genre").value)||""); }
 function histAdd(line){
@@ -5870,6 +5922,7 @@ function wire(){
   $("notes").addEventListener("input",()=>{autoGrowNotes();draw();});
   $("pname").addEventListener("input",autoGrowPname);
   ["setW","setDpi","setFs","setQr"].forEach(id=>$(id).addEventListener("input",draw));
+  ["setLayout","setSimpleLen"].forEach(id=>{ const el=$(id); if(el){ el.addEventListener("input",draw); el.addEventListener("change",draw); } });
   ["setCode","setOrient","setScale"].forEach(id=>{const e=$(id);if(e)e.addEventListener("change",draw);});
   $("setOrient").addEventListener("change",draw);
   $("printBtn").onclick=doPrint; if($("calBtn"))$("calBtn").onclick=calibrate;
