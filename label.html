@@ -404,6 +404,7 @@
       <label class="acctgl" title="値札＋付属品ラベル（QRなし）＋裏ラベル（保管場所）の3枚を印刷（F4で切替）"><input type="checkbox" id="accOn"> 付属品</label>
       <button class="acctgl" id="accSoloBtn" type="button" title="値札なしで、付属品ラベル＋裏ラベル（保管場所・管理番号）だけを印刷する画面を開く">📎 付属品のみ</button>
       <button class="acctgl" id="histBtn" type="button" title="印刷履歴：クリックで内容を呼び出して再印刷。前回の値付けも価格欄の下に自動表示">📜 履歴</button>
+      <button class="acctgl" id="layoutTgl" type="button" title="シンプル値札（会社の値札風・固定長）と標準ラベルをワンタップで切替"></button>
       <button class="resetbtn" id="resetAllBtn" title="ショートカット：F8">全てリセット</button>
       <span class="badge brandbadge" id="storeBadge">HARD-OFF</span>
       <button class="gear" id="settingsBtn">⚙ 設定</button>
@@ -4055,10 +4056,16 @@ function paintSimple(){
   // ★固定長：会社の値札と同じ長さで出す（⚙設定「シンプル時のラベル長」・既定28mm）
   const lenMm=Math.max(20,Math.min(60,parseFloat(($("setSimpleLen")&&$("setSimpleLen").value)||"28")||28));
   const H=Math.round(mm(lenMm));
-  const hGenre=Math.round(mm(3.9)*FS), hPrice=Math.round(mm(6.6)*FS), hBrand=Math.round(mm(3.4)*FS);
-  const top=Math.round(mm(1.6)), gap=Math.round(mm(0.8)), bottom=Math.round(mm(1.4));
-  // QRは残りスペースに合わせて自動サイズ（固定長の中で最大化）
   let mat=null; try{ mat=QRMini.generate(nonpluCode(),"H",true); }catch(e){ mat=null; }
+  const minQr=mat?mat.length*2:0;                       // QRの最小サイズ（1セル2ドット＝読める下限）
+  const top=Math.round(mm(1.2)), gap=Math.round(mm(0.6)), bottom=Math.round(mm(1.0));
+  // 文字3行の基本サイズ。短いラベルではQRの最小スペースを死守するため自動で縮小（重なり防止）
+  let k=1;
+  let hGenre=Math.round(mm(3.9)*FS*k), hPrice=Math.round(mm(6.6)*FS*k), hBrand=Math.round(mm(3.4)*FS*k);
+  const roomForText=H-top-bottom-gap*2-minQr-Math.round(mm(0.6));
+  const textH=hGenre+hPrice+hBrand;
+  if(textH>roomForText&&textH>0){ k=Math.max(0.55,roomForText/textH);
+    hGenre=Math.round(hGenre*k); hPrice=Math.round(hPrice*k); hBrand=Math.round(hBrand*k); }
   const avail=H-top-hGenre-hPrice-gap*2-hBrand-bottom;
   const cell=mat?Math.max(2,Math.floor(avail/mat.length)):0;
   const qrPx=mat?cell*mat.length:0;
@@ -4069,27 +4076,29 @@ function paintSimple(){
   // ジャンル行（OFF HOUSE / HOBBY-OFF はレジ番号3桁詰め＝会社ツールの表記に合わせる）
   const gsel=$("genre"); const gname=gsel&&gsel.selectedOptions[0]?String(gsel.selectedOptions[0].dataset.name||""):"";
   const gno=(isOffHouse()||isHobbyOff())?String(parseInt(gsel.value,10)||0).padStart(3,"0"):String(gsel?gsel.value:"");
-  ctx.font=jpFont(mm(2.7)*FS,"700");
+  ctx.font=jpFont(mm(2.7)*FS*k,"700");
   ctx.fillText(gno+"　"+gname, mx, y);
   y+=hGenre;
   // 価格行：税込を大きく＋（税抜）
   const ex=num($("priceEx").value)||0; const inc=Math.round(ex*1.1);
-  ctx.font=monoFont(mm(5.4)*FS,"900");
+  ctx.font=monoFont(mm(5.4)*FS*k,"900");
   const big="¥"+comma(inc);
   ctx.fillText(big, mx, y);
   const bw=ctx.measureText(big).width;
-  ctx.font=monoFont(mm(2.7)*FS,"700");
-  ctx.fillText("（¥"+comma(ex)+"）", mx+bw+Math.round(mm(2.5)), y+Math.round(mm(2.4)*FS));
+  ctx.font=monoFont(mm(2.7)*FS*k,"700");
+  ctx.fillText("（¥"+comma(ex)+"）", mx+bw+Math.round(mm(2.2)), y+Math.round(mm(2.4)*FS*k));
   y+=hPrice+gap;
-  // QR（中央・残りスペースの真ん中）
+  // QR（中央・ブランド行に食い込まない位置に収める）
+  const brandTop=H-bottom-hBrand;
   if(mat&&qrPx>0){ const ox=Math.round((W8-qrPx)/2);
-    const qy=y+Math.max(0,Math.round((avail-qrPx)/2));
+    let qy=y+Math.max(0,Math.round((avail-qrPx)/2));
+    if(qy+qrPx>brandTop-gap) qy=Math.max(y,brandTop-gap-qrPx);
     for(let r=0;r<mat.length;r++)for(let c=0;c<mat.length;c++){ if(mat[r][c]) ctx.fillRect(ox+c*cell, qy+r*cell, cell, cell); }
   }
   // 店舗ブランド（最下段に固定）
-  ctx.font=monoFont(mm(2.9)*FS,"bold");
+  ctx.font=monoFont(mm(2.9)*FS*k,"bold");
   const bn=$("setStore").value||""; const bw2=ctx.measureText(bn).width;
-  ctx.fillText(bn, Math.round((W8-bw2)/2), H-bottom-hBrand+Math.round(mm(0.4)));
+  ctx.fillText(bn, Math.round((W8-bw2)/2), brandTop+Math.round(mm(0.3)));
 }
 function draw(){
   if($("autoDate").checked) setToday(); else window.__date="";
@@ -4126,6 +4135,7 @@ function draw(){
   updateCondCap();
   updateNoteHighlight();
   if(typeof renderSpecChip==="function") try{renderSpecChip();}catch(e){}
+  if($("layoutTgl")) $("layoutTgl").textContent=isSimpleLayout()?"🏷 標準ラベルへ":"🏷 シンプル値札へ";
   persist();
 }
 function fitPreview(){
@@ -4187,7 +4197,8 @@ async function eposPrint(copies){
   const ip=$("printerIp").value.trim();
   const n=Math.max(1,Math.min(50,parseInt(copies,10)||1));
   const{b64,W,H}=rasterFromCanvas();
-  let body=''; for(let i=0;i<n;i++){ body+=`<image width="${W}" height="${H}" color="color_1" mode="mono" align="center">${b64}</image><feed unit="24"/><cut type="feed"/>`; }
+  const fd=isSimpleLayout()?'':'<feed unit="24"/>'; // シンプル＝固定長ではカット前の送りを省略
+  let body=''; for(let i=0;i<n;i++){ body+=`<image width="${W}" height="${H}" color="color_1" mode="mono" align="center">${b64}</image>${fd}<cut type="feed"/>`; }
   const xml='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'+
     '<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">'+body+'</epos-print></s:Body></s:Envelope>';
   status(n>1?("印刷を送信中…（"+n+"枚）"):"印刷を送信中…","");
@@ -4397,8 +4408,9 @@ function accCanvas(kind,place,no5,ov){
 async function eposPrintMulti(jobs){
   const ip=$("printerIp").value.trim();
   let body="", total=0;
+  const fd=isSimpleLayout()?'':'<feed unit="24"/>';
   jobs.forEach(j=>{ const {b64,W,H}=rasterFromCanvas(j.canvas,j.noRotate); const n=Math.max(1,Math.min(50,j.copies||1)); total+=n;
-    for(let i=0;i<n;i++){ body+=`<image width="${W}" height="${H}" color="color_1" mode="mono" align="center">${b64}</image><feed unit="24"/><cut type="feed"/>`; } });
+    for(let i=0;i<n;i++){ body+=`<image width="${W}" height="${H}" color="color_1" mode="mono" align="center">${b64}</image>${fd}<cut type="feed"/>`; } });
   const xml='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'+
     '<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">'+body+'</epos-print></s:Body></s:Envelope>';
   status("印刷を送信中…（付属品ラベル込み・計"+total+"枚）","");
@@ -5923,6 +5935,8 @@ function wire(){
   $("pname").addEventListener("input",autoGrowPname);
   ["setW","setDpi","setFs","setQr"].forEach(id=>$(id).addEventListener("input",draw));
   ["setLayout","setSimpleLen"].forEach(id=>{ const el=$(id); if(el){ el.addEventListener("input",draw); el.addEventListener("change",draw); } });
+  if($("layoutTgl")) $("layoutTgl").addEventListener("click",()=>{ const sl=$("setLayout"); if(!sl) return;
+    sl.value=(sl.value==="simple")?"std":"simple"; draw(); });
   ["setCode","setOrient","setScale"].forEach(id=>{const e=$(id);if(e)e.addEventListener("change",draw);});
   $("setOrient").addEventListener("change",draw);
   $("printBtn").onclick=doPrint; if($("calBtn"))$("calBtn").onclick=calibrate;
