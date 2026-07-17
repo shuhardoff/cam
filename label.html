@@ -84,6 +84,8 @@
   .accpv{display:flex;gap:8px;margin-top:8px;align-items:flex-start}
   .accpv canvas{width:48%;height:auto;background:#fff;border:1px solid var(--line);border-radius:8px}
   .appver{font-size:11px;font-weight:800;color:var(--ok);letter-spacing:.03em;vertical-align:middle;margin-left:2px}
+  .kh{font-size:9.5px;font-weight:800;color:var(--sub);background:rgba(20,40,90,.08);border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle;letter-spacing:.02em}
+  #printBtn .kh{color:rgba(255,255,255,.9);background:rgba(255,255,255,.22)}
   .lswitch{display:inline-flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
   .lswitch .lswtxt{font-size:12px;font-weight:800;color:var(--sub)}
   .lswitch input{display:none}
@@ -397,14 +399,14 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v2.3</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v2.4</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
       <span id="gpReg" class="gpreg">—</span>
     </div>
     <div class="bar-actions">
-      <button class="printbtn hdrprint" id="printBtn" title="ショートカット：F2 または Ctrl+Enter">印刷する</button>
+      <button class="printbtn hdrprint" id="printBtn" title="ショートカット：Ctrl+P または Ctrl+Enter（⚙設定で変更可）">印刷する</button>
       <div class="copywrap">
         <label>枚数</label>
         <input id="copies" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="1" autocomplete="off">
@@ -4088,10 +4090,11 @@ function paintSimple(){
   const big="¥"+comma(inc);
   ctx.fillText(big, mx, y);
   const bigW=ctx.measureText(big).width;
-  ctx.font=monoFont(mm(3.0),"700");
+  ctx.font=monoFont(mm(2.6),"700");
   const par="（¥"+comma(ex)+"）";
   const pw=ctx.measureText(par).width;
-  ctx.fillText(par, Math.max(mx+bigW+Math.round(mm(1.5)), W8-mx-pw), y+Math.round(mm(2.6)));
+  // 右端はプリンタの印字可能域で欠けることがあるため 3.5mm 内側に
+  ctx.fillText(par, Math.max(mx+bigW+Math.round(mm(1.5)), W8-Math.round(mm(3.5))-pw), y+Math.round(mm(2.8)));
   y+=hPrice+g2;
   // QR（中央・固定サイズ）
   if(mat&&qrPx>0){ const ox=Math.round((W8-qrPx)/2);
@@ -4656,6 +4659,20 @@ function histUiInit(){
   const f=$("histFilter"); if(f) f.addEventListener("input",()=>{ clearTimeout(window._hmT); window._hmT=setTimeout(renderHistModal,200); });
 }
 
+/* 各ボタン周辺にショートカットを小さく表示（設定変更にも追従） */
+function kbdHints(){
+  try{
+    const c=kbdCfg();
+    const put=(el,txt)=>{ if(!el||!txt) return;
+      let sp=el.querySelector(".kh");
+      if(!sp){ sp=document.createElement("span"); sp.className="kh"; el.appendChild(sp); }
+      sp.textContent=txt; };
+    put($("printBtn"), c.print);
+    const accLbl=$("accOn")&&$("accOn").closest("label"); put(accLbl, c.acc);
+    put($("resetAllBtn"), c.reset);
+    put(document.querySelector(".lswitch"), "Ctrl+M");
+  }catch(e){}
+}
 /* ===== 自動バックアップ（1日1回・直近2日分をこのPC内に保存） ===== */
 function backupNow(){
   try{
@@ -4708,7 +4725,7 @@ function focusNext(id){ const i=ENTER_CHAIN.indexOf(id); if(i<0||i>=ENTER_CHAIN.
 /* ショートカット設定（このPCに保存・設定の書き出し/読み込みにも含まれる） */
 function kbdCfg(){ const d={print:"Ctrl+P",acc:"Ctrl+F",reset:"Ctrl+Delete"}; const c=store.get("kbdCfg",{})||{};
   return {print:c.print||d.print, acc:c.acc||d.acc, reset:c.reset||d.reset}; }
-function kbdSave(c){ store.set("kbdCfg",c); applyKbdTitles(); }
+function kbdSave(c){ store.set("kbdCfg",c); setTimeout(function(){try{kbdHints();}catch(e){}},0); applyKbdTitles(); }
 function comboFromEvent(e){
   let k=e.key; if(k===" ")k="Space";
   if(["Control","Shift","Alt","Meta"].indexOf(k)>=0) return null; // 修飾キー単体は無視
@@ -4767,6 +4784,7 @@ function kbdInit(){
       if(combo===c.print || combo==="Ctrl+Enter"){ e.preventDefault(); doPrint(); return; }
       if(combo===c.acc){ e.preventDefault(); const a=$("accOn"); if(a){ a.checked=!a.checked; a.dispatchEvent(new Event("change",{bubbles:true})); } return; }
       if(combo===c.reset){ e.preventDefault(); const rb=$("resetAllBtn"); if(rb){ rb.click(); const pe=$("priceEx"); if(pe){ pe.focus(); try{pe.select();}catch(x){} } } return; }
+      if(combo==="Ctrl+M"){ e.preventDefault(); if($("layoutSw")) $("layoutSw").click(); return; } // シンプル⇔標準
     }
     if(e.key!=="Enter"||e.ctrlKey||e.metaKey||e.altKey) return;
     const t=e.target; if(!t||!t.id) return;
@@ -5975,7 +5993,7 @@ function wire(){
   }
   renderSiteButtons();
 }
-buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
+buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); kbdHints(); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
 </script>
 <script>
 /* ===== 進化UI v5：操作レイヤー（検証済みエンジン・既存関数には触れない、追加のみ） ===== */
