@@ -83,6 +83,13 @@
   #accPanel .apttl{font-size:12px;font-weight:800;margin-bottom:8px}
   .accpv{display:flex;gap:8px;margin-top:8px;align-items:flex-start}
   .accpv canvas{width:48%;height:auto;background:#fff;border:1px solid var(--line);border-radius:8px}
+  .lswitch{display:inline-flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
+  .lswitch .lswtxt{font-size:12px;font-weight:800;color:var(--sub)}
+  .lswitch input{display:none}
+  .lswslider{width:40px;height:21px;border-radius:12px;background:#c9d3e8;position:relative;transition:background .18s ease;flex:0 0 auto}
+  .lswslider::after{content:"";position:absolute;left:2.5px;top:2.5px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(10,30,80,.35);transition:transform .18s ease}
+  .lswitch input:checked + .lswslider{background:var(--a1)}
+  .lswitch input:checked + .lswslider::after{transform:translateX(19px)}
   .histrow{display:flex;gap:10px;align-items:center;padding:9px 10px;border:1.5px solid var(--line);border-radius:10px;margin-bottom:7px;cursor:pointer;font-size:13px}
   .histrow:hover{border-color:var(--a1);background:rgba(0,0,0,.02)}
   .histrow .hr-t{color:var(--sub);font-size:11.5px;white-space:nowrap;font-weight:700}
@@ -404,7 +411,7 @@
       <label class="acctgl" title="値札＋付属品ラベル（QRなし）＋裏ラベル（保管場所）の3枚を印刷（F4で切替）"><input type="checkbox" id="accOn"> 付属品</label>
       <button class="acctgl" id="accSoloBtn" type="button" title="値札なしで、付属品ラベル＋裏ラベル（保管場所・管理番号）だけを印刷する画面を開く">📎 付属品のみ</button>
       <button class="acctgl" id="histBtn" type="button" title="印刷履歴：クリックで内容を呼び出して再印刷。前回の値付けも価格欄の下に自動表示">📜 履歴</button>
-      <button class="acctgl" id="layoutTgl" type="button" title="シンプル値札（会社の値札風・固定長）と標準ラベルをワンタップで切替"></button>
+      <label class="lswitch" title="ON＝シンプル値札（会社の値札風・固定長）／OFF＝標準ラベル"><span class="lswtxt">シンプル値札</span><input type="checkbox" id="layoutSw"><span class="lswslider"></span></label>
       <button class="resetbtn" id="resetAllBtn" title="ショートカット：F8">全てリセット</button>
       <span class="badge brandbadge" id="storeBadge">HARD-OFF</span>
       <button class="gear" id="settingsBtn">⚙ 設定</button>
@@ -4137,7 +4144,7 @@ function draw(){
   updateCondCap();
   updateNoteHighlight();
   if(typeof renderSpecChip==="function") try{renderSpecChip();}catch(e){}
-  if($("layoutTgl")) $("layoutTgl").textContent=isSimpleLayout()?"🏷 標準ラベルへ":"🏷 シンプル値札へ";
+  if($("layoutSw")) $("layoutSw").checked=isSimpleLayout();
   persist();
 }
 function fitPreview(){
@@ -4173,6 +4180,7 @@ function trimTopBottom(c){
 function outputCanvas(srcCanvas,noRotate){
   let src=srcCanvas||cv;
   const _noTrim=(typeof isSimpleLayout==="function"&&isSimpleLayout()&&src===cv); // シンプル＝固定長を維持
+  if(_noTrim) noRotate=true; // シンプル値札は縦・横設定を無視して常にそのままの向きで印刷
   // 付属品ラベル等（縦レイアウト固定）は横向き設定でも回転しない（回転すると用紙幅を超えて白紙になる）
   if(orient()==="landscape" && !noRotate){
     const base=src;
@@ -5937,8 +5945,8 @@ function wire(){
   $("pname").addEventListener("input",autoGrowPname);
   ["setW","setDpi","setFs","setQr"].forEach(id=>$(id).addEventListener("input",draw));
   ["setLayout","setSimpleLen"].forEach(id=>{ const el=$(id); if(el){ el.addEventListener("input",draw); el.addEventListener("change",draw); } });
-  if($("layoutTgl")) $("layoutTgl").addEventListener("click",()=>{ const sl=$("setLayout"); if(!sl) return;
-    sl.value=(sl.value==="simple")?"std":"simple"; draw(); });
+  if($("layoutSw")) $("layoutSw").addEventListener("change",()=>{ const sl=$("setLayout"); if(!sl) return;
+    sl.value=$("layoutSw").checked?"simple":"std"; draw(); });
   ["setCode","setOrient","setScale"].forEach(id=>{const e=$(id);if(e)e.addEventListener("change",draw);});
   $("setOrient").addEventListener("change",draw);
   $("printBtn").onclick=doPrint; if($("calBtn"))$("calBtn").onclick=calibrate;
