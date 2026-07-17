@@ -4057,17 +4057,19 @@ function paintSimple(){
   const lenMm=Math.max(20,Math.min(60,parseFloat(($("setSimpleLen")&&$("setSimpleLen").value)||"28")||28));
   const H=Math.round(mm(lenMm));
   let mat=null; try{ mat=QRMini.generate(nonpluCode(),"H",true); }catch(e){ mat=null; }
-  const minQr=mat?mat.length*2:0;                       // QRの最小サイズ（1セル2ドット＝読める下限）
+  const minQr=mat?mat.length*2:0;                       // QRの最小（1セル2ドット＝読める下限）
   const top=Math.round(mm(1.2)), gap=Math.round(mm(0.6)), bottom=Math.round(mm(1.0));
-  // 文字3行の基本サイズ。短いラベルではQRの最小スペースを死守するため自動で縮小（重なり防止）
+  // ★優先順位：①文字は原寸を維持 → ②QRが残りスペースで伸縮（セル2〜4ドット）→ ③それでも入らない時だけ文字を縮小
   let k=1;
-  let hGenre=Math.round(mm(3.9)*FS*k), hPrice=Math.round(mm(6.6)*FS*k), hBrand=Math.round(mm(3.4)*FS*k);
-  const roomForText=H-top-bottom-gap*2-minQr-Math.round(mm(0.6));
-  const textH=hGenre+hPrice+hBrand;
-  if(textH>roomForText&&textH>0){ k=Math.max(0.55,roomForText/textH);
-    hGenre=Math.round(hGenre*k); hPrice=Math.round(hPrice*k); hBrand=Math.round(hBrand*k); }
-  const avail=H-top-hGenre-hPrice-gap*2-hBrand-bottom;
-  const cell=mat?Math.max(2,Math.floor(avail/mat.length)):0;
+  let hGenre=Math.round(mm(3.9)*FS), hPrice=Math.round(mm(6.6)*FS), hBrand=Math.round(mm(3.4)*FS);
+  let avail=H-top-hGenre-hPrice-gap*2-hBrand-bottom;
+  if(mat && avail<minQr){                                // 最終手段：不足分だけ文字を縮める
+    const textH=hGenre+hPrice+hBrand;
+    k=Math.max(0.55,(textH-(minQr-avail))/textH);
+    hGenre=Math.round(hGenre*k); hPrice=Math.round(hPrice*k); hBrand=Math.round(hBrand*k);
+    avail=H-top-hGenre-hPrice-gap*2-hBrand-bottom;
+  }
+  const cell=mat?Math.max(2,Math.min(4,Math.floor(avail/mat.length))):0;  // QRは最大約13mmまで
   const qrPx=mat?cell*mat.length:0;
   cv.width=W8; cv.height=H;
   ctx.fillStyle="#fff"; ctx.fillRect(0,0,W8,H);
