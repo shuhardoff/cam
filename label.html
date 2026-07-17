@@ -399,7 +399,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v2.4</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v2.5</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -639,6 +639,7 @@
         <div class="seclbl">ラベル・コードの詳細設定</div>
         <div class="g2">
           <div class="f"><label>コード種別</label><select id="setCode"><option value="bar">バーコード</option><option value="qr" selected>QRコード</option><option value="both">両方</option></select></div>
+          <div class="f" style="grid-column:1/-1"><label class="acctgl"><input type="checkbox" id="setHeadSeek"> 印刷前に頭出し（実験）：上余白1.3cm対策。直営ドライバと同じ命令(FS(L fn=67)で頭出し位置へ紙送りしてから印字。動作が変な時はOFFに</label></div>
           <div class="f"><label>ラベルの形式</label><select id="setLayout"><option value="std" selected>標準（情報たっぷり）</option><option value="simple">シンプル（会社の値札風・固定長）</option></select></div>
           
           <div class="f"><label>ロール幅 (mm)</label><input id="setW" inputmode="decimal" value="35"></div>
@@ -4207,7 +4208,8 @@ async function eposPrint(copies){
   const n=Math.max(1,Math.min(50,parseInt(copies,10)||1));
   const{b64,W,H}=rasterFromCanvas();
   const fd=isSimpleLayout()?'':'<feed unit="24"/>'; // シンプル＝固定長ではカット前の送りを省略
-  let body=''; for(let i=0;i<n;i++){ body+=`<image width="${W}" height="${H}" color="color_1" mode="mono" align="center">${b64}</image>${fd}<cut type="feed"/>`; }
+  const hs=($("setHeadSeek")&&$("setHeadSeek").checked)?'<command>1C284C02004332</command>':''; // FS ( L fn=67 頭出し
+  let body=''; for(let i=0;i<n;i++){ body+=hs+`<image width="${W}" height="${H}" color="color_1" mode="mono" align="center">${b64}</image>${fd}<cut type="feed"/>`; }
   const xml='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'+
     '<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">'+body+'</epos-print></s:Body></s:Envelope>';
   status(n>1?("印刷を送信中…（"+n+"枚）"):"印刷を送信中…","");
@@ -4418,8 +4420,9 @@ async function eposPrintMulti(jobs){
   const ip=$("printerIp").value.trim();
   let body="", total=0;
   const fd=isSimpleLayout()?'':'<feed unit="24"/>';
+  const hs=($("setHeadSeek")&&$("setHeadSeek").checked)?'<command>1C284C02004332</command>':'';
   jobs.forEach(j=>{ const {b64,W,H}=rasterFromCanvas(j.canvas,j.noRotate); const n=Math.max(1,Math.min(50,j.copies||1)); total+=n;
-    for(let i=0;i<n;i++){ body+=`<image width="${W}" height="${H}" color="color_1" mode="mono" align="center">${b64}</image>${fd}<cut type="feed"/>`; } });
+    for(let i=0;i<n;i++){ body+=hs+`<image width="${W}" height="${H}" color="color_1" mode="mono" align="center">${b64}</image>${fd}<cut type="feed"/>`; } });
   const xml='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'+
     '<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">'+body+'</epos-print></s:Body></s:Envelope>';
   status("印刷を送信中…（付属品ラベル込み・計"+total+"枚）","");
@@ -5877,8 +5880,8 @@ function importSettings(file){
   }catch(e){ ioMsg("読み込みに失敗しました。正しい設定ファイル（.json）を選んでください。"); } };
   r.readAsText(file);
 }
-function persist(){store.set("genre",$("genre").value);store.set("cfg",{w:$("setW").value,dpi:$("setDpi").value,fs:$("setFs").value,qr:$("setQr").value,store:$("setStore").value,ip:$("printerIp").value,orient:orient(),code:codeType(),scale:($("setScale")&&$("setScale").value),shift:($("setShiftX")&&$("setShiftX").value),shiftY:($("setShiftY")&&$("setShiftY").value),proxy:($("setProxy")&&$("setProxy").value),sites:($("setSites")&&$("setSites").value),dispFont:($("dispFontSel")&&$("dispFontSel").value),dispBold:($("dispBold")?$("dispBold").checked:true),dispSize:($("dispSize")&&$("dispSize").value),layout:($("setLayout")&&$("setLayout").value),simpleLen:($("setSimpleLen")&&$("setSimpleLen").value)});}
-function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);if($("setLayout"))$("setLayout").value=(c.layout==="simple")?"simple":"std";if($("setSimpleLen"))$("setSimpleLen").value=c.simpleLen||"21";}
+function persist(){store.set("genre",$("genre").value);store.set("cfg",{w:$("setW").value,dpi:$("setDpi").value,fs:$("setFs").value,qr:$("setQr").value,store:$("setStore").value,ip:$("printerIp").value,orient:orient(),code:codeType(),scale:($("setScale")&&$("setScale").value),shift:($("setShiftX")&&$("setShiftX").value),shiftY:($("setShiftY")&&$("setShiftY").value),proxy:($("setProxy")&&$("setProxy").value),sites:($("setSites")&&$("setSites").value),dispFont:($("dispFontSel")&&$("dispFontSel").value),dispBold:($("dispBold")?$("dispBold").checked:true),dispSize:($("dispSize")&&$("dispSize").value),layout:($("setLayout")&&$("setLayout").value),headSeek:($("setHeadSeek")&&$("setHeadSeek").checked?1:0),simpleLen:($("setSimpleLen")&&$("setSimpleLen").value)});}
+function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);if($("setLayout"))$("setLayout").value=(c.layout==="simple")?"simple":"std";if($("setHeadSeek"))$("setHeadSeek").checked=!!c.headSeek;if($("setSimpleLen"))$("setSimpleLen").value=c.simpleLen||"21";}
 function histGet(){return store.get("histLines",[]);}
 function curGenreKey(){ return brandGenrePrefix()+String(($("genre")&&$("genre").value)||""); }
 function histAdd(line){
