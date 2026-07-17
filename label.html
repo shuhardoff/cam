@@ -4065,10 +4065,10 @@ function paintSimple(){
   const H=Math.round(mm(lenMm));
   let mat=null; try{ mat=QRMini.generate(nonpluCode(),"H",true); }catch(e){ mat=null; }
   const minQr=mat?mat.length*2:0;                       // QRの最小（1セル2ドット＝読める下限）
-  const top=Math.round(mm(1.2)), gap=Math.round(mm(0.6)), bottom=Math.round(mm(1.0));
+  const top=Math.round(mm(0.8)), gap=Math.round(mm(0.4)), bottom=Math.round(mm(0.8));
   // ★優先順位：①文字は原寸を維持 → ②QRが残りスペースで伸縮（セル2〜4ドット）→ ③それでも入らない時だけ文字を縮小
   let k=1;
-  let hGenre=Math.round(mm(3.9)*FS), hPrice=Math.round(mm(6.6)*FS), hBrand=Math.round(mm(3.4)*FS);
+  let hGenre=Math.round(mm(4.0)*FS), hPrice=Math.round(mm(8.0)*FS), hBrand=Math.round(mm(3.6)*FS);
   let avail=H-top-hGenre-hPrice-gap*2-hBrand-bottom;
   if(mat && avail<minQr){                                // 最終手段：不足分だけ文字を縮める
     const textH=hGenre+hPrice+hBrand;
@@ -4085,17 +4085,18 @@ function paintSimple(){
   // ジャンル行（OFF HOUSE / HOBBY-OFF はレジ番号3桁詰め＝会社ツールの表記に合わせる）
   const gsel=$("genre"); const gname=gsel&&gsel.selectedOptions[0]?String(gsel.selectedOptions[0].dataset.name||""):"";
   const gno=(isOffHouse()||isHobbyOff())?String(parseInt(gsel.value,10)||0).padStart(3,"0"):String(gsel?gsel.value:"");
-  ctx.font=jpFont(mm(2.7)*FS*k,"700");
+  ctx.font=jpFont(mm(3.0)*FS*k,"700");
   ctx.fillText(gno+"　"+gname, mx, y);
   y+=hGenre;
-  // 価格行：税込を大きく＋（税抜）
+  // 価格行：税込を大きく（左）＋（税抜）は右寄せ＝横幅をフルに使う
   const ex=num($("priceEx").value)||0; const inc=Math.round(ex*1.1);
-  ctx.font=monoFont(mm(5.4)*FS*k,"900");
+  ctx.font=monoFont(mm(6.4)*FS*k,"900");
   const big="¥"+comma(inc);
   ctx.fillText(big, mx, y);
-  const bw=ctx.measureText(big).width;
-  ctx.font=monoFont(mm(2.7)*FS*k,"700");
-  ctx.fillText("（¥"+comma(ex)+"）", mx+bw+Math.round(mm(2.2)), y+Math.round(mm(2.4)*FS*k));
+  ctx.font=monoFont(mm(3.0)*FS*k,"700");
+  const par="（¥"+comma(ex)+"）";
+  const pw=ctx.measureText(par).width;
+  ctx.fillText(par, Math.max(mx+ctx.measureText(big).width+Math.round(mm(1.5)), W8-mx-pw), y+Math.round(mm(3.0)*FS*k));
   y+=hPrice+gap;
   // QR（中央・ブランド行に食い込まない位置に収める）
   const brandTop=H-bottom-hBrand;
@@ -4105,7 +4106,7 @@ function paintSimple(){
     for(let r=0;r<mat.length;r++)for(let c=0;c<mat.length;c++){ if(mat[r][c]) ctx.fillRect(ox+c*cell, qy+r*cell, cell, cell); }
   }
   // 店舗ブランド（最下段に固定）
-  ctx.font=monoFont(mm(2.9)*FS*k,"bold");
+  ctx.font=monoFont(mm(3.1)*FS*k,"bold");
   const bn=$("setStore").value||""; const bw2=ctx.measureText(bn).width;
   ctx.fillText(bn, Math.round((W8-bw2)/2), brandTop+Math.round(mm(0.3)));
 }
