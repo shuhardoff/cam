@@ -397,7 +397,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v2.1</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v2.2</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -4066,11 +4066,11 @@ function paintSimple(){
   let mat=null; try{ mat=QRMini.generate(nonpluCode(),"H",true); }catch(e){ mat=null; }
   const cell=3;                                   // QR＝1セル3ドット ≒ 9.4mm（目標と同サイズ・固定）
   const qrPx=mat?cell*mat.length:0;
-  const top=Math.round(mm(1.2)), gap=Math.round(mm(1.0)), bottom=Math.round(mm(1.2));
-  const hGenre=Math.round(mm(4.6));               // ジャンル行
-  const hPrice=Math.round(mm(9.0));               // 価格行（¥550＝約7.2mmの大文字）
-  const hBrand=Math.round(mm(4.2));               // 店舗ブランド行
-  const H=top+hGenre+hPrice+gap+qrPx+gap+hBrand+bottom;   // ← 長さは自動（約31mm）
+  const top=Math.round(mm(0.4)), gap=Math.round(mm(0.4)), bottom=Math.round(mm(0.3));
+  const hGenre=Math.round(mm(3.9));               // ジャンル行
+  const hPrice=Math.round(mm(8.0));               // 価格行（¥550＝約7.2mmの大文字はそのまま）
+  const hBrand=Math.round(mm(3.6));               // 店舗ブランド行
+  const H=top+hGenre+hPrice+gap+qrPx+gap+hBrand+bottom;   // ← 長さは自動（余白を圧縮し約26mm）
   cv.width=W8; cv.height=H;
   ctx.fillStyle="#fff"; ctx.fillRect(0,0,W8,H);
   ctx.fillStyle="#000"; ctx.textBaseline="top";
