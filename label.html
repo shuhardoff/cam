@@ -338,7 +338,7 @@
   .sitebtns button img{width:12px !important;height:12px !important}
 
   /* ヘッダーに集約したアクション（印刷・枚数・全リセット・ロゴ・設定） */
-  .bar-actions{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .bar-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;flex:1 1 auto;min-width:0;justify-content:flex-end}
   .printbtn.hdrprint{width:auto;margin:0;height:56px;min-width:200px;font-size:19px;letter-spacing:.1em;padding:0 56px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center}
   .printbtn.hdrprint::after{animation:shine 4.2s ease-in-out infinite}
   .bar-actions .copywrap{height:56px;padding:4px 16px;justify-content:center}
@@ -414,7 +414,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v2.9</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v3.0</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
