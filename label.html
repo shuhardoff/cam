@@ -414,7 +414,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v3.2</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v3.3</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -5926,17 +5926,24 @@ function histAdd(line){
   try{shareSoon();}catch(e){}
   renderHistory();
 }
+/* 本文のカーソル位置を記憶（チップを押すとフォーカスが外れるため） */
+(function(){ document.addEventListener("DOMContentLoaded",function(){
+  const t=$("notes"); if(!t) return;
+  const save=()=>{ window.__nSel={s:t.selectionStart,e:t.selectionEnd}; };
+  ["keyup","click","select","focus","input"].forEach(ev=>t.addEventListener(ev,save));
+});})();
 function insertComment(line){
   const t=$("notes");
-  // カーソル位置（選択範囲）に挿入する。本文にフォーカスが無い時＝従来どおり末尾に行追加
-  if(document.activeElement===t && typeof t.selectionStart==="number"){
-    const st=t.selectionStart, en=t.selectionEnd, v=t.value;
+  // 記憶したカーソル位置（選択範囲）に挿入。一度も本文を触っていない時＝末尾に行追加
+  let st=null,en=null;
+  if(document.activeElement===t && typeof t.selectionStart==="number"){ st=t.selectionStart; en=t.selectionEnd; }
+  else if(window.__nSel && typeof window.__nSel.s==="number"){ st=Math.min(window.__nSel.s,t.value.length); en=Math.min(window.__nSel.e,t.value.length); }
+  if(st!=null){
+    const v=t.value;
     const before=v.slice(0,st), after=v.slice(en);
-    // 行の途中でなければそのまま、行の途中なら自然に繋がるよう前後に改行を補う
-    const needNL1=before&&!before.endsWith("\n")&&before.trim()!==""&&st>0&&before.slice(-1)!=="\n";
-    const ins=(needNL1&&before.slice(-1)!==" "?"":"")+line;
-    t.value=before+ins+after;
-    const pos=(before+ins).length;
+    t.value=before+line+after;
+    const pos=(before+line).length;
+    window.__nSel={s:pos,e:pos};
     t.focus(); try{t.setSelectionRange(pos,pos);}catch(e){}
   }else{
     const cur=t.value.replace(/\s+$/,"");
@@ -5964,7 +5971,7 @@ function renderHistory(){
     b.title=(o.n?("この商品名で"+(nameScore[o.t]||1)+"回使用："):o.g?("このジャンルで"+(gm[o.t]||1)+"回使用："):"")+o.t;
     if(o.n){ b.style.borderColor="var(--ok)"; b.style.borderWidth="2px"; }
     else if(o.g) b.style.borderColor="var(--a1)";
-    b.onclick=()=>{ insertComment(o.t); histAdd(o.t); }; box.appendChild(b); });
+    b.onmousedown=(ev)=>ev.preventDefault(); b.onclick=()=>{ insertComment(o.t); histAdd(o.t); }; box.appendChild(b); });
 }
 function addClear(id){
   const el=$(id); if(!el) return; const f=el.parentElement; if(!f) return;
