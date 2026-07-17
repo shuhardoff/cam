@@ -397,7 +397,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v2.2</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v2.3</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -4066,11 +4066,12 @@ function paintSimple(){
   let mat=null; try{ mat=QRMini.generate(nonpluCode(),"H",true); }catch(e){ mat=null; }
   const cell=3;                                   // QR＝1セル3ドット ≒ 9.4mm（目標と同サイズ・固定）
   const qrPx=mat?cell*mat.length:0;
-  const top=Math.round(mm(0.4)), gap=Math.round(mm(0.4)), bottom=Math.round(mm(0.3));
-  const hGenre=Math.round(mm(3.9));               // ジャンル行
-  const hPrice=Math.round(mm(8.0));               // 価格行（¥550＝約7.2mmの大文字はそのまま）
-  const hBrand=Math.round(mm(3.6));               // 店舗ブランド行
-  const H=top+hGenre+hPrice+gap+qrPx+gap+hBrand+bottom;   // ← 長さは自動（余白を圧縮し約26mm）
+  // ★会社の値札を画像実測した寸法（ジャンル2.7／価格5.2／ブランド2.6mm）。QRのみ読み取り保証のためセル3ドット
+  const top=Math.round(mm(0.5)), g1=Math.round(mm(0.7)), g2=Math.round(mm(0.9)), g3=Math.round(mm(0.9)), bottom=Math.round(mm(0.4));
+  const hGenre=Math.round(mm(3.4));
+  const hPrice=Math.round(mm(6.2));
+  const hBrand=Math.round(mm(3.4));
+  const H=top+hGenre+g1+hPrice+g2+qrPx+g3+hBrand+bottom;   // ← 内容から自動（約25mm）
   cv.width=W8; cv.height=H;
   ctx.fillStyle="#fff"; ctx.fillRect(0,0,W8,H);
   ctx.fillStyle="#000"; ctx.textBaseline="top";
@@ -4078,25 +4079,25 @@ function paintSimple(){
   // ジャンル行（OFF HOUSE / HOBBY-OFF はレジ番号3桁詰め＝会社ツールの表記）
   const gsel=$("genre"); const gname=gsel&&gsel.selectedOptions[0]?String(gsel.selectedOptions[0].dataset.name||""):"";
   const gno=(isOffHouse()||isHobbyOff())?String(parseInt(gsel.value,10)||0).padStart(3,"0"):String(gsel?gsel.value:"");
-  ctx.font=jpFont(mm(3.3),"700");
+  ctx.font=jpFont(mm(2.7),"700");
   ctx.fillText(gno+"　"+gname, mx, y);
-  y+=hGenre;
+  y+=hGenre+g1;
   // 価格行：税込を大きく（左）＋（税抜）は右寄り＝目標と同じ配置
   const ex=num($("priceEx").value)||0; const inc=Math.round(ex*1.1);
-  ctx.font=monoFont(mm(7.2),"900");
+  ctx.font=monoFont(mm(5.9),"900");
   const big="¥"+comma(inc);
   ctx.fillText(big, mx, y);
   const bigW=ctx.measureText(big).width;
-  ctx.font=monoFont(mm(3.4),"700");
+  ctx.font=monoFont(mm(3.0),"700");
   const par="（¥"+comma(ex)+"）";
   const pw=ctx.measureText(par).width;
-  ctx.fillText(par, Math.max(mx+bigW+Math.round(mm(1.5)), W8-mx-pw), y+Math.round(mm(3.2)));
-  y+=hPrice+gap;
+  ctx.fillText(par, Math.max(mx+bigW+Math.round(mm(1.5)), W8-mx-pw), y+Math.round(mm(2.6)));
+  y+=hPrice+g2;
   // QR（中央・固定サイズ）
   if(mat&&qrPx>0){ const ox=Math.round((W8-qrPx)/2);
     for(let r=0;r<mat.length;r++)for(let c=0;c<mat.length;c++){ if(mat[r][c]) ctx.fillRect(ox+c*cell, y+r*cell, cell, cell); }
   }
-  y+=qrPx+gap;
+  y+=qrPx+g3;
   // 店舗ブランド（中央）
   ctx.font=monoFont(mm(3.6),"bold");
   const bn=$("setStore").value||""; const bw2=ctx.measureText(bn).width;
