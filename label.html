@@ -86,7 +86,13 @@
   .appver{font-size:11px;font-weight:800;color:var(--ok);letter-spacing:.03em;vertical-align:middle;margin-left:2px}
   .kh{font-size:9.5px;font-weight:800;color:var(--sub);background:rgba(20,40,90,.08);border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle;letter-spacing:.02em}
   #printBtn .kh{color:rgba(255,255,255,.9);background:rgba(255,255,255,.22)}
-  .bar-actions{display:flex;align-items:center;gap:9px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;flex:1 1 auto;min-width:0;justify-content:flex-end;margin-left:auto}
+  .bar-actions{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;flex:1 1 auto;min-width:0;justify-content:flex-end;margin-left:auto}
+  .bar-actions .resetbtn{padding:8px 12px;font-size:12.5px}
+  .bar-actions .resetbtn .kh{display:none}
+  .bar-actions .gear{padding:8px 10px;font-size:12.5px}
+  .bar-actions .brandbadge{transform:scale(.82);transform-origin:center;margin:0 -6px}
+  .bar-actions .acctgl{padding:7px 9px;font-size:12px}
+  .hsep{margin:0}
   .gpill{flex:0 1 auto;min-width:0;overflow:hidden}
   .gpill .gpname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .logo{flex:0 0 auto}
@@ -405,7 +411,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v2.7</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v2.8</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
