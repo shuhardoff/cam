@@ -397,7 +397,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v2.0</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v2.1</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -638,7 +638,7 @@
         <div class="g2">
           <div class="f"><label>コード種別</label><select id="setCode"><option value="bar">バーコード</option><option value="qr" selected>QRコード</option><option value="both">両方</option></select></div>
           <div class="f"><label>ラベルの形式</label><select id="setLayout"><option value="std" selected>標準（情報たっぷり）</option><option value="simple">シンプル（会社の値札風・固定長）</option></select></div>
-          <div class="f"><label>シンプル時のラベル長（mm）</label><input id="setSimpleLen" inputmode="numeric" value="21"><div class="hint">印字部分の長さ。仕上がり＝これ＋プリンタ構造上の上余白（約7mm）。目標の総長から上余白を引いた値に</div></div>
+          
           <div class="f"><label>ロール幅 (mm)</label><input id="setW" inputmode="decimal" value="35"></div>
           <div class="f"><label>QRサイズ (mm)</label><input id="setQr" inputmode="decimal" value="12"></div>
           <div class="f"><label>文字の大きさ</label><input id="setFs" inputmode="decimal" value="1"></div>
@@ -4058,58 +4058,49 @@ function isSimpleLayout(){ return $("setLayout")&&$("setLayout").value==="simple
    1行目=ジャンル番号＋名前 ／ 2行目=税込を大きく＋（税抜） ／ QR（実証済みの3ブランドPOS番号）／ 店舗ブランド。
    ロールの節約と、レジ・スタッフが見慣れた形式のための代替レイアウト。 */
 function paintSimple(){
+  /* ★目標の会社値札を実測した固定デザイン。文字・QRサイズは固定、ラベル長は内容から自動決定。
+     文字サイズ設定・長さ設定・縦横設定の影響を受けない（どのPCでも同じ仕上がり） */
   const Wmm=parseFloat($("setW").value)||35;
   const W8=Math.ceil(Math.round(Wmm*DPMM)/8)*8;
-  const mx=Math.round(mm(2.2));
-  // ★固定長：会社の値札と同じ長さで出す（⚙設定「シンプル時のラベル長」・既定28mm）
-  const lenMm=Math.max(15,Math.min(60,parseFloat(($("setSimpleLen")&&$("setSimpleLen").value)||"21")||21));
-  const H=Math.round(mm(lenMm));
+  const mx=Math.round(mm(2.0));
   let mat=null; try{ mat=QRMini.generate(nonpluCode(),"H",true); }catch(e){ mat=null; }
-  const minQr=mat?mat.length*2:0;                       // QRの最小（1セル2ドット＝読める下限）
-  const top=Math.round(mm(0.8)), gap=Math.round(mm(0.4)), bottom=Math.round(mm(0.8));
-  // ★優先順位：①文字は原寸を維持 → ②QRが残りスペースで伸縮（セル2〜4ドット）→ ③それでも入らない時だけ文字を縮小
-  let k=1;
-  let hGenre=Math.round(mm(4.0)*FS), hPrice=Math.round(mm(8.0)*FS), hBrand=Math.round(mm(3.6)*FS);
-  let avail=H-top-hGenre-hPrice-gap*2-hBrand-bottom;
-  if(mat && avail<minQr){                                // 最終手段：不足分だけ文字を縮める
-    const textH=hGenre+hPrice+hBrand;
-    k=Math.max(0.55,(textH-(minQr-avail))/textH);
-    hGenre=Math.round(hGenre*k); hPrice=Math.round(hPrice*k); hBrand=Math.round(hBrand*k);
-    avail=H-top-hGenre-hPrice-gap*2-hBrand-bottom;
-  }
-  const cell=mat?Math.max(2,Math.min(4,Math.floor(avail/mat.length))):0;  // QRは最大約13mmまで
+  const cell=3;                                   // QR＝1セル3ドット ≒ 9.4mm（目標と同サイズ・固定）
   const qrPx=mat?cell*mat.length:0;
+  const top=Math.round(mm(1.2)), gap=Math.round(mm(1.0)), bottom=Math.round(mm(1.2));
+  const hGenre=Math.round(mm(4.6));               // ジャンル行
+  const hPrice=Math.round(mm(9.0));               // 価格行（¥550＝約7.2mmの大文字）
+  const hBrand=Math.round(mm(4.2));               // 店舗ブランド行
+  const H=top+hGenre+hPrice+gap+qrPx+gap+hBrand+bottom;   // ← 長さは自動（約31mm）
   cv.width=W8; cv.height=H;
   ctx.fillStyle="#fff"; ctx.fillRect(0,0,W8,H);
   ctx.fillStyle="#000"; ctx.textBaseline="top";
   let y=top;
-  // ジャンル行（OFF HOUSE / HOBBY-OFF はレジ番号3桁詰め＝会社ツールの表記に合わせる）
+  // ジャンル行（OFF HOUSE / HOBBY-OFF はレジ番号3桁詰め＝会社ツールの表記）
   const gsel=$("genre"); const gname=gsel&&gsel.selectedOptions[0]?String(gsel.selectedOptions[0].dataset.name||""):"";
   const gno=(isOffHouse()||isHobbyOff())?String(parseInt(gsel.value,10)||0).padStart(3,"0"):String(gsel?gsel.value:"");
-  ctx.font=jpFont(mm(3.0)*FS*k,"700");
+  ctx.font=jpFont(mm(3.3),"700");
   ctx.fillText(gno+"　"+gname, mx, y);
   y+=hGenre;
-  // 価格行：税込を大きく（左）＋（税抜）は右寄せ＝横幅をフルに使う
+  // 価格行：税込を大きく（左）＋（税抜）は右寄り＝目標と同じ配置
   const ex=num($("priceEx").value)||0; const inc=Math.round(ex*1.1);
-  ctx.font=monoFont(mm(6.4)*FS*k,"900");
+  ctx.font=monoFont(mm(7.2),"900");
   const big="¥"+comma(inc);
   ctx.fillText(big, mx, y);
-  ctx.font=monoFont(mm(3.0)*FS*k,"700");
+  const bigW=ctx.measureText(big).width;
+  ctx.font=monoFont(mm(3.4),"700");
   const par="（¥"+comma(ex)+"）";
   const pw=ctx.measureText(par).width;
-  ctx.fillText(par, Math.max(mx+ctx.measureText(big).width+Math.round(mm(1.5)), W8-mx-pw), y+Math.round(mm(3.0)*FS*k));
+  ctx.fillText(par, Math.max(mx+bigW+Math.round(mm(1.5)), W8-mx-pw), y+Math.round(mm(3.2)));
   y+=hPrice+gap;
-  // QR（中央・ブランド行に食い込まない位置に収める）
-  const brandTop=H-bottom-hBrand;
+  // QR（中央・固定サイズ）
   if(mat&&qrPx>0){ const ox=Math.round((W8-qrPx)/2);
-    let qy=y+Math.max(0,Math.round((avail-qrPx)/2));
-    if(qy+qrPx>brandTop-gap) qy=Math.max(y,brandTop-gap-qrPx);
-    for(let r=0;r<mat.length;r++)for(let c=0;c<mat.length;c++){ if(mat[r][c]) ctx.fillRect(ox+c*cell, qy+r*cell, cell, cell); }
+    for(let r=0;r<mat.length;r++)for(let c=0;c<mat.length;c++){ if(mat[r][c]) ctx.fillRect(ox+c*cell, y+r*cell, cell, cell); }
   }
-  // 店舗ブランド（最下段に固定）
-  ctx.font=monoFont(mm(3.1)*FS*k,"bold");
+  y+=qrPx+gap;
+  // 店舗ブランド（中央）
+  ctx.font=monoFont(mm(3.6),"bold");
   const bn=$("setStore").value||""; const bw2=ctx.measureText(bn).width;
-  ctx.fillText(bn, Math.round((W8-bw2)/2), brandTop+Math.round(mm(0.3)));
+  ctx.fillText(bn, Math.round((W8-bw2)/2), y);
 }
 function draw(){
   if($("autoDate").checked) setToday(); else window.__date="";
@@ -4147,6 +4138,8 @@ function draw(){
   updateNoteHighlight();
   if(typeof renderSpecChip==="function") try{renderSpecChip();}catch(e){}
   if($("layoutSw")) $("layoutSw").checked=isSimpleLayout();
+  try{ const os=$("orientSeg"); const ow=os&&os.closest(".psrow");
+    if(ow) ow.style.display=isSimpleLayout()?"none":""; }catch(e){}
   persist();
 }
 function fitPreview(){
