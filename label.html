@@ -49,7 +49,8 @@
   .themename .tno{font-weight:700;font-size:12px;color:var(--sub);margin-left:6px}
   @media(max-width:760px){.themename{font-size:16px}}
   .themeicon:hover{transform:scale(1.12) rotate(-6deg)}
-  header.bar{display:flex;align-items:center;gap:12px;padding:24px 4px 14px;animation:fade .6s ease both;flex-wrap:nowrap;min-width:0}
+  header.bar{display:flex;align-items:center;gap:12px;padding:24px 4px 14px;animation:fade .6s ease both;flex-wrap:nowrap;min-width:0;row-gap:8px}
+  header.bar.wrapped{flex-wrap:wrap}
   .logo{font-family:var(--jp-display);font-weight:900;letter-spacing:.005em;font-size:25px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;position:relative}
   .logo::after{content:"";position:absolute;left:1px;right:6px;bottom:-3px;height:2px;border-radius:2px;background:var(--luxgrad);opacity:.85}
   .bar .sub{color:var(--sub);font-size:12.5px;margin-left:4px;align-self:flex-end;padding-bottom:3px}
@@ -86,7 +87,7 @@
   .appver{font-size:11px;font-weight:800;color:var(--ok);letter-spacing:.03em;vertical-align:middle;margin-left:2px}
   .kh{font-size:9.5px;font-weight:800;color:var(--sub);background:rgba(20,40,90,.08);border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle;letter-spacing:.02em}
   #printBtn .kh{color:rgba(255,255,255,.9);background:rgba(255,255,255,.22)}
-  .bar-actions{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;flex:1 1 auto;min-width:0;justify-content:flex-end;margin-left:auto}
+  .bar-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;row-gap:8px;overflow:visible;flex:1 1 auto;min-width:0;justify-content:flex-end;margin-left:auto}
   .bar-actions .resetbtn{padding:8px 12px;font-size:12.5px}
   .bar-actions .resetbtn .kh{font-size:8.5px;padding:1px 4px;margin-left:4px}
   .bar-actions .gear{padding:8px 11px;font-size:16px;line-height:1}
@@ -96,10 +97,30 @@
   .bar-actions .brandbadge{transform:scale(.82);transform-origin:center;margin:0 -6px}
   .bar-actions .acctgl{padding:7px 9px;font-size:12px}
   .hsep{margin:0}
+  /* ボタン行は常に全幅へ均等配置：どの画面幅でも余白が「間隔」として活き、無駄な空きが出ない */
+  .bar-actions{justify-content:space-between !important;zoom:.85}
+  /* 縮めた時：均等散らしをやめ、左から整然と並べる（行ごとに揃った綺麗な折返し） */
+
+  .bar-actions .hsep{display:none}
+  .gpill{zoom:.9}
+  .logo{font-size:21px}
+  .brk{display:none}
+  /* 画面半分（約850px）専用：1行目=タイトル⟷ジャンル、2行目・3行目=フル幅均等の2段はしご */
+  @media (max-width:1100px){
+    header.bar{flex-wrap:wrap;row-gap:10px}
+    .gpill{margin-left:auto !important}
+    .bar-actions{flex-basis:100%;row-gap:11px;justify-content:flex-start !important;gap:10px;zoom:1 !important;align-content:flex-start}
+    header.bar{padding-top:14px;padding-bottom:12px;row-gap:8px}
+    .brk{display:block !important;flex-basis:100% !important;width:100% !important;height:0 !important}
+    .bar-actions>*:not(.brk){height:40px !important;display:inline-flex;align-items:center;border-radius:12px;box-sizing:border-box}
+    .bar-actions #printBtn{flex:1 1 auto !important;max-width:460px;justify-content:center}
+    .bar-actions .resetbtn{flex:1 1 auto;max-width:340px;display:inline-flex;justify-content:center}
+    .bar-actions #printBtn{height:46px !important;border-radius:14px}
+  }
   .gpill{flex:0 0 auto;overflow:hidden;max-width:280px}
   .gpill .gpname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
   .logo{flex:0 0 auto}
-  .bar-actions .acctgl,.bar-actions .lswitch{flex:0 0 auto}
+  .bar-actions>*{flex:0 0 auto}
   .hsep{width:1px;height:26px;background:var(--line);flex:0 0 auto;margin:0 2px}
   .lswitch{display:inline-flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
   .lswitch .lswtxt{font-size:12px;font-weight:800;color:var(--sub)}
@@ -338,7 +359,7 @@
   .sitebtns button img{width:12px !important;height:12px !important}
 
   /* ヘッダーに集約したアクション（印刷・枚数・全リセット・ロゴ・設定） */
-  .bar-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;flex:1 1 auto;min-width:0;justify-content:flex-end}
+  .bar-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap;row-gap:8px;overflow:visible;flex:1 1 auto;min-width:0;justify-content:flex-end;margin-left:auto}
   .printbtn.hdrprint{width:auto;margin:0;height:56px;min-width:200px;font-size:19px;letter-spacing:.1em;padding:0 56px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center}
   .printbtn.hdrprint::after{animation:shine 4.2s ease-in-out infinite}
   .bar-actions .copywrap{height:56px;padding:4px 16px;justify-content:center}
@@ -414,7 +435,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v3.4</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v5.9</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -429,6 +450,7 @@
       <span class="hsep"></span>
       <label class="acctgl" title="値札＋付属品ラベル（QRなし）＋裏ラベル（保管場所）の3枚を印刷（F4で切替）"><input type="checkbox" id="accOn"> 付属品</label>
       <button class="acctgl" id="accSoloBtn" type="button" title="値札なしで、付属品ラベル＋裏ラベル（保管場所・管理番号）だけを印刷する画面を開く">📎 付属品のみ</button>
+      <span class="brk"></span>
       <button class="acctgl" id="histBtn" type="button" title="印刷履歴：クリックで内容を呼び出して再印刷。前回の値付けも価格欄の下に自動表示">📜 履歴</button>
       <span class="hsep"></span>
       <label class="lswitch" title="ON＝シンプル値札（会社の値札風・固定長）／OFF＝標準ラベル"><span class="lswtxt">シンプル値札</span><input type="checkbox" id="layoutSw"><span class="lswslider"></span></label>
@@ -3660,11 +3682,18 @@ function paint(measureOnly){
 
   // header（区分を黒帯＋白抜きのヘッダーにして「ラベルの上端」を明確化）
   const kub=p.kubun;
-  const bandH=Math.round(mm(5.0)*FS);
+  const bandH=Math.round(mm(5.0));  // 黒帯は文字サイズ設定に依存せず固定バランス
   if(!measureOnly){
     ctx.fillStyle=dark; ctx.fillRect(mx,y,cw,bandH);
-    if(kub){ const fpx=mm(3.4)*FS; ctx.font=kubunFont(fpx,"900",kub); ctx.textBaseline="middle"; ctx.fillStyle="#fff"; ctx.strokeStyle="#fff"; ctx.lineJoin="round"; ctx.lineWidth=Math.max(1.2,mm(0.18)); const kx=mx+Math.round(mm(1.6)), ky=y+bandH/2; ctx.strokeText(kub,kx,ky); ctx.fillText(kub,kx,ky); }
-    { const fpx=mm(2.0)*FS; ctx.font=monoFont(fpx,"900"); ctx.textBaseline="middle"; ctx.fillStyle="#fff"; ctx.strokeStyle="#fff"; ctx.lineJoin="round"; ctx.lineWidth=Math.max(1,mm(0.14)); const tw=ctx.measureText(slash).width; const dx=W8-mx-tw-Math.round(mm(1.2)), dy=y+bandH/2; ctx.strokeText(slash,dx,dy); ctx.fillText(slash,dx,dy); }
+    if(kub){ let fpx=mm(3.4);
+      // 日付と重ならないよう、区分は「日付の左端 − 余白」までに収まるサイズへ自動縮小
+      let dateW=0; if(slash){ ctx.font=monoFont(mm(2.0),"900"); dateW=ctx.measureText(slash).width+Math.round(mm(2.6)); }
+      const kx=mx+Math.round(mm(1.6));
+      const availW=(W8-mx-Math.round(mm(1.2)))-dateW-kx;
+      ctx.font=kubunFont(fpx,"900",kub);
+      while(fpx>mm(1.8) && ctx.measureText(kub).width>availW){ fpx*=0.94; ctx.font=kubunFont(fpx,"900",kub); }
+      ctx.textBaseline="middle"; ctx.fillStyle="#fff"; ctx.strokeStyle="#fff"; ctx.lineJoin="round"; ctx.lineWidth=Math.max(1.2,mm(0.18)); const ky=y+bandH/2; ctx.strokeText(kub,kx,ky); ctx.fillText(kub,kx,ky); }
+    { const fpx=mm(2.0); ctx.font=monoFont(fpx,"900"); ctx.textBaseline="middle"; ctx.fillStyle="#fff"; ctx.strokeStyle="#fff"; ctx.lineJoin="round"; ctx.lineWidth=Math.max(1,mm(0.14)); const tw=ctx.measureText(slash).width; const dx=W8-mx-tw-Math.round(mm(1.2)), dy=y+bandH/2; ctx.strokeText(slash,dx,dy); ctx.fillText(slash,dx,dy); }
     ctx.fillStyle=dark; ctx.textBaseline="top";
   }
   y+=bandH+Math.round(mm(1.4));
@@ -3777,9 +3806,9 @@ function paint(measureOnly){
   }
   // brand
   if($("secBrand").checked){
-    const fpx=mm(2.7)*FS; ctx.font=monoFont(fpx,"bold");
+    const fpx=mm(2.7); ctx.font=monoFont(fpx,"bold");  // 店舗ブランドは文字サイズ設定に依存しない固定サイズ
     if(!measureOnly){ ctx.textBaseline="top"; const t=$("setStore").value; const tw=ctx.measureText(t).width; ctx.fillStyle=dark; ctx.fillText(t,(W8-tw)/2,y); }
-    y+=Math.round(mm(3.2)*FS);
+    y+=Math.round(mm(3.2));
   }
   // （日付は右上に表示済みのため、下部の管理番号は重複につき非表示）
   y+=Math.round(mm(1.2));
@@ -4161,6 +4190,7 @@ function draw(){
   updateNoteHighlight();
   if(typeof renderSpecChip==="function") try{renderSpecChip();}catch(e){}
   if($("layoutSw")) $("layoutSw").checked=isSimpleLayout();
+  try{ clearTimeout(window.__fbT2); window.__fbT2=setTimeout(fitBar,80); }catch(e){}
   try{ const os=$("orientSeg"); const ow=os&&os.closest(".psrow");
     if(ow) ow.style.display=isSimpleLayout()?"none":""; }catch(e){}
   persist();
@@ -4374,7 +4404,7 @@ function accCanvas(kind,place,no5,ov){
     g2.textBaseline="top"; y+=h; }
   if(kind==="fuzoku"){
     // 黒帯（付属品＋日付）
-    const bandH=Math.round(mm(5.0)*FS);
+    const bandH=Math.round(mm(5.0));  // 黒帯は文字サイズ設定に依存せず固定バランス
     g2.fillStyle="#000"; g2.fillRect(mx,y,cw,bandH);
     g2.font=jpFont(mm(3.3)*FS,"900"); g2.textBaseline="middle"; g2.fillStyle="#fff";
     g2.strokeStyle="#fff"; g2.lineJoin="round"; g2.lineWidth=Math.max(1.2,mm(0.18));
@@ -4410,7 +4440,7 @@ function accCanvas(kind,place,no5,ov){
     // レジ注意帯（白抜き＝目立たせる）
     band("レジ打ち不可・値札は本体",mm(2.2)*FS,Math.round(mm(4.2)*FS));
     y+=Math.round(mm(1.0));
-    if($("secBrand").checked){ center($("setStore").value,monoFont(mm(2.5)*FS,"bold"),y); y+=Math.round(mm(3.0)*FS); }
+    if($("secBrand").checked){ center($("setStore").value,monoFont(mm(2.5),"bold"),y); y+=Math.round(mm(3.0)); }  /* 固定サイズ */
     { const st="— 付属品側 —"; const sp=mm(1.8)*FS; g2.font=jpFont(sp,"700");
       const stw=g2.measureText(st).width; txt(st,jpFont(sp,"700"),W8-mx-stw,y); y+=Math.round(sp*1.4); }
   }else{
@@ -4680,6 +4710,13 @@ function histUiInit(){
   const f=$("histFilter"); if(f) f.addEventListener("input",()=>{ clearTimeout(window._hmT); window._hmT=setTimeout(renderHistModal,200); });
 }
 
+/* ボタン列：ウィンドウ幅に合わせて全体を自動縮小（隠さない・スクロールさせない） */
+function fitBar(){ try{
+  const bar=document.querySelector("header.bar"); if(!bar) return;
+  bar.classList.remove("wrapped");            // まず1列で試す
+  if(bar.scrollWidth>bar.clientWidth+2) bar.classList.add("wrapped");  // 入り切らない時だけ折り返し
+}catch(e){} }
+window.addEventListener("resize",()=>{ clearTimeout(window.__fbT); window.__fbT=setTimeout(fitBar,120); });
 /* 各ボタン周辺にショートカットを小さく表示（設定変更にも追従） */
 function kbdHints(){
   try{
@@ -4999,7 +5036,33 @@ function renderSiteButtons(){ var box=$("siteBtns"); if(!box)return; box.innerHT
         janMsg("「"+s[0]+"」で検索を開きました。商品名・メーカーを見て入力してください。","ok");
       } };
     box.appendChild(b); });
+  requestAnimationFrame(fitSiteBtns);
 }
+/* サイト名を省略（…）せず全表示：ボタンごとに収まる文字サイズへ自動調整。
+   Webフォント読込後やリサイズで幅が変わっても追従する */
+function fitSiteBtns(){
+  var box=$("siteBtns"); if(!box) return;
+  window.__sbNeed=0;
+  Array.prototype.forEach.call(box.children,function(b){
+    var sp=b.querySelector("span"); if(!sp) return;
+    var fs=11;
+    sp.style.whiteSpace="nowrap"; sp.style.overflow="hidden"; sp.style.textOverflow="ellipsis";
+    sp.style.fontSize=fs+"px"; sp.style.letterSpacing="0";
+    var img=b.querySelector("img"); if(img){ img.style.display=""; }
+    b.style.paddingLeft=""; b.style.paddingRight=""; if(!b.dataset.grown){ b.style.flexGrow=""; b.style.flexShrink=""; }
+    var fits=function(){ return sp.scrollWidth<=sp.clientWidth+1; };
+    while(fs>7 && !fits()){ fs-=0.5; sp.style.fontSize=fs+"px"; }
+    if(!fits()){ sp.style.letterSpacing="-0.5px"; }                    // ② 字間を詰める
+    if(!fits()){ b.style.paddingLeft="4px"; b.style.paddingRight="4px"; } // ③ ボタン余白を圧縮
+    if(!fits() && img){ img.style.display="none"; }                     // ④ 最終手段：アイコンを隠して名前を優先
+    if(!fits() && !b.dataset.grown){ b.dataset.grown="1"; b.style.flexShrink="0.25"; b.style.flexGrow="1.6"; window.__sbNeed=1; } // ⑤ 長い名前のボタンに幅を多めに配分して再計算
+    if(fits()){ sp.style.overflow="visible"; sp.style.textOverflow="clip"; }
+  });
+  if(window.__sbNeed && !window.__sbRe){ window.__sbRe=setTimeout(function(){ window.__sbRe=null; fitSiteBtns(); },40); }
+}
+try{ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(function(){ setTimeout(fitSiteBtns,60); }); }catch(e){}
+window.addEventListener("resize",function(){ clearTimeout(window.__sbT); window.__sbT=setTimeout(fitSiteBtns,150); });
+window.addEventListener("load",function(){ setTimeout(fitSiteBtns,250); });
 function proxyURL(){ return ($("setProxy")&&$("setProxy").value.trim())||""; }
 function janMsg(html,cls){ const e=$("janMsg"); if(!e)return; e.innerHTML=html; e.style.color=cls==="ok"?"var(--ok)":cls==="err"?"var(--err)":"var(--sub)"; }
 var MAKER_MAP=[
@@ -6038,7 +6101,7 @@ function wire(){
   }
   renderSiteButtons();
 }
-buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); kbdHints(); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
+buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); kbdHints(); setTimeout(fitBar,50); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
 </script>
 <script>
 /* ===== 進化UI v5：操作レイヤー（検証済みエンジン・既存関数には触れない、追加のみ） ===== */
