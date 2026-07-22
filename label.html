@@ -104,6 +104,7 @@
   .bar-actions .hsep{display:none}
   .gpill{zoom:.9}
   .logo{font-size:21px}
+  .dimcard{opacity:.55;pointer-events:none;filter:grayscale(1) brightness(.82);transition:opacity .2s}
   .brk{display:none}
   /* 画面半分（約850px）専用：1行目=タイトル⟷ジャンル、2行目・3行目=フル幅均等の2段はしご */
   @media (max-width:1100px){
@@ -435,7 +436,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v6.0</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v7.8</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -454,6 +455,7 @@
       <button class="acctgl" id="histBtn" type="button" title="印刷履歴：クリックで内容を呼び出して再印刷。前回の値付けも価格欄の下に自動表示">📜 履歴</button>
       <span class="hsep"></span>
       <label class="lswitch" title="ON＝シンプル値札（会社の値札風・固定長）／OFF＝標準ラベル"><span class="lswtxt">シンプル値札</span><input type="checkbox" id="layoutSw"><span class="lswslider"></span></label>
+      <label class="lswitch" title="ON＝補足ラベル：コンディション＋日付だけを印刷して、会社システムのラベルの下に貼り足す用（縦専用）"><span class="lswtxt">補足</span><input type="checkbox" id="condSw"><span class="lswslider"></span></label>
       <span class="hsep"></span>
       <button class="resetbtn" id="resetAllBtn" title="ショートカット：F8">全てリセット</button>
       <span class="badge brandbadge" id="storeBadge">HARD-OFF</span>
@@ -469,7 +471,7 @@
     <div class="forms">
     <!-- 入力A: 価格・ジャンル / 商品詳細 -->
     <div class="colA">
-      <section class="card">
+      <section class="card" id="cardPrice">
         <div class="ttl"><span class="n">1</span><h2>価格・ジャンル</h2></div>
         <div class="bd">
           <div class="g2">
@@ -481,7 +483,7 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card" id="cardDetail">
         <div class="ttl"><span class="n">2</span><h2>商品詳細 <span style="font-weight:600;color:var(--sub);font-size:12px">（任意）</span></h2></div>
         <div class="bd">
           <div class="g2">
@@ -516,7 +518,7 @@
 
     <!-- 入力B: 商品の自動入力 ＋ コンディション（コンディションを上に寄せるため自動入力は小型化） -->
     <div class="colB">
-      <section class="card">
+      <section class="card" id="cardAuto">
         <div class="ttl"><span class="n"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="11" cy="11" r="6.2" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M16 16l5 5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg></span><h2>商品の自動入力 <span class="autosub" style="font-weight:600;color:var(--sub);font-size:11px">※採用した語を学習→次回同じ語で自動入力</span></h2></div>
         <div class="bd">
           <div class="f full" id="janRow">
@@ -532,7 +534,7 @@
           </div>
         </div>
       </section>
-      <section class="card">
+      <section class="card" id="cardCond">
         <div class="ttl"><span class="n">3</span><h2>コンディション <span style="font-weight:600;color:var(--sub);font-size:12px">（任意）</span></h2><button class="softbtn" id="resetCondBtn" style="margin-left:auto">リセット</button></div>
         <div class="bd">
           <div class="f full">
@@ -680,7 +682,8 @@
         <div class="g2">
           <div class="f"><label>コード種別</label><select id="setCode"><option value="bar">バーコード</option><option value="qr" selected>QRコード</option><option value="both">両方</option></select></div>
           <div class="f" style="grid-column:1/-1"><label class="acctgl"><input type="checkbox" id="setHeadSeek"> 印刷前に頭出し（実験）：上余白1.3cm対策。直営ドライバと同じ命令(FS(L fn=67)で頭出し位置へ紙送りしてから印字。動作が変な時はOFFに</label></div>
-          <div class="f"><label>ラベルの形式</label><select id="setLayout"><option value="std" selected>標準（情報たっぷり）</option><option value="simple">シンプル（会社の値札風・固定長）</option></select></div>
+          <div class="f"><label>ラベルの形式</label><select id="setLayout"><option value="std" selected>標準（情報たっぷり）</option><option value="simple">シンプル（会社の値札風・固定長）</option><option value="cond">補足ラベル（コンディション＋日付のみ）</option></select></div>
+          
           
           <div class="f"><label>ロール幅 (mm)</label><input id="setW" inputmode="decimal" value="35"></div>
           <div class="f"><label>QRサイズ (mm)</label><input id="setQr" inputmode="decimal" value="12"></div>
@@ -4104,9 +4107,50 @@ function applyTheme(){
     ic.classList.remove("pop"); void ic.offsetWidth; ic.classList.add("pop"); } }
 }
 function isSimpleLayout(){ return $("setLayout")&&$("setLayout").value==="simple"; }
+function isCondLayout(){ return $("setLayout")&&$("setLayout").value==="cond"; }
+function isFixedLayout(){ return isSimpleLayout()||isCondLayout(); } /* 縦固定・トリム/回転なし系 */
 /* ===== シンプル値札モード：会社ツールの値札とほぼ同じ見た目・短さで印刷 =====
    1行目=ジャンル番号＋名前 ／ 2行目=税込を大きく＋（税抜） ／ QR（実証済みの3ブランドPOS番号）／ 店舗ブランド。
    ロールの節約と、レジ・スタッフが見慣れた形式のための代替レイアウト。 */
+function paintCond(){
+  /* 補足ラベル：会社システムのラベルの下に貼り足す用。コンディション行＋（任意で）今日の日付のみ。
+     文字サイズ設定・向き設定の影響を受けない固定デザイン（縦専用） */
+  const Wmm=parseFloat($("setW").value)||35;
+  const W8=Math.ceil(Math.round(Wmm*DPMM)/8)*8;
+  const mx=Math.round(mm(1.8));
+  const fpx=mm(2.9), lh=Math.round(mm(3.8));
+  const top=Math.round(mm(1.0)), bottom=Math.round(mm(0.8));
+  // 行の折返し（canvas実測で幅に収める）
+  ctx.font=jpFont(fpx,"700");
+  const maxW=W8-mx*2;
+  const src=($("notes").value||"").split("\n").map(t=>t.replace(/\s+$/,"")).filter(t=>t!=="");
+  const lines=[];
+  const meas=document.createElement("canvas").getContext("2d"); meas.font=jpFont(fpx,"700");
+  src.forEach(line=>{
+    let cur="";
+    for(const ch of line){
+      if(meas.measureText(cur+ch).width>maxW && cur!==""){ lines.push(cur); cur=ch; }
+      else cur+=ch;
+    }
+    lines.push(cur);
+  });
+  const useDate=!$("autoDate")||$("autoDate").checked;   // 既存の「今日の日付を自動で入れる」に一本化
+  const d=new Date();
+  const slash=String(d.getFullYear()).slice(-2)+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
+  const dh=useDate?Math.round(mm(3.2)):0;
+  const H=Math.max(Math.round(mm(6)), top+lines.length*lh+(useDate?Math.round(mm(0.6))+dh:0)+bottom);
+  cv.width=W8; cv.height=H;
+  ctx.fillStyle="#fff"; ctx.fillRect(0,0,W8,H);
+  ctx.fillStyle="#000"; ctx.textBaseline="top"; ctx.font=jpFont(fpx,"700");
+  let y=top;
+  lines.forEach(t=>{ ctx.fillText(t,mx,y); y+=lh; });
+  if(useDate){
+    y+=Math.round(mm(0.6));
+    ctx.font=monoFont(mm(2.4),"900");
+    const tw=ctx.measureText(slash).width;
+    ctx.fillText(slash, W8-mx-tw, y);   // 右下に日付
+  }
+}
 function paintSimple(){
   /* ★目標の会社値札を実測した固定デザイン。文字・QRサイズは固定、ラベル長は内容から自動決定。
      文字サイズ設定・長さ設定・縦横設定の影響を受けない（どのPCでも同じ仕上がり） */
@@ -4161,7 +4205,9 @@ function draw(){
   applyPnameScale();
   DPMM=(parseInt($("setDpi").value,10)||203)/25.4;
   const Wmm=parseFloat($("setW").value)||38;
-  if(isSimpleLayout()){
+  if(isCondLayout()){
+    paintCond();                   // 補足ラベル（コンディション＋日付のみ・縦専用）
+  }else if(isSimpleLayout()){
     paintSimple();                 // 会社の値札風（短い）。向き設定に関わらず縦で描く
   }else if(orient()==="landscape"){
     const HH=Math.ceil(Math.round(Wmm*DPMM)/8)*8;
@@ -4190,9 +4236,18 @@ function draw(){
   updateNoteHighlight();
   if(typeof renderSpecChip==="function") try{renderSpecChip();}catch(e){}
   if($("layoutSw")) $("layoutSw").checked=isSimpleLayout();
+  if($("condSw")) $("condSw").checked=isCondLayout();
+  try{ /* 使わないカードをグレーアウト：シンプル＝価格・ジャンル以外、補足＝コンディション以外 */
+    const dim=(id,on)=>{ const el=document.getElementById(id); if(el) el.classList.toggle("dimcard",!!on); };
+    const sim=isSimpleLayout(), cnd=isCondLayout();
+    dim("cardPrice", cnd);
+    dim("cardDetail", sim||cnd);
+    dim("cardAuto", sim||cnd);
+    dim("cardCond", sim);
+  }catch(e){}
   try{ clearTimeout(window.__fbT2); window.__fbT2=setTimeout(fitBar,80); }catch(e){}
   try{ const os=$("orientSeg"); const ow=os&&os.closest(".psrow");
-    if(ow) ow.style.display=isSimpleLayout()?"none":""; }catch(e){}
+    if(ow) ow.style.display=isFixedLayout()?"none":""; }catch(e){}
   persist();
 }
 function fitPreview(){
@@ -4227,7 +4282,7 @@ function trimTopBottom(c){
 }
 function outputCanvas(srcCanvas,noRotate){
   let src=srcCanvas||cv;
-  const _noTrim=(typeof isSimpleLayout==="function"&&isSimpleLayout()&&src===cv); // シンプル＝固定長を維持
+  const _noTrim=(typeof isFixedLayout==="function"&&isFixedLayout()&&src===cv); // シンプル＝固定長を維持
   if(_noTrim) noRotate=true; // シンプル値札は縦・横設定を無視して常にそのままの向きで印刷
   // 付属品ラベル等（縦レイアウト固定）は横向き設定でも回転しない（回転すると用紙幅を超えて白紙になる）
   if(orient()==="landscape" && !noRotate){
@@ -4255,7 +4310,7 @@ async function eposPrint(copies){
   const ip=$("printerIp").value.trim();
   const n=Math.max(1,Math.min(50,parseInt(copies,10)||1));
   const{b64,W,H}=rasterFromCanvas();
-  const fd=isSimpleLayout()?'':'<feed unit="24"/>'; // シンプル＝固定長ではカット前の送りを省略
+  const fd=isFixedLayout()?'':'<feed unit="24"/>'; // 固定デザイン系はカット前の送りを省略
   const hs=($("setHeadSeek")&&$("setHeadSeek").checked)?'<command>1C284C02004332</command>':''; // FS ( L fn=67 頭出し
   let body=''; for(let i=0;i<n;i++){ body+=hs+`<image width="${W}" height="${H}" color="color_1" mode="mono" align="center">${b64}</image>${fd}<cut type="feed"/>`; }
   const xml='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'+
@@ -4467,7 +4522,7 @@ function accCanvas(kind,place,no5,ov){
 async function eposPrintMulti(jobs){
   const ip=$("printerIp").value.trim();
   let body="", total=0;
-  const fd=isSimpleLayout()?'':'<feed unit="24"/>';
+  const fd=isFixedLayout()?'':'<feed unit="24"/>';
   const hs=($("setHeadSeek")&&$("setHeadSeek").checked)?'<command>1C284C02004332</command>':'';
   jobs.forEach(j=>{ const {b64,W,H}=rasterFromCanvas(j.canvas,j.noRotate); const n=Math.max(1,Math.min(50,j.copies||1)); total+=n;
     for(let i=0;i<n;i++){ body+=hs+`<image width="${W}" height="${H}" color="color_1" mode="mono" align="center">${b64}</image>${fd}<cut type="feed"/>`; } });
@@ -4728,7 +4783,9 @@ function kbdHints(){
     put($("printBtn"), c.print);
     const accLbl=$("accOn")&&$("accOn").closest("label"); put(accLbl, c.acc);
     put($("resetAllBtn"), c.reset);
-    put(document.querySelector(".lswitch"), "Ctrl+M");
+    const _ls=document.querySelectorAll(".lswitch");
+    if(_ls[0]) put(_ls[0], "Ctrl+M");
+    if(_ls[1]) put(_ls[1], "Ctrl+B");
   }catch(e){}
 }
 /* ===== 自動バックアップ（1日1回・直近2日分をこのPC内に保存） ===== */
@@ -4843,6 +4900,7 @@ function kbdInit(){
       if(combo===c.acc){ e.preventDefault(); const a=$("accOn"); if(a){ a.checked=!a.checked; a.dispatchEvent(new Event("change",{bubbles:true})); } return; }
       if(combo===c.reset){ e.preventDefault(); const rb=$("resetAllBtn"); if(rb){ rb.click(); const pe=$("priceEx"); if(pe){ pe.focus(); try{pe.select();}catch(x){} } } return; }
       if(combo==="Ctrl+M"){ e.preventDefault(); if($("layoutSw")) $("layoutSw").click(); return; } // シンプル⇔標準
+      if(combo==="Ctrl+B"){ e.preventDefault(); if($("condSw")) $("condSw").click(); return; } // 補足⇔標準
     }
     if(e.key!=="Enter"||e.ctrlKey||e.metaKey||e.altKey) return;
     const t=e.target; if(!t||!t.id) return;
@@ -5962,7 +6020,7 @@ function importSettings(file){
   r.readAsText(file);
 }
 function persist(){store.set("genre",$("genre").value);store.set("cfg",{w:$("setW").value,dpi:$("setDpi").value,fs:$("setFs").value,qr:$("setQr").value,store:$("setStore").value,ip:$("printerIp").value,orient:orient(),code:codeType(),scale:($("setScale")&&$("setScale").value),shift:($("setShiftX")&&$("setShiftX").value),shiftY:($("setShiftY")&&$("setShiftY").value),proxy:($("setProxy")&&$("setProxy").value),sites:($("setSites")&&$("setSites").value),dispFont:($("dispFontSel")&&$("dispFontSel").value),dispBold:($("dispBold")?$("dispBold").checked:true),dispSize:($("dispSize")&&$("dispSize").value),layout:($("setLayout")&&$("setLayout").value),headSeek:($("setHeadSeek")&&$("setHeadSeek").checked?1:0),simpleLen:($("setSimpleLen")&&$("setSimpleLen").value)});}
-function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);if($("setLayout"))$("setLayout").value=(c.layout==="simple")?"simple":"std";if($("setHeadSeek"))$("setHeadSeek").checked=!!c.headSeek;if($("setSimpleLen"))$("setSimpleLen").value=c.simpleLen||"21";}
+function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);if($("setLayout"))$("setLayout").value=(c.layout==="simple")?"simple":((c.layout==="cond")?"cond":"std");if($("setHeadSeek"))$("setHeadSeek").checked=!!c.headSeek;if($("setSimpleLen"))$("setSimpleLen").value=c.simpleLen||"21";}
 function histGet(){return store.get("histLines",[]);}
 function curGenreKey(){ return brandGenrePrefix()+String(($("genre")&&$("genre").value)||""); }
 function histAdd(line){
@@ -6067,6 +6125,8 @@ function wire(){
   $("pname").addEventListener("input",autoGrowPname);
   ["setW","setDpi","setFs","setQr"].forEach(id=>$(id).addEventListener("input",draw));
   ["setLayout","setSimpleLen"].forEach(id=>{ const el=$(id); if(el){ el.addEventListener("input",draw); el.addEventListener("change",draw); } });
+  if($("condSw")) $("condSw").addEventListener("change",function(){ $("setLayout").value=this.checked?"cond":"std"; draw(); });
+
   if($("layoutSw")) $("layoutSw").addEventListener("change",()=>{ const sl=$("setLayout"); if(!sl) return;
     sl.value=$("layoutSw").checked?"simple":"std"; draw(); });
   ["setCode","setOrient","setScale"].forEach(id=>{const e=$(id);if(e)e.addEventListener("change",draw);});
