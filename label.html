@@ -436,7 +436,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v7.8</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v8.4</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -642,6 +642,8 @@
       <div class="g2">
         <div class="f"><label>品名（任意・ラベルに印字＆学習に使用）</label><input id="accSoloName" autocomplete="off" placeholder="例：スーパーファミコン"></div>
         <div class="f"><label>型番（任意）</label><input id="accSoloModel" autocomplete="off" placeholder="例：SHVC-001"></div>
+        <div class="f"><label>メーカー（任意）</label><input id="accSoloMaker" autocomplete="off" placeholder="例：任天堂"></div>
+        <div class="f"><label>税抜価格（任意・「本体 ¥税込」で印字）</label><input id="accSoloPrice" inputmode="numeric" autocomplete="off" placeholder="例：1000"></div>
       </div>
       <div class="g2" style="margin-top:10px">
         <div class="f"><label>保管場所名</label><input id="accSoloPlace" list="accPlaceList" autocomplete="off" placeholder="例：ジャンクカメラ関連品"></div>
@@ -4442,7 +4444,7 @@ function accCanvas(kind,place,no5,ov){
   const mx=Math.round(mm(2.2)), cw=W8-2*mx;
   const {slash}=dateParts();
   // ov指定時（付属品のみモード）＝フォームを使わず、渡された品名・型番だけで描く
-  const p=ov?{model:ov.model||"",pname:ov.pname||"",maker:ov.maker||"",priceEx:"",priceIn:""}:placeholders();
+  const p=ov?{model:ov.model||"",pname:ov.pname||"",maker:ov.maker||"",priceEx:ov.priceEx||"",priceIn:ov.priceIn||""}:placeholders();
   let y=Math.round(mm(1.2));
   function txt(t,font,x,yy){ g2.font=font; g2.textBaseline="top"; g2.fillStyle="#000"; g2.fillText(t,x,yy); }
   function center(t,font,yy){ g2.font=font; const w=g2.measureText(t).width; txt(t,font,Math.max(mx,(W8-w)/2),yy); }
@@ -4459,7 +4461,7 @@ function accCanvas(kind,place,no5,ov){
     g2.textBaseline="top"; y+=h; }
   if(kind==="fuzoku"){
     // 黒帯（付属品＋日付）
-    const bandH=Math.round(mm(5.0));  // 黒帯は文字サイズ設定に依存せず固定バランス
+    const bandH=Math.round(mm(5.0));  // 黒帯は固定バランス
     g2.fillStyle="#000"; g2.fillRect(mx,y,cw,bandH);
     g2.font=jpFont(mm(3.3)*FS,"900"); g2.textBaseline="middle"; g2.fillStyle="#fff";
     g2.strokeStyle="#fff"; g2.lineJoin="round"; g2.lineWidth=Math.max(1.2,mm(0.18));
@@ -4473,18 +4475,18 @@ function accCanvas(kind,place,no5,ov){
     y+=bandH+Math.round(mm(1.3));
     // 型番・品名・メーカー（本体との対応が分かる最小限）
     const rows=[["型番",p.model],["品名",p.pname],["メーカー",p.maker]].filter(r=>r[1]);
-    const fpx=mm(2.1)*FS, keyw=mm(13), valW=cw-keyw;
+    const fpx=mm(2.5)*FS, keyw=mm(14), valW=cw-keyw;   // ★品名等をひと回り大きく（2.1→2.5mm）
     rows.forEach(([k,v])=>{
       v=String(v).replace(/\n+/g," ");
       const vp=fitPx(v,fpx,"900",valW);
       g2.font=jpFont(vp,"900");
       const lines=(g2.measureText(v).width<=valW)?[v]:wrap2(v,jpFont(vp,"900"),valW).slice(0,2);
-      lines.forEach((ln,li)=>{ if(li===0) txt(k,jpFont(fpx,"900"),mx,y); txt(ln,jpFont(vp,"900"),mx+keyw,y); y+=Math.round(mm(2.9)*FS); });
+      lines.forEach((ln,li)=>{ if(li===0) txt(k,jpFont(fpx,"900"),mx,y); txt(ln,jpFont(vp,"900"),mx+keyw,y); y+=Math.round(mm(3.3)*FS); });
     });
     const g=ov?null:$("genre").selectedOptions[0];
     if(g){ hline(y); y+=Math.round(mm(0.9));
-      txt(`${$("genre").value}　${g.dataset.name}`,jpFont(mm(2.2)*FS,"600"),mx,y); y+=Math.round(mm(2.9)*FS); }
-    if(p.priceEx!==""){ txt(`本体 ¥${comma(p.priceIn)}（税込）`,jpFont(mm(2.0)*FS,"700"),mx,y); y+=Math.round(mm(2.9)*FS); }
+      { const gt=`${$("genre").value}　${g.dataset.name}`; const gp=fitPx(gt,mm(2.6)*FS,"600",cw); txt(gt,jpFont(gp,"600"),mx,y); y+=Math.round(mm(3.3)*FS); } }  /* ★2.2→2.6mm */
+    if(p.priceEx!==""){ txt(`本体 ¥${comma(p.priceIn)}（税込）`,jpFont(mm(2.4)*FS,"700"),mx,y); y+=Math.round(mm(3.3)*FS); }  /* ★2.0→2.4mm */
     // 保管場所＋管理番号
     dline(y); y+=Math.round(mm(1.2));
     txt("保管場所",jpFont(mm(1.9)*FS,"900"),mx,y); y+=Math.round(mm(2.6)*FS);
@@ -4940,7 +4942,10 @@ function accSoloPreviewSoon(){ clearTimeout(_accSoloPvT); _accSoloPvT=setTimeout
 function accSoloPreview(){
   const place=(($("accSoloPlace")&&$("accSoloPlace").value)||"").trim();
   const no5=String(parseInt(($("accSoloNo")&&$("accSoloNo").value)||"1",10)||1).padStart(5,"0");
-  const ov={pname:($("accSoloName")&&$("accSoloName").value)||"",model:($("accSoloModel")&&$("accSoloModel").value)||""};
+  const ov=(function(){ const ex=num(($("accSoloPrice")&&$("accSoloPrice").value)||"");
+    return {pname:($("accSoloName")&&$("accSoloName").value)||"",model:($("accSoloModel")&&$("accSoloModel").value)||"",
+            maker:($("accSoloMaker")&&$("accSoloMaker").value)||"",
+            priceEx: ex>0?String(ex):"", priceIn: ex>0?String(Math.round(ex*1.1)):""}; })();
   [["accSoloCv1","fuzoku"],["accSoloCv2","back"]].forEach(([id,kind])=>{
     const el=$(id); if(!el)return;
     const src=accCanvas(kind,place,no5,ov);
@@ -4973,7 +4978,10 @@ async function accSoloDoPrint(){
   }
   if(!no||no<1) no=accNextNo(place); if(no>99999) no=1;
   const no5=String(no).padStart(5,"0");
-  const ov={pname:($("accSoloName")&&$("accSoloName").value)||"",model:($("accSoloModel")&&$("accSoloModel").value)||""};
+  const ov=(function(){ const ex=num(($("accSoloPrice")&&$("accSoloPrice").value)||"");
+    return {pname:($("accSoloName")&&$("accSoloName").value)||"",model:($("accSoloModel")&&$("accSoloModel").value)||"",
+            maker:($("accSoloMaker")&&$("accSoloMaker").value)||"",
+            priceEx: ex>0?String(ex):"", priceIn: ex>0?String(Math.round(ex*1.1)):""}; })();
   const jobs=[
     {canvas:accCanvas("fuzoku",place,no5,ov),copies:1,noRotate:true},
     {canvas:accCanvas("back",place,no5,ov),copies:1,noRotate:true}
@@ -5002,7 +5010,7 @@ function accSoloInit(){
   const pl=$("accSoloPlace");
   if(pl) pl.addEventListener("input",()=>{ accSoloSyncNo(); accSoloPreviewSoon(); });
   const noEl=$("accSoloNo"); if(noEl) noEl.addEventListener("input",()=>{ noEl.dataset.nman="1"; accSoloPreviewSoon(); });
-  ["accSoloName","accSoloModel"].forEach(id=>{ const el=$(id); if(el) el.addEventListener("input",()=>{
+  ["accSoloName","accSoloModel","accSoloMaker","accSoloPrice"].forEach(id=>{ const el=$(id); if(el) el.addEventListener("input",()=>{
     const p=$("accSoloPlace"); if(p&&!p.dataset.man){ const s=accSoloSuggest(); if(s&&!p.value.trim()) p.value=s; accSoloSyncNo(); }
     accSoloPreviewSoon(); }); });
   if(pl) pl.addEventListener("change",()=>{ pl.dataset.man="1"; });
