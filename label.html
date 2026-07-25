@@ -439,7 +439,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v10.1</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v10.4</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -456,7 +456,7 @@
       <button class="acctgl" id="accSoloBtn" type="button" title="値札なしで、付属品ラベル＋裏ラベル（保管場所・管理番号）だけを印刷する画面を開く">📎 付属品のみ</button>
       <span class="brk"></span>
       <button class="acctgl" id="histBtn" type="button" title="印刷履歴：クリックで内容を呼び出して再印刷。前回の値付けも価格欄の下に自動表示">📜 履歴</button>
-      <button class="acctgl" id="quoteBtn" type="button" title="買取見積り：お客様情報と商品・見積額を保存（3ヶ月）して後日確認できます">📋 見積</button>
+      <button class="acctgl" id="quoteBtn" type="button" title="買取見積り：お客様情報と商品・見積額を保存（3ヶ月）して後日確認できます">📋 見積もり</button>
       <span class="hsep"></span>
       <label class="lswitch" title="ON＝シンプル値札（会社の値札風・固定長）／OFF＝標準ラベル"><span class="lswtxt">シンプル値札</span><input type="checkbox" id="layoutSw"><span class="lswslider"></span></label>
       <label class="lswitch" title="ON＝補足ラベル：コンディション＋日付だけを印刷して、会社システムのラベルの下に貼り足す用（縦専用）"><span class="lswtxt">補足</span><input type="checkbox" id="condSw"><span class="lswslider"></span></label>
@@ -662,6 +662,14 @@
     </div>
   </div>
 </div>
+<div id="qZoom" style="display:none;position:fixed;inset:0;background:rgba(10,14,24,.86);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:14px">
+  <img id="qZoomImg" style="max-width:88vw;max-height:72vh;border-radius:14px;background:#fff;object-fit:contain;box-shadow:0 18px 60px rgba(0,0,0,.5)">
+  <div style="display:flex;gap:10px">
+    <button class="ghostbtn" id="qZoomChange" style="background:#fff">✏ 画像を変更</button>
+    <button class="ghostbtn" id="qZoomDel" style="background:#fff;color:#c33">🗑 画像を削除</button>
+    <button class="printbtn" id="qZoomClose" style="margin:0;width:auto;padding:10px 26px">閉じる</button>
+  </div>
+</div>
 <div class="modal-bg" id="quoteModal">
   <div class="modal" style="max-width:940px">
     <div class="mhead"><h3 id="qTitle">📋 買取見積り</h3><button class="xbtn" id="qClose" aria-label="閉じる">×</button></div>
@@ -676,7 +684,7 @@
           </div>
           <select id="qFSrc" style="flex:0 0 auto;width:auto;max-width:110px;font-size:12px;padding:8px 6px;border-radius:10px"><option value="">種別:全て</option><option value="電話">📞 電話</option><option value="店頭">🏬 店頭</option></select>
           <select id="qFGenre" style="flex:0 0 auto;width:auto;max-width:150px;font-size:12px;padding:8px 6px;border-radius:10px"><option value="">ジャンル:全て</option></select>
-          <button class="printbtn" id="qNew" style="margin:0;width:auto;padding:10px 18px;flex:0 0 auto">＋新規見積</button>
+          <button class="printbtn" id="qNew" style="margin:0;width:auto;padding:10px 18px;flex:0 0 auto">＋新規</button>
         </div>
         <div id="qList" style="max-height:430px;overflow-y:auto;overflow-x:hidden;padding-right:6px"></div>
       </div>
@@ -741,8 +749,7 @@
         </div>
         <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;align-items:flex-end">
           <div class="f" style="flex:0 0 110px"><label>販売相場（円）</label><input id="qISell" inputmode="numeric"></div>
-          <div class="f" style="flex:0 0 110px"><label>買取上限（円）</label><input id="qIBuyMax" inputmode="numeric"></div>
-          <div class="f" style="flex:0 0 auto"><label>お客様への回答</label>
+          <div class="f" style="flex:0 0 auto"><label>お客様への回答（買取額）</label>
             <div style="display:flex;gap:4px;align-items:center">
               <div class="seg" id="qAnsSeg" style="display:flex;gap:4px">
                 <button type="button" data-a="max">上限で回答</button>
@@ -4826,14 +4833,16 @@ function shareCollect(){
   return {
     histByGenre:store.get("histByGenre",{}), histByName:store.get("histByName",{}),
     accLearn:accGetLearn(), accPlacesCfg:accPlacesCfg(), accPlaces:accPlaces(),
-    histLines:histGet(), learnedItems:store.get("learnedItems",{}), printHist:store.get("printHist",[])
+    histLines:histGet(), learnedItems:store.get("learnedItems",{}), printHist:store.get("printHist",[]),
+    quotes:store.get("quotes",[])
   };
 }
 function shareApply(d){
   if(!d) return;
-  ["histByGenre","histByName","accLearn","accPlacesCfg","accPlaces","histLines","learnedItems","printHist"]
+  ["histByGenre","histByName","accLearn","accPlacesCfg","accPlaces","histLines","learnedItems","printHist","quotes"]
     .forEach(k=>{ if(d[k]!==undefined) store.set(k,d[k]); });
   try{ renderHistory(); accFillDatalist(); renderPrevPrice(); }catch(e){}
+  try{ if($("quoteModal")&&$("quoteModal").classList.contains("open")&&$("qListView").style.display!=="none") qRenderList(); }catch(e){}
 }
 async function shareSync(){
   const url=proxyURL(); if(!url||_shareBusy) return;
@@ -4946,9 +4955,9 @@ function fitBar(){ try{
 window.addEventListener("resize",()=>{ clearTimeout(window.__fbT); window.__fbT=setTimeout(fitBar,120); });
 /* 各ボタン周辺にショートカットを小さく表示（設定変更にも追従） */
 /* ===== 買取見積り v2（高速UI・電話ハイフン・世代絵文字・画像・3種金額） ===== */
-function quotes(){ return store.get("quotes",[]); }
+function quotes(){ return store.get("quotes",[]).filter(q=>q&&!q.del); }
 function quotesSave(a){ store.set("quotes",a); }
-function quotePrune(){ const lim=Date.now()-92*864e5; const a=quotes(); const b=a.filter(q=>q&&q.t>lim); if(b.length!==a.length) quotesSave(b); }
+function quotePrune(){ const lim=Date.now()-92*864e5; const a=store.get("quotes",[]); const b=a.filter(q=>q&&(q.t||0)>lim); if(b.length!==a.length) quotesSave(b); }
 var qEditId=null, qDraftItems=[], qSlipId=null, qSex="", qAge="", qSrc="", qAnsType="max", qItemEditIdx=-1, qGenreAuto=true;
 function formatTel(v){
   const d=String(v||"").replace(/[^0-9]/g,"").slice(0,11);
@@ -5020,6 +5029,13 @@ function qRenderList(){
     box.appendChild(row);
   });
 }
+var __qZoomSet=null;
+function qZoomOpen(url, setter){
+  __qZoomSet=setter||null;
+  $("qZoomImg").src=url||"";
+  $("qZoom").style.display="flex";
+}
+function qZoomClose(){ $("qZoom").style.display="none"; __qZoomSet=null; }
 function qImgBox(it,size){
   const s=size||52;
   const ph='<div class="qph" style="width:'+s+'px;height:'+s+'px;border-radius:8px;background:#eef2f8;border:1px dashed #c9d4e4;display:flex;align-items:center;justify-content:center;font-size:9px;color:#8aa;flex:0 0 auto;text-align:center;line-height:1.3">No<br>Image</div>';
@@ -5052,6 +5068,20 @@ function qOpenSlip(id){
       +'<div style="text-align:right;flex:0 0 auto;font-size:12.5px;line-height:1.7">'
       +'<div style="color:var(--sub)">販売 ¥'+comma(it.sell||0)+'</div>'
       +'<div style="font-weight:900;color:#0a7a2f">上限 ¥'+comma(it.buyMax||0)+'</div></div>';
+    const sim=row.querySelector("img")||row.firstElementChild;
+    if(sim){ sim.style.cursor="pointer";
+      sim.title=it.img?"クリックで拡大（変更・削除もそこから）":"クリックで画像URLを設定";
+      const idx=(q.items||[]).indexOf(it);
+      const applyImg=(u)=>{
+        const a=store.get("quotes",[]); const j=a.findIndex(x=>x&&x.id===q.id);
+        if(j<0) return;
+        (a[j].items||[])[idx].img=u; a[j].u=Date.now();
+        store.set("quotes",a); try{shareSoon();}catch(e){}
+        qOpenSlip(q.id);
+      };
+      sim.onclick=()=>{ if(it.img){ qZoomOpen(it.img, applyImg); }
+        else { const u=prompt("商品画像のURLを貼り付け\n※Web検索で出た画像を右クリック→「画像アドレスをコピー」","");
+          if(u!==null) applyImg(u.trim()); } }; }
     box.appendChild(row);
   });
   $("qpSellT").textContent="¥"+comma(sellT);
@@ -5076,7 +5106,9 @@ function qRenderChips(){
 function qAnsUI(){
   [...$("qAnsSeg").children].forEach(b=>{ const on=b.dataset.a===qAnsType;
     b.style.cssText="border:1.5px solid "+(on?"var(--a1)":"var(--line)")+";background:"+(on?"#eaf2ff":"#fff")+";border-radius:9px;padding:7px 10px;font-size:12px;font-weight:"+(on?"900":"600")+";cursor:pointer"; });
-  $("qIAnsLo").style.display=(qAnsType==="max")?"none":"";
+  /* 金額欄は常に1箇所。「範囲」の時だけ2つ目が現れる */
+  const lo=$("qIAnsLo");
+  lo.style.display=""; lo.disabled=false; lo.placeholder="金額"; lo.style.opacity="";
   $("qAnsTilde").style.display=(qAnsType==="range")?"":"none";
   $("qIAnsHi").style.display=(qAnsType==="range")?"":"none";
 }
@@ -5091,10 +5123,12 @@ function qRenderItems(){
       +'<div style="font-size:11.5px;color:#b06">'+qAnsText(it)+'</div>'
       +(it.memo?'<div style="font-size:11px;color:var(--sub)">📝 '+it.memo+'</div>':"")+'</div>';
     const imgEl=row.firstElementChild;
-    if(imgEl){ imgEl.style.cursor="pointer"; imgEl.title="クリックで画像URLを設定／変更（Webの画像を右クリック→「画像アドレスをコピー」して貼り付け）";
+    if(imgEl){ imgEl.style.cursor="pointer";
+      imgEl.title=it.img?"クリックで拡大（変更・削除もそこから）":"クリックで画像URLを設定";
       imgEl.onclick=(ev)=>{ ev.stopPropagation();
-        const u=prompt("商品画像のURLを貼り付け（空にすると削除）\n※Web検索で出た画像を右クリック→「画像アドレスをコピー」",it.img||"");
-        if(u!==null){ it.img=u.trim(); qRenderItems(); } }; }
+        if(it.img){ qZoomOpen(it.img, u=>{ it.img=u; qRenderItems(); qDraftSave(); }); }
+        else { const u=prompt("商品画像のURLを貼り付け\n※Web検索で出た画像を右クリック→「画像アドレスをコピー」","");
+          if(u!==null){ it.img=u.trim(); qRenderItems(); qDraftSave(); } } }; }
     const mk=(val,ph,key)=>{ const inp=document.createElement("input"); inp.value=val||""; inp.placeholder=ph; inp.inputMode="numeric";
       inp.style.cssText="flex:0 0 92px;text-align:right"; inp.title=ph;
       inp.addEventListener("input",()=>{ it[key]=num(inp.value)||0; qCalcTotal(); }); return inp; };
@@ -5105,8 +5139,9 @@ function qRenderItems(){
     ed.onclick=()=>{ qItemEditIdx=i;
       $("qIName").value=it.name||""; $("qIMaker").value=it.maker||""; $("qIModel").value=it.model||"";
       qGenreFill(); qGenreSet(it.genre||""); qGenreAuto=false;
-      $("qIMemo").value=it.memo||""; $("qISell").value=it.sell||""; $("qIBuyMax").value=it.buyMax||"";
-      qAnsType=it.ansType||"max"; qAnsUI(); $("qIAnsLo").value=it.ansLo||""; $("qIAnsHi").value=it.ansHi||"";
+      $("qIMemo").value=it.memo||""; $("qISell").value=it.sell||"";
+      qAnsType=it.ansType||"max"; qAnsUI();
+      $("qIAnsLo").value=(it.ansLo||it.buyMax||"")||""; $("qIAnsHi").value=it.ansHi||"";
       window.__qImg=it.img||"";
       $("qAddItem").textContent="✔ 更新"; $("qEditCancel").style.display="";
       $("qIName").focus(); };
@@ -5126,7 +5161,7 @@ function qCalcTotal(){
 }
 function qItemEditReset(){
   qItemEditIdx=-1; qGenreAuto=true;
-  ["qKw","qIName","qIMaker","qIModel","qIMemo","qISell","qIBuyMax","qIAnsLo","qIAnsHi"].forEach(i=>{ if($(i))$(i).value=""; });
+  ["qKw","qIName","qIMaker","qIModel","qIMemo","qISell","qIAnsLo","qIAnsHi"].forEach(i=>{ if($(i))$(i).value=""; });
   if($("qIGenre"))$("qIGenre").value="";
   qAnsType="max"; qAnsUI();
   if($("qAddItem"))$("qAddItem").textContent="↓ 追加";
@@ -5164,7 +5199,7 @@ function qOpenEdit(id){
   qRenderSiteBtns(); qGenreFill();
   qSex=q?q.sex||"":""; qAge=q?q.age||"":""; qRenderChips();
   qAnsType="max"; qAnsUI();
-  ["qKw","qIName","qIMaker","qIModel","qIGenre","qISell","qIBuyMax","qIAnsLo","qIAnsHi"].forEach(i=>{ $(i).value=""; });
+  ["qKw","qIName","qIMaker","qIModel","qISell","qIAnsLo","qIAnsHi"].forEach(i=>{ if($(i))$(i).value=""; }); if($("qIGenre"))$("qIGenre").value="";
   qDraftItems=q?(q.items||[]).map(x=>Object.assign({},x)):[];
   qItemEditReset();
   const restored=qDraftLoadIf(q?q.id:null);
@@ -5177,6 +5212,15 @@ function qOpenEdit(id){
   $("qDelete").style.display=q?"":"none";
   $("qListView").style.display="none"; $("qSlipView").style.display="none"; $("qEditView").style.display="";
   (q?$("qKw"):$("qName")).focus();
+}
+async function qFetchImg(term){
+  try{
+    const url=proxyURL(); if(!url||!term) return "";
+    const r=await fetch(url+(url.indexOf("?")>=0?"&":"?")+"q="+encodeURIComponent(term));
+    const j=await r.json();
+    const it=(j&&j.items&&j.items[0])||null;
+    return (it&&(it.image||it.img))||"";
+  }catch(e){ return ""; }
 }
 function qCopyFromMain(){
   const g=$("genre").selectedOptions[0];
@@ -5252,11 +5296,15 @@ function qInit(){
   $("qAddItem").onclick=()=>{
     const it={name:$("qIName").value.trim(),maker:$("qIMaker").value.trim(),model:$("qIModel").value.trim(),
               genre:$("qIGenre").value.trim(),memo:$("qIMemo").value.trim(),img:window.__qImg||"",
-              sell:num($("qISell").value)||0,buyMax:num($("qIBuyMax").value)||0,
+              sell:num($("qISell").value)||0,
               ansType:qAnsType,ansLo:num($("qIAnsLo").value)||0,ansHi:num($("qIAnsHi").value)||0};
+    it.buyMax=(qAnsType==="range"?(num($("qIAnsHi").value)||0):(num($("qIAnsLo").value)||0));
     if(!it.name&&!it.model){ alert("品名か型番を入れてください"); return; }
     if(qItemEditIdx>=0&&qDraftItems[qItemEditIdx]) qDraftItems[qItemEditIdx]=it;
     else qDraftItems.push(it);
+    /* 画像が無ければ、商品名・メーカー・型番で自動取得（JAN不要） */
+    if(!it.img){ const t=[it.maker,it.name,it.model].filter(Boolean).join(" ");
+      qFetchImg(t).then(u=>{ if(u&&!it.img){ it.img=u; qRenderItems(); qDraftSave(); } }); }
     qItemEditReset(); window.__qImg=""; qRenderItems();
     $("qKw").focus();
   };
@@ -5274,11 +5322,19 @@ function qInit(){
       const done=(now!==before&&($("pname").value||$("model").value));
       if(done||Date.now()-t0>9000){
         clearInterval(timer); $("qAutoBtn").textContent="🔍 自動入力"; $("qAutoBtn").disabled=false;
-        if(done){ qCopyFromMain(); $("qISell").focus(); }
+        if(done){ qCopyFromMain(); $("qISell").focus();
+          if(!window.__qImg){ qFetchImg(qTerm()).then(u=>{ if(u) window.__qImg=u; }); } }
       }
     },300);
   };
   $("qPullMain").onclick=()=>{ qCopyFromMain(); $("qISell").focus(); };
+  $("qZoomClose").onclick=qZoomClose;
+  $("qZoom").addEventListener("click",e=>{ if(e.target===$("qZoom")) qZoomClose(); });
+  $("qZoomChange").onclick=()=>{ if(!__qZoomSet) return;
+    const u=prompt("新しい画像URLを貼り付け\n（Webの画像を右クリック→「画像アドレスをコピー」）",$("qZoomImg").src||"");
+    if(u!==null){ __qZoomSet(u.trim()); qZoomClose(); } };
+  $("qZoomDel").onclick=()=>{ if(!__qZoomSet) return;
+    if(confirm("この商品の画像を削除しますか？")){ __qZoomSet(""); qZoomClose(); } };
   $("qDraftClear").onclick=()=>{ if(!confirm("下書きを破棄して、保存済みの内容で開き直しますか？"))return;
     store.set("quoteDraft",null); qOpenEdit(qEditId); };
   ["qName","qTel","qAddr","qNote"].forEach(id=>$(id).addEventListener("input",qDraftSave));
@@ -5291,13 +5347,12 @@ function qInit(){
     window.open("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(a),"_blank","noopener"); };
   $("qKw").addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.isComposing){ e.preventDefault(); $("qAutoBtn").click(); } });
   /* Enter＝上から順に移動し、最後の欄で「追加」 */
-  ["qIName","qIMaker","qIModel","qIGenre","qISell","qIBuyMax","qIAnsLo","qIAnsHi"].forEach(id=>
+  ["qIName","qIMaker","qIModel","qIGenre","qISell","qIAnsLo","qIAnsHi"].forEach(id=>
     $(id).addEventListener("keydown",e=>{
       if(e.key!=="Enter"||e.isComposing) return;
       e.preventDefault();
-      const chain=["qIName","qIMaker","qIModel","qIGenre","qISell","qIBuyMax"];
-      if(qAnsType==="about") chain.push("qIAnsLo");
-      if(qAnsType==="range"){ chain.push("qIAnsLo","qIAnsHi"); }
+      const chain=["qIName","qIMaker","qIModel","qIGenre","qISell","qIAnsLo"];
+      if(qAnsType==="range"){ chain.push("qIAnsHi"); }
       const i=chain.indexOf(id);
       if(i<0||i===chain.length-1){ $("qAddItem").click(); }
       else { const nx=$(chain[i+1]); nx.focus(); try{nx.select();}catch(x){} }
@@ -5309,12 +5364,14 @@ function qInit(){
                 total:qDraftItems.reduce((s,i)=>s+(num(i.buyMax)||0),0)};
     if(qEditId){ const j=a.findIndex(x=>x&&x.id===qEditId); if(j>=0) a[j]=Object.assign({},a[j],base,{u:Date.now()}); }
     else a.push(Object.assign({id:"q"+Date.now()+Math.random().toString(36).slice(2,6),t:Date.now()},base));
-    quotesSave(a); store.set("quoteDraft",null); qShowList();
+    quotesSave(a); store.set("quoteDraft",null); try{shareSoon();}catch(e){} qShowList();
   };
   $("qDelete").onclick=()=>{
     if(!qEditId) return;
     if(!confirm("この見積を削除しますか？")) return;
-    quotesSave(quotes().filter(x=>x&&x.id!==qEditId)); store.set("quoteDraft",null); qShowList();
+    const _a=store.get("quotes",[]); const _j=_a.findIndex(x=>x&&x.id===qEditId);
+    if(_j>=0){ _a[_j]={id:qEditId,t:_a[_j].t||Date.now(),del:1,u:Date.now()}; quotesSave(_a); }
+    store.set("quoteDraft",null); try{shareSoon();}catch(e){} qShowList();
   };
   quotePrune();
 }
@@ -5326,7 +5383,7 @@ window.addEventListener("hashchange",function(){
 document.addEventListener("click",function(e){
   const b=e.target&&e.target.closest&&e.target.closest("#quoteBtn");
   if(!b) return;
-  try{ $("quoteModal").classList.add("open"); qShowList(); }catch(err){ alert("見積画面エラー: "+(err&&err.message||err)); }
+  try{ $("quoteModal").classList.add("open"); qShowList(); try{shareSync();}catch(e2){} }catch(err){ alert("見積画面エラー: "+(err&&err.message||err)); }
 },true);
 try{ if(/quote/.test(location.hash)) setTimeout(function(){ $("quoteModal").classList.add("open"); qShowList(); },400); }catch(e){}
 function kbdHints(){
