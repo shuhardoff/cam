@@ -75,6 +75,7 @@
   .xbtn:hover{background:#e7eefa}
   .mbody{padding:18px 22px;display:grid;grid-template-columns:1fr 1fr;gap:24px}
   @media(max-width:680px){.mbody{grid-template-columns:1fr}}
+  #quoteModal .mbody{display:block}  /* 見積は1カラム（2列グリッドだと内容が枠外へはみ出す） */
   .seclbl{font-weight:900;font-size:13.5px;margin-bottom:8px}
   select#brandSel{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:11px 12px;font-size:14px;background:#fff;font-family:inherit;color:var(--ink)}
   /* 付属品ラベル */
@@ -137,6 +138,8 @@
   .histrow .hr-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
   .histrow .hr-a{color:var(--sub);font-size:11.5px;white-space:nowrap}
   .histrow .hr-b{background:#1c2340;color:#fff;border-radius:5px;font-size:10.5px;padding:1px 6px;font-weight:800}
+  #qList .histrow{box-sizing:border-box;width:100%}
+  #qList .hr-a{max-width:120px;overflow:hidden;text-overflow:ellipsis}
   .kbdcap{cursor:pointer;text-align:center;font-weight:800;letter-spacing:.5px}
   .kbdcap:focus{border-color:var(--a1);box-shadow:0 0 0 3px rgba(0,0,0,.06)}
   .seg-tools{display:flex;gap:8px;margin-bottom:8px;align-items:center}
@@ -436,7 +439,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v8.4</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v10.1</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -453,6 +456,7 @@
       <button class="acctgl" id="accSoloBtn" type="button" title="値札なしで、付属品ラベル＋裏ラベル（保管場所・管理番号）だけを印刷する画面を開く">📎 付属品のみ</button>
       <span class="brk"></span>
       <button class="acctgl" id="histBtn" type="button" title="印刷履歴：クリックで内容を呼び出して再印刷。前回の値付けも価格欄の下に自動表示">📜 履歴</button>
+      <button class="acctgl" id="quoteBtn" type="button" title="買取見積り：お客様情報と商品・見積額を保存（3ヶ月）して後日確認できます">📋 見積</button>
       <span class="hsep"></span>
       <label class="lswitch" title="ON＝シンプル値札（会社の値札風・固定長）／OFF＝標準ラベル"><span class="lswtxt">シンプル値札</span><input type="checkbox" id="layoutSw"><span class="lswslider"></span></label>
       <label class="lswitch" title="ON＝補足ラベル：コンディション＋日付だけを印刷して、会社システムのラベルの下に貼り足す用（縦専用）"><span class="lswtxt">補足</span><input type="checkbox" id="condSw"><span class="lswslider"></span></label>
@@ -650,10 +654,124 @@
         <div class="f"><label>管理番号（保管場所ごとに自動連番）</label><input id="accSoloNo" inputmode="numeric" maxlength="5" autocomplete="off"></div>
       </div>
       <div class="accpv" style="margin-top:12px"><canvas id="accSoloCv1"></canvas><canvas id="accSoloCv2"></canvas></div>
-      <div class="hint" style="margin-top:8px">印刷すると番号が進み、保管場所名を品名から学習します（99999の次は00001）。Enterでも印刷できます。</div>
+      <div class="hint" style="margin-top:8px">印刷すると番号が進み、保管場所名を品名から学習します（99999の次は00001）。Enterは次の項目へ移動。印刷は Ctrl+P またはボタンで。</div>
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
         <button class="ghostbtn" id="accSoloCancel">閉じる</button>
         <button class="printbtn" id="accSoloPrint" style="padding:12px 26px">この2枚を印刷</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="quoteModal">
+  <div class="modal" style="max-width:940px">
+    <div class="mhead"><h3 id="qTitle">📋 買取見積り</h3><button class="xbtn" id="qClose" aria-label="閉じる">×</button></div>
+    <div class="mbody">
+      <!-- 一覧 -->
+      <div id="qListView">
+        <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+          <div style="flex:1 1 auto;min-width:0;position:relative">
+            <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none">🔍</span>
+            <input id="qSearch" placeholder="名前・電話・商品・ジャンル・備考で検索" style="width:100%;box-sizing:border-box;padding:11px 64px 11px 36px;border-radius:999px;border:1.5px solid var(--line);background:#fbfdff">
+            <span id="qCount" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--sub);font-weight:800;pointer-events:none"></span>
+          </div>
+          <select id="qFSrc" style="flex:0 0 auto;width:auto;max-width:110px;font-size:12px;padding:8px 6px;border-radius:10px"><option value="">種別:全て</option><option value="電話">📞 電話</option><option value="店頭">🏬 店頭</option></select>
+          <select id="qFGenre" style="flex:0 0 auto;width:auto;max-width:150px;font-size:12px;padding:8px 6px;border-radius:10px"><option value="">ジャンル:全て</option></select>
+          <button class="printbtn" id="qNew" style="margin:0;width:auto;padding:10px 18px;flex:0 0 auto">＋新規見積</button>
+        </div>
+        <div id="qList" style="max-height:430px;overflow-y:auto;overflow-x:hidden;padding-right:6px"></div>
+      </div>
+      <!-- 見積書（確認ビュー） -->
+      <div id="qSlipView" style="display:none">
+        <div style="background:#fff;border:1.5px solid var(--line);border-radius:16px;box-shadow:0 8px 26px rgba(20,40,90,.10);padding:18px 22px;max-width:660px;margin:0 auto">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:8px">
+            <div style="font-weight:900;font-size:17px">買取見積書</div>
+            <div style="font-size:12px;color:var(--sub)"><span id="qpDate"></span>　<b id="qpStore"></b></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:baseline;margin-top:10px;flex-wrap:wrap">
+            <span id="qpEmoji" style="font-size:22px"></span>
+            <b id="qpName" style="font-size:16px"></b>
+            <span id="qpMeta" style="color:var(--sub);font-size:12.5px"></span>
+            <span id="qpTel" style="margin-left:auto;font-weight:700"></span>
+          </div>
+          <div id="qpAddr" style="font-size:12px;color:var(--sub);margin-top:3px"></div>
+          <div id="qpItems" style="margin-top:12px"></div>
+          <div style="display:flex;justify-content:flex-end;gap:18px;margin-top:10px;border-top:2px solid var(--ink);padding-top:8px;font-size:14px">
+            <div>販売相場計 <b id="qpSellT"></b></div>
+            <div style="font-size:16px">買取上限計 <b id="qpBuyT" style="color:#0a7a2f"></b></div>
+          </div>
+          <div id="qpNote" style="margin-top:10px;font-size:12.5px;color:#b06"></div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:10px;margin-top:14px">
+          <button class="ghostbtn" id="qSlipBack">一覧へ戻る</button>
+          <button class="printbtn" id="qSlipEdit" style="margin:0;width:auto;padding:12px 26px">✏ 編集する</button>
+        </div>
+      </div>
+      <!-- 編集（高速入力） -->
+      <div id="qEditView" style="display:none">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input id="qName" autocomplete="off" placeholder="お名前" style="flex:1 1 180px;min-width:0">
+          <input id="qTel" inputmode="tel" autocomplete="off" placeholder="電話（ハイフン自動）" style="flex:1 1 170px;min-width:0">
+          <input id="qNote" autocomplete="off" placeholder="備考メモ（対応の注意点など）" style="flex:2 1 220px;min-width:0">
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <input id="qAddr" autocomplete="off" placeholder="住所（任意・郵便番号なし）" style="flex:1 1 auto;min-width:0">
+          <button class="ghostbtn" id="qMapBtn" type="button" title="入力した住所をGoogleマップで開く" style="white-space:nowrap">🗺 地図</button>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <div id="qSrcChips" style="display:flex;gap:5px"></div>
+          <span style="color:var(--line)">｜</span>
+          <div id="qSexChips" style="display:flex;gap:5px"></div>
+          <div id="qAgeChips" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--line);margin:12px 0">
+        <div style="display:flex;gap:6px">
+          <input id="qKw" autocomplete="off" placeholder="JAN・型番・通称 → Enterで自動入力" style="flex:1 1 auto;min-width:0">
+          <button class="ghostbtn" id="qAutoBtn" type="button" style="white-space:nowrap">🔍 自動入力</button>
+          <button class="ghostbtn" id="qPullMain" type="button" style="white-space:nowrap" title="ラベル作成画面（拡張の「ラベルアプリへ送る」で入った内容含む）をこの明細欄へコピー">⬇ ラベル欄から</button>
+        </div>
+        <div id="qSiteBtns" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px"></div>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+          <input id="qIName" autocomplete="off" placeholder="品名" style="flex:2 1 180px;min-width:0">
+          <input id="qIMaker" autocomplete="off" placeholder="メーカー" style="flex:1 1 110px;min-width:0">
+          <input id="qIModel" autocomplete="off" placeholder="型番" style="flex:1 1 120px;min-width:0">
+          <select id="qIGenre" style="flex:1 1 120px;min-width:0"><option value="">ジャンル（自動）</option></select>
+        </div>
+        <div style="margin-top:6px">
+          <input id="qIMemo" autocomplete="off" placeholder="商品メモ（状態・付属品・傷など問い合わせ時に聞いた内容）" style="width:100%;box-sizing:border-box">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;align-items:flex-end">
+          <div class="f" style="flex:0 0 110px"><label>販売相場（円）</label><input id="qISell" inputmode="numeric"></div>
+          <div class="f" style="flex:0 0 110px"><label>買取上限（円）</label><input id="qIBuyMax" inputmode="numeric"></div>
+          <div class="f" style="flex:0 0 auto"><label>お客様への回答</label>
+            <div style="display:flex;gap:4px;align-items:center">
+              <div class="seg" id="qAnsSeg" style="display:flex;gap:4px">
+                <button type="button" data-a="max">上限で回答</button>
+                <button type="button" data-a="about">約</button>
+                <button type="button" data-a="range">範囲</button>
+              </div>
+              <input id="qIAnsLo" inputmode="numeric" placeholder="金額" style="width:86px;display:none">
+              <span id="qAnsTilde" style="display:none">〜</span>
+              <input id="qIAnsHi" inputmode="numeric" placeholder="上" style="width:86px;display:none">
+            </div>
+          </div>
+          <button class="printbtn" id="qAddItem" type="button" style="margin:0;width:auto;padding:11px 20px">↓ 追加</button>
+          <button class="ghostbtn" id="qEditCancel" type="button" style="display:none;padding:11px 14px">編集をやめる</button>
+        </div>
+        <div id="qItems" style="margin-top:10px"></div>
+        <div style="display:flex;justify-content:flex-end;gap:18px;font-weight:900;margin-top:6px">
+          <span>販売相場計 <span id="qSellTotal">¥0</span></span>
+          <span style="font-size:16px">買取上限計 <span id="qTotal" style="color:#0a7a2f">¥0</span></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:10px;margin-top:14px">
+          <div style="display:flex;gap:8px">
+            <button class="ghostbtn" id="qDelete" style="color:#c33">この見積を削除</button>
+            <button class="ghostbtn" id="qDraftClear" title="自動保存された下書きを破棄して開き直す" style="font-size:12px">🗑 下書き破棄</button>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button class="ghostbtn" id="qBack">一覧へ戻る</button>
+            <button class="printbtn" id="qSave" style="margin:0;width:auto;padding:12px 26px">保存</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -721,6 +839,16 @@
       <div style="grid-column:1/-1">
         <div class="seclbl">付属品ラベル・保管場所</div>
         <div class="hint" style="margin-bottom:6px">保管場所名を登録すると入力時に候補として出ます。<b>番号グループ</b>に同じ言葉を入れた保管場所どうしは<b>5桁の管理番号を共有</b>します（例：工具-1／工具-2／工具-3 のグループを全部「工具」にすると通し番号＝渡し間違い防止）。空欄なら場所ごとに独立の連番。学習はこのPC内で完結し、APIは消費しません。<b>管理番号は、⚙設定のプロキシURL（GAS v6.43以降）を設定したPCどうしで店内共有</b>され、複数PCでも重複しません（未設定PCはこのPC内の連番）。</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <label style="font-size:12px;color:var(--sub)">並び順</label>
+          <select id="accPlaceSort" style="flex:0 0 auto;font-size:12px;padding:5px 8px;width:auto">
+            <option value="upd">更新順</option>
+            <option value="name">名前順</option>
+            <option value="add">追加順</option>
+            <option value="manual">カスタム（任意順）</option>
+          </select>
+          <span class="hint" style="margin:0">この並び順は入力候補（付属品ラベルの保管場所）にも反映されます</span>
+        </div>
         <div id="accPlaceEditor"></div>
         <div class="addrow"><input id="addAccPlace" placeholder="保管場所名を追加（例：工具-1）"><input id="addAccGroup" placeholder="番号グループ（任意）" style="max-width:150px"><button class="ghostbtn" id="addAccPlaceBtn">追加</button></div>
 
@@ -4551,7 +4679,7 @@ function browserPrintMulti(jobs){
 var _accPvT=null;
 function accFillDatalist(){ const dl=$("accPlaceList"); if(!dl)return; dl.innerHTML="";
   const seen={}; const push=p=>{ p=(p||"").trim(); if(!p||seen[p])return; seen[p]=1; const o=document.createElement("option"); o.value=p; dl.appendChild(o); };
-  accPlacesCfg().forEach(e=>push(e&&e.name)); accPlaces().forEach(push); }
+  accPlacesSorted().forEach(e=>push(e&&e.name)); accPlaces().forEach(push); }
 function accSyncNo(){ const pl=$("accPlace"), noEl=$("accNo"); if(!pl||!noEl)return;
   noEl.value=String(accNextNo(pl.value.trim())).padStart(5,"0"); noEl.dataset.nman="";
   accPeekShared(pl,noEl,accPreviewSoon); }
@@ -4579,29 +4707,71 @@ function accInit(){
   const noEl=$("accNo"); if(noEl) noEl.addEventListener("input",()=>{ noEl.dataset.nman="1"; accPreviewSoon(); });
   ["genre","kubun"].forEach(id=>{ const el=$(id); if(el) el.addEventListener("change",()=>accRefresh(false)); });
   ["pname","model"].forEach(id=>{ const el=$(id); if(el) el.addEventListener("input",()=>{ accRefresh(false); clearTimeout(window._rhT); window._rhT=setTimeout(function(){ renderHistory(); try{renderPrevPrice();}catch(e){} },400); }); });
+  const ps=$("accPlaceSort");
+  if(ps){ ps.value=accPlaceSortMode(); ps.addEventListener("change",()=>{ store.set("accPlaceSort",ps.value); renderAccPlaceEditor(); accFillDatalist(); }); }
   const ab=$("addAccPlaceBtn");
   if(ab) ab.onclick=()=>{ const n=($("addAccPlace").value||"").trim(); const g=($("addAccGroup").value||"").trim(); if(!n) return;
     const a=accPlacesCfg(); const ex=a.find(x=>x&&x.name===n); if(ex){ ex.group=g; ex.t=Date.now(); } else a.push({name:n,group:g,t:Date.now()});
     accSavePlacesCfg(a); $("addAccPlace").value=""; $("addAccGroup").value=""; renderAccPlaceEditor(); accFillDatalist(); };
 }
-/* 設定内の保管場所エディタ（名前・番号グループ・次番号・削除） */
+/* 保管場所の並び順（設定・入力候補の両方に効く） */
+function accPlaceSortMode(){ return store.get("accPlaceSort","manual"); }
+function accPlacesSorted(){
+  const a=accPlacesCfg().slice();
+  let m=accPlaceSortMode();
+  if(m==="new"||m==="old") m="add";                     // 旧設定の互換
+  if(m==="name") a.sort((x,y)=>String(x.name||"").localeCompare(String(y.name||""),"ja"));
+  else if(m==="upd") a.sort((x,y)=>(y.t||0)-(x.t||0));
+  /* add / manual（カスタム）＝ 配列順のまま */
+  return a;
+}
+/* 設定内の保管場所エディタ（名前・番号グループ・次番号・並べ替え・削除） */
 function renderAccPlaceEditor(){
   const box=$("accPlaceEditor"); if(!box) return; box.innerHTML="";
-  const list=accPlacesCfg();
+  const list=accPlacesSorted();
   if(!list.length){ box.innerHTML='<div class="hint" style="margin-bottom:6px">まだ登録がありません。下で追加できます（付属品ラベルを印刷すると、使った保管場所は自動でここに登録されます）。</div>'; return; }
   const c=accCounters();
+  const manual=accPlaceSortMode()==="manual";
   list.forEach((e,i)=>{
     const row=document.createElement("div"); row.style.cssText="display:flex;gap:6px;align-items:center;margin-bottom:6px";
+    if(manual){
+      row.draggable=true; row.dataset.pname=e.name||"";
+      const grip=document.createElement("span"); grip.textContent="≡"; grip.title="ドラッグで並べ替え";
+      grip.style.cssText="cursor:grab;color:var(--sub);font-weight:900;flex:0 0 auto;padding:0 2px;user-select:none";
+      row.appendChild(grip);
+      row.addEventListener("dragstart",ev=>{ ev.dataTransfer.setData("text/plain",e.name||""); row.style.opacity=".45"; });
+      row.addEventListener("dragend",()=>{ row.style.opacity=""; });
+      row.addEventListener("dragover",ev=>{ ev.preventDefault(); row.style.outline="2px dashed var(--a1)"; row.style.outlineOffset="2px"; });
+      row.addEventListener("dragleave",()=>{ row.style.outline=""; });
+      row.addEventListener("drop",ev=>{ ev.preventDefault(); row.style.outline="";
+        const from=ev.dataTransfer.getData("text/plain"); const to=e.name||"";
+        if(!from||from===to) return;
+        const a=accPlacesCfg(); const j=a.findIndex(x=>x&&x.name===from); const k=a.findIndex(x=>x&&x.name===to);
+        if(j<0||k<0) return; const it=a.splice(j,1)[0]; a.splice(k,0,it);
+        accSavePlacesCfg(a); renderAccPlaceEditor(); accFillDatalist(); });
+    }
     const n=document.createElement("input"); n.value=e.name||""; n.placeholder="保管場所名"; n.style.cssText="flex:1 1 auto;min-width:0";
     const g=document.createElement("input"); g.value=e.group||""; g.placeholder="番号グループ"; g.style.cssText="flex:0 0 130px;min-width:0";
     const cur=document.createElement("span");
     cur.textContent="次 "+String(accNextNo(e.name||"")).padStart(5,"0");
     cur.style.cssText="font-size:11px;color:var(--sub);white-space:nowrap;flex:0 0 auto";
     const d=document.createElement("button"); d.type="button"; d.className="ghostbtn"; d.textContent="×"; d.title="この保管場所を削除（学習・番号は残ります）"; d.style.cssText="flex:0 0 auto;padding:8px 12px";
-    const save=()=>{ const a=accPlacesCfg(); a[i]={name:n.value.trim(),group:g.value.trim(),t:Date.now()}; accSavePlacesCfg(a); renderAccPlaceEditor(); accFillDatalist(); };
+    const orig=e.name;                              // 表示は並び替え後でも、編集は名前で元データを特定
+    const save=()=>{ const a=accPlacesCfg(); const j=a.findIndex(x=>x&&x.name===orig);
+      if(j>=0){ a[j]={name:n.value.trim(),group:g.value.trim(),t:Date.now()}; accSavePlacesCfg(a); renderAccPlaceEditor(); accFillDatalist(); } };
     n.onchange=save; g.onchange=save;
-    d.onclick=()=>{ const a=accPlacesCfg(); a.splice(i,1); accSavePlacesCfg(a); renderAccPlaceEditor(); accFillDatalist(); };
-    row.appendChild(n); row.appendChild(g); row.appendChild(cur); row.appendChild(d); box.appendChild(row);
+    d.onclick=()=>{ const a=accPlacesCfg(); const j=a.findIndex(x=>x&&x.name===orig);
+      if(j>=0){ a.splice(j,1); accSavePlacesCfg(a); renderAccPlaceEditor(); accFillDatalist(); } };
+    row.appendChild(n); row.appendChild(g); row.appendChild(cur);
+    if(manual){
+      const up=document.createElement("button"); up.type="button"; up.className="ghostbtn"; up.textContent="↑"; up.style.cssText="flex:0 0 auto;padding:8px 10px";
+      const dn=document.createElement("button"); dn.type="button"; dn.className="ghostbtn"; dn.textContent="↓"; dn.style.cssText="flex:0 0 auto;padding:8px 10px";
+      const move=(dir)=>{ const a=accPlacesCfg(); const j=a.findIndex(x=>x&&x.name===orig); const k=j+dir;
+        if(j<0||k<0||k>=a.length) return; const t=a[j]; a[j]=a[k]; a[k]=t; accSavePlacesCfg(a); renderAccPlaceEditor(); accFillDatalist(); };
+      up.onclick=()=>move(-1); dn.onclick=()=>move(1);
+      row.appendChild(up); row.appendChild(dn);
+    }
+    row.appendChild(d); box.appendChild(row);
   });
 }
 
@@ -4775,6 +4945,390 @@ function fitBar(){ try{
 }catch(e){} }
 window.addEventListener("resize",()=>{ clearTimeout(window.__fbT); window.__fbT=setTimeout(fitBar,120); });
 /* 各ボタン周辺にショートカットを小さく表示（設定変更にも追従） */
+/* ===== 買取見積り v2（高速UI・電話ハイフン・世代絵文字・画像・3種金額） ===== */
+function quotes(){ return store.get("quotes",[]); }
+function quotesSave(a){ store.set("quotes",a); }
+function quotePrune(){ const lim=Date.now()-92*864e5; const a=quotes(); const b=a.filter(q=>q&&q.t>lim); if(b.length!==a.length) quotesSave(b); }
+var qEditId=null, qDraftItems=[], qSlipId=null, qSex="", qAge="", qSrc="", qAnsType="max", qItemEditIdx=-1, qGenreAuto=true;
+function formatTel(v){
+  const d=String(v||"").replace(/[^0-9]/g,"").slice(0,11);
+  if(d.length===11) return d.replace(/(\d{3})(\d{4})(\d{4})/,"$1-$2-$3");           // 携帯 090-1234-5678
+  if(d.length===10){
+    if(/^0(3|6)/.test(d)) return d.replace(/(\d{2})(\d{4})(\d{4})/,"$1-$2-$3");     // 03/06 大都市
+    if(/^0120/.test(d))  return d.replace(/(\d{4})(\d{3})(\d{3})/,"$1-$2-$3");      // フリーダイヤル
+    return d.replace(/(\d{3})(\d{3})(\d{4})/,"$1-$2-$3");                            // 一般固定 083-123-4567
+  }
+  return d;
+}
+function qEmoji(sex,age){
+  const n=parseInt(age)||0;
+  if(sex==="男性"){
+    if(n===10) return "👦"; if(n===20) return "🧑"; if(n===30||n===40) return "👨";
+    if(n===50) return "🧔"; if(n>=60) return "👴"; return "👨";
+  }
+  if(sex==="女性"){
+    if(n===10) return "👧"; if(n===20||n===30) return "👩"; if(n===40||n===50) return "🧓";
+    if(n>=60) return "👵"; return "👩";
+  }
+  return "🧑";
+}
+function qAnsText(it){
+  if(it.ansType==="about") return "約¥"+comma(it.ansLo||0)+"と回答";
+  if(it.ansType==="range") return "¥"+comma(it.ansLo||0)+"〜¥"+comma(it.ansHi||0)+"と回答";
+  return "上限¥"+comma(it.buyMax||0)+"で回答";
+}
+function qFmtT(t){ const d=new Date(t); const z=n=>String(n).padStart(2,"0");
+  return String(d.getFullYear()).slice(-2)+"/"+z(d.getMonth()+1)+"/"+z(d.getDate())+" "+z(d.getHours())+":"+z(d.getMinutes()); }
+function qSummary(q){ return (q.items||[]).map(i=>[i.genre,i.name].filter(Boolean).join("・")).filter(Boolean).slice(0,3).join(" ／ ")||"（商品なし）"; }
+function qShowList(){ $("qListView").style.display=""; $("qEditView").style.display="none"; $("qSlipView").style.display="none";
+  $("qTitle").textContent="📋 買取見積り（保存期間3ヶ月）"; qRenderList(); const f=$("qSearch"); if(f) f.focus(); }
+function qRenderList(){
+  quotePrune();
+  const box=$("qList"); box.innerHTML="";
+  const kw=($("qSearch").value||"").trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const fSrc=($("qFSrc")&&$("qFSrc").value)||"";
+  const fGen=($("qFGenre")&&$("qFGenre").value)||"";
+  const list=quotes().slice().sort((a,b)=>b.t-a.t);
+  /* ジャンルフィルターの選択肢を実データから生成 */
+  try{ const gsel=$("qFGenre"); const cur=gsel.value; const seen={};
+    gsel.innerHTML='<option value="">ジャンル:全て</option>';
+    quotes().forEach(q=>(q.items||[]).forEach(i=>{ if(i.genre&&!seen[i.genre]){ seen[i.genre]=1;
+      const op=document.createElement("option"); op.value=i.genre; op.textContent=i.genre; gsel.appendChild(op); } }));
+    gsel.value=seen[cur]?cur:( cur===""?"":"" );
+  }catch(e){}
+  const hit=q=>{
+    if(fSrc&&q.src!==fSrc) return false;
+    if(fGen&&!(q.items||[]).some(i=>i.genre===fGen)) return false;
+    if(!kw.length) return true;
+    const hay=[q.name,q.tel,q.sex,q.age,q.src,q.addr,q.note,qSummary(q),(q.items||[]).map(i=>[i.name,i.maker,i.model,i.genre].join(" ")).join(" ")].join(" ").toLowerCase();
+    return kw.every(k=>hay.indexOf(k)>=0); };
+  const shown=list.filter(hit);
+  if($("qCount")) $("qCount").textContent=shown.length+"件";
+  if(!shown.length){ box.innerHTML='<div class="hint">該当する見積がありません。「＋新規見積」から作成できます。</div>'; return; }
+  shown.forEach(q=>{
+    /* 履歴と同じ1行スタイル（histrow） */
+    const row=document.createElement("div"); row.className="histrow";
+    row.innerHTML='<span class="hr-t">'+qFmtT(q.t)+'</span>'
+      +'<span style="font-size:17px;flex:0 0 auto">'+qEmoji(q.sex,q.age)+'</span>'
+      +(q.src?'<span style="font-size:13px;flex:0 0 auto" title="'+q.src+'">'+(q.src==="電話"?"📞":"🏬")+'</span>':"")
+      +'<span class="hr-p" style="color:#0a7a2f">¥'+comma(q.total||0)+'</span>'
+      +'<span class="hr-n"></span>'
+      +(q.note?'<span class="hr-a">📝'+(q.note.length>10?q.note.slice(0,10)+"…":q.note)+'</span>':"");
+    row.querySelector(".hr-n").textContent=(q.name||"（名前なし）")+"　"+(q.tel||"")+"　"+qSummary(q);
+    row.title=[q.name,q.tel,[q.sex,q.age].filter(Boolean).join("・"),qSummary(q),(q.note?"📝"+q.note:"")].filter(Boolean).join("\n");
+    row.onclick=()=>qOpenSlip(q.id);
+    box.appendChild(row);
+  });
+}
+function qImgBox(it,size){
+  const s=size||52;
+  const ph='<div class="qph" style="width:'+s+'px;height:'+s+'px;border-radius:8px;background:#eef2f8;border:1px dashed #c9d4e4;display:flex;align-items:center;justify-content:center;font-size:9px;color:#8aa;flex:0 0 auto;text-align:center;line-height:1.3">No<br>Image</div>';
+  if(it.img) return '<img src="'+it.img+'" style="width:'+s+'px;height:'+s+'px;object-fit:contain;border-radius:8px;background:#f4f7fb;flex:0 0 auto" onerror="this.style.display=String.fromCharCode(110,111,110,101)">'+"";
+  return ph;
+}
+function qOpenSlip(id){
+  const q=quotes().find(x=>x&&x.id===id); if(!q){ qShowList(); return; }
+  qSlipId=id;
+  $("qTitle").textContent="📋 買取見積書";
+  $("qpEmoji").textContent=qEmoji(q.sex,q.age);
+  $("qpName").textContent=(q.name||"（名前なし）")+" 様";
+  $("qpMeta").textContent=[q.src?((q.src==="電話"?"📞":"🏬")+q.src+"問い合わせ"):"",q.sex,q.age].filter(Boolean).join("・");
+  $("qpTel").textContent=q.tel||"";
+  $("qpDate").textContent=qFmtT(q.t);
+  if(q.addr){ $("qpAddr").innerHTML='🏠 <a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q.addr)+'" target="_blank" rel="noopener" style="color:inherit">'+q.addr+' <span style="font-size:10px;color:var(--a1)">🗺 地図</span></a>'; }
+  else { $("qpAddr").textContent=""; }
+  $("qpStore").textContent=($("setStore")&&$("setStore").value)||"";
+  const box=$("qpItems"); box.innerHTML="";
+  let sellT=0,buyT=0;
+  (q.items||[]).forEach(it=>{
+    sellT+=num(it.sell)||0; buyT+=num(it.buyMax)||0;
+    const row=document.createElement("div");
+    row.style.cssText="display:flex;gap:12px;align-items:center;border-bottom:1px dashed var(--line);padding:9px 2px";
+    row.innerHTML=qImgBox(it,56)
+      +'<div style="flex:1 1 auto;min-width:0"><b>'+(it.name||"（品名なし）")+'</b>'
+      +'<div style="font-size:11.5px;color:var(--sub)">'+[it.maker,it.model,it.genre].filter(Boolean).join(" / ")+'</div>'
+      +'<div style="font-size:12px;color:#b06;margin-top:2px">'+qAnsText(it)+'</div>'
+      +(it.memo?'<div style="font-size:11.5px;color:var(--sub);margin-top:1px">📝 '+it.memo+'</div>':"")+'</div>' 
+      +'<div style="text-align:right;flex:0 0 auto;font-size:12.5px;line-height:1.7">'
+      +'<div style="color:var(--sub)">販売 ¥'+comma(it.sell||0)+'</div>'
+      +'<div style="font-weight:900;color:#0a7a2f">上限 ¥'+comma(it.buyMax||0)+'</div></div>';
+    box.appendChild(row);
+  });
+  $("qpSellT").textContent="¥"+comma(sellT);
+  $("qpBuyT").textContent="¥"+comma(buyT);
+  $("qpNote").textContent=q.note?("📝 "+q.note):"";
+  $("qListView").style.display="none"; $("qEditView").style.display="none"; $("qSlipView").style.display="";
+}
+function qChip(label,on,fn){
+  const b=document.createElement("button"); b.type="button"; b.textContent=label;
+  b.style.cssText="border:1.5px solid "+(on?"var(--a1)":"var(--line)")+";background:"+(on?"#eaf2ff":"#fff")
+    +";border-radius:999px;padding:5px 11px;font-size:12px;font-weight:"+(on?"900":"600")+";cursor:pointer";
+  b.onclick=fn; return b;
+}
+function qRenderChips(){
+  const sc=$("qSrcChips"); if(sc){ sc.innerHTML="";
+    [["電話","📞 電話"],["店頭","🏬 店頭"]].forEach(([v,l])=>sc.appendChild(qChip(l, qSrc===v, ()=>{ qSrc=(qSrc===v?"":v); qRenderChips(); qDraftSave(); }))); }
+  const sx=$("qSexChips"); sx.innerHTML="";
+  ["男性","女性"].forEach(v=>sx.appendChild(qChip((v==="男性"?"👨 ":"👩 ")+v, qSex===v, ()=>{ qSex=(qSex===v?"":v); qRenderChips(); qDraftSave(); })));
+  const ag=$("qAgeChips"); ag.innerHTML="";
+  ["10代","20代","30代","40代","50代","60代","70代以上"].forEach(v=>ag.appendChild(qChip(v, qAge===v, ()=>{ qAge=(qAge===v?"":v); qRenderChips(); qDraftSave(); })));
+}
+function qAnsUI(){
+  [...$("qAnsSeg").children].forEach(b=>{ const on=b.dataset.a===qAnsType;
+    b.style.cssText="border:1.5px solid "+(on?"var(--a1)":"var(--line)")+";background:"+(on?"#eaf2ff":"#fff")+";border-radius:9px;padding:7px 10px;font-size:12px;font-weight:"+(on?"900":"600")+";cursor:pointer"; });
+  $("qIAnsLo").style.display=(qAnsType==="max")?"none":"";
+  $("qAnsTilde").style.display=(qAnsType==="range")?"":"none";
+  $("qIAnsHi").style.display=(qAnsType==="range")?"":"none";
+}
+function qRenderItems(){
+  const box=$("qItems"); box.innerHTML="";
+  qDraftItems.forEach((it,i)=>{
+    const row=document.createElement("div");
+    row.style.cssText="display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:7px 10px;margin-bottom:6px;background:#fbfdff";
+    row.innerHTML=qImgBox(it,44)
+      +'<div style="flex:1 1 auto;min-width:0"><b>'+(it.name||"（品名なし）")+'</b>'
+      +' <span style="color:var(--sub);font-size:11.5px">'+[it.maker,it.model,it.genre].filter(Boolean).join(" / ")+'</span>'
+      +'<div style="font-size:11.5px;color:#b06">'+qAnsText(it)+'</div>'
+      +(it.memo?'<div style="font-size:11px;color:var(--sub)">📝 '+it.memo+'</div>':"")+'</div>';
+    const imgEl=row.firstElementChild;
+    if(imgEl){ imgEl.style.cursor="pointer"; imgEl.title="クリックで画像URLを設定／変更（Webの画像を右クリック→「画像アドレスをコピー」して貼り付け）";
+      imgEl.onclick=(ev)=>{ ev.stopPropagation();
+        const u=prompt("商品画像のURLを貼り付け（空にすると削除）\n※Web検索で出た画像を右クリック→「画像アドレスをコピー」",it.img||"");
+        if(u!==null){ it.img=u.trim(); qRenderItems(); } }; }
+    const mk=(val,ph,key)=>{ const inp=document.createElement("input"); inp.value=val||""; inp.placeholder=ph; inp.inputMode="numeric";
+      inp.style.cssText="flex:0 0 92px;text-align:right"; inp.title=ph;
+      inp.addEventListener("input",()=>{ it[key]=num(inp.value)||0; qCalcTotal(); }); return inp; };
+    row.appendChild(mk(it.sell,"販売相場","sell"));
+    row.appendChild(mk(it.buyMax,"買取上限","buyMax"));
+    const ed=document.createElement("button"); ed.type="button"; ed.className="ghostbtn"; ed.textContent="✏"; ed.title="この商品を上の入力欄で編集";
+    ed.style.cssText="flex:0 0 auto;padding:6px 9px";
+    ed.onclick=()=>{ qItemEditIdx=i;
+      $("qIName").value=it.name||""; $("qIMaker").value=it.maker||""; $("qIModel").value=it.model||"";
+      qGenreFill(); qGenreSet(it.genre||""); qGenreAuto=false;
+      $("qIMemo").value=it.memo||""; $("qISell").value=it.sell||""; $("qIBuyMax").value=it.buyMax||"";
+      qAnsType=it.ansType||"max"; qAnsUI(); $("qIAnsLo").value=it.ansLo||""; $("qIAnsHi").value=it.ansHi||"";
+      window.__qImg=it.img||"";
+      $("qAddItem").textContent="✔ 更新"; $("qEditCancel").style.display="";
+      $("qIName").focus(); };
+    const del=document.createElement("button"); del.type="button"; del.className="ghostbtn"; del.textContent="×"; del.style.cssText="flex:0 0 auto;padding:6px 10px";
+    del.onclick=()=>{ qDraftItems.splice(i,1); if(qItemEditIdx===i) qItemEditReset(); qRenderItems(); };
+    row.appendChild(ed); row.appendChild(del); box.appendChild(row);
+  });
+  qCalcTotal();
+}
+function qCalcTotal_after(){ try{qDraftSave();}catch(e){} }
+function qCalcTotal(){
+  const st=qDraftItems.reduce((s,i)=>s+(num(i.sell)||0),0);
+  const bt=qDraftItems.reduce((s,i)=>s+(num(i.buyMax)||0),0);
+  $("qSellTotal").textContent="¥"+comma(st);
+  $("qTotal").textContent="¥"+comma(bt);
+  qCalcTotal_after();
+}
+function qItemEditReset(){
+  qItemEditIdx=-1; qGenreAuto=true;
+  ["qKw","qIName","qIMaker","qIModel","qIMemo","qISell","qIBuyMax","qIAnsLo","qIAnsHi"].forEach(i=>{ if($(i))$(i).value=""; });
+  if($("qIGenre"))$("qIGenre").value="";
+  qAnsType="max"; qAnsUI();
+  if($("qAddItem"))$("qAddItem").textContent="↓ 追加";
+  if($("qEditCancel"))$("qEditCancel").style.display="none";
+}
+/* ── 下書き自動保存：途中で閉じても消えない ── */
+var __qDraftT=null;
+function qDraftSave(){
+  clearTimeout(__qDraftT);
+  __qDraftT=setTimeout(function(){
+    try{
+      if($("qEditView").style.display==="none") return;
+      store.set("quoteDraft",{editId:qEditId,name:$("qName").value,tel:$("qTel").value,addr:$("qAddr").value,
+        note:$("qNote").value,sex:qSex,age:qAge,src:qSrc,items:qDraftItems.slice(),t:Date.now()});
+    }catch(e){}
+  },350);
+}
+function qDraftLoadIf(id){
+  try{
+    const d=store.get("quoteDraft",null);
+    if(!d) return false;
+    if((d.editId||null)!==(id||null)) return false;
+    $("qName").value=d.name||""; $("qTel").value=d.tel||""; $("qAddr").value=d.addr||""; $("qNote").value=d.note||"";
+    qSex=d.sex||""; qAge=d.age||""; qSrc=d.src||"";
+    qDraftItems=(d.items||[]).map(x=>Object.assign({},x));
+    return true;
+  }catch(e){ return false; }
+}
+function qOpenEdit(id){
+  const q=id?quotes().find(x=>x&&x.id===id):null;
+  qEditId=q?q.id:null;
+  $("qTitle").textContent=q?("✏ 見積の編集　"+qFmtT(q.t)):"✏ 新規見積";
+  $("qName").value=q?q.name||"":""; $("qTel").value=q?q.tel||"":""; $("qNote").value=q?q.note||"":""; $("qAddr").value=q?q.addr||"":"";
+  qSrc=q?q.src||"":"";
+  qRenderSiteBtns(); qGenreFill();
+  qSex=q?q.sex||"":""; qAge=q?q.age||"":""; qRenderChips();
+  qAnsType="max"; qAnsUI();
+  ["qKw","qIName","qIMaker","qIModel","qIGenre","qISell","qIBuyMax","qIAnsLo","qIAnsHi"].forEach(i=>{ $(i).value=""; });
+  qDraftItems=q?(q.items||[]).map(x=>Object.assign({},x)):[];
+  qItemEditReset();
+  const restored=qDraftLoadIf(q?q.id:null);
+  if(restored) qRenderChips();
+  qRenderItems();
+  if(restored){ const h=document.createElement("div"); h.className="hint"; h.id="qDraftHint";
+    h.textContent="💾 前回の入力途中の内容（下書き）を復元しました。不要なら左下の「🗑 下書き破棄」。";
+    const ex=$("qDraftHint"); if(ex) ex.remove();
+    $("qItems").parentNode.insertBefore(h,$("qItems")); setTimeout(()=>{try{h.remove();}catch(e){}},6000); }
+  $("qDelete").style.display=q?"":"none";
+  $("qListView").style.display="none"; $("qSlipView").style.display="none"; $("qEditView").style.display="";
+  (q?$("qKw"):$("qName")).focus();
+}
+function qCopyFromMain(){
+  const g=$("genre").selectedOptions[0];
+  if($("pname").value) $("qIName").value=$("pname").value;
+  if($("maker").value) $("qIMaker").value=$("maker").value;
+  if($("model").value) $("qIModel").value=$("model").value;
+  if(g&&g.dataset.name){ qGenreSet(g.dataset.name); qGenreAuto=false; }
+  // 販売価格（拡張が拾ったサイト売価）→ 販売相場欄へ（空の時だけ）
+  try{ if(!$("qISell").value && $("priceEx").value) $("qISell").value=$("priceEx").value; }catch(e){}
+  // 画像：自動入力(applyItem) or 拡張ペイロードから
+  try{
+    const li=window.__lastAutoItem, ep=window.__extPayload;
+    window.__qImg=(li&&(li.img||li.image||li.thumb||li.imageUrl))
+                ||(ep&&(ep.img||ep.image||ep.photo||ep.thumb))||window.__qImg||"";
+  }catch(e){}
+}
+/* 見積用：ラベルと同じWeb検索サイト群（キーワード＝入力中の商品情報） */
+function qGenreFill(){
+  const sel=$("qIGenre"); if(!sel) return;
+  const cur=sel.value; sel.innerHTML='<option value="">ジャンル（自動）</option>';
+  const seen={};
+  [...($("genre")?$("genre").options:[])].forEach(o=>{ const n=o.dataset&&o.dataset.name; if(n&&!seen[n]){ seen[n]=1;
+    const op=document.createElement("option"); op.value=n; op.textContent=n; sel.appendChild(op); } });
+  if(cur){ if(!seen[cur]){ const op=document.createElement("option"); op.value=cur; op.textContent=cur; sel.appendChild(op); } sel.value=cur; }
+}
+function qGenreSet(name){
+  const sel=$("qIGenre"); if(!sel||!name) return;
+  if(![...sel.options].some(o=>o.value===name)){ const op=document.createElement("option"); op.value=name; op.textContent=name; sel.appendChild(op); }
+  sel.value=name;
+}
+function qAutoGenre(){
+  if(!qGenreAuto) return;
+  try{ const g=detectGenreFromName(($("qIName").value||"")+" "+($("qIModel").value||""));
+    if(g!==""&&g!=null){ const opt=[...$("genre").options].find(o=>String(o.value)===String(g));
+      if(opt&&opt.dataset.name) qGenreSet(opt.dataset.name); } }catch(e){}
+}
+function qTerm(){
+  const t=[$("qIMaker").value,$("qIName").value,$("qIModel").value].map(v=>String(v||"").trim()).filter(Boolean).join(" ");
+  return t||String($("qKw").value||"").trim();
+}
+function qRenderSiteBtns(){
+  const box=$("qSiteBtns"); if(!box) return; box.innerHTML="";
+  searchSites().forEach(function(sdef){
+    const b=document.createElement("button"); b.type="button"; b.className="ghostbtn";
+    b.style.cssText="display:inline-flex;align-items:center;gap:5px;padding:6px 10px;font-size:11.5px;font-weight:700";
+    const host=siteHost(sdef[1]);
+    if(host){ const img=document.createElement("img");
+      img.src="https://www.google.com/s2/favicons?domain="+encodeURIComponent(host)+"&sz=32";
+      img.width=14; img.height=14; img.referrerPolicy="no-referrer";
+      img.style.cssText="width:14px;height:14px;border-radius:3px;flex:0 0 auto";
+      img.onerror=function(){ this.style.display="none"; }; b.appendChild(img); }
+    const sp=document.createElement("span"); sp.textContent=sdef[0]; b.appendChild(sp);
+    b.onclick=function(){
+      const t=qTerm(); if(!t){ alert("商品名・型番・キーワードのいずれかを入力してください"); $("qKw").focus(); return; }
+      const hh=siteHost(sdef[1])||"";
+      if(/kakaku\.com/.test(hh)){ sjisGetSearch("https://kakaku.com/search_results/","query",t); }
+      else { window.open(sdef[1].replace(/%s/g, encodeURIComponent(t)), "_blank", "noopener"); }
+    };
+    box.appendChild(b);
+  });
+}
+function qInit(){
+  if(!$("quoteBtn")) return;
+  $("qClose").onclick=()=>$("quoteModal").classList.remove("open");
+  $("quoteModal").addEventListener("click",e=>{ if(e.target===$("quoteModal")) $("quoteModal").classList.remove("open"); });
+  $("qSearch").addEventListener("input",qRenderList);
+  $("qNew").onclick=()=>qOpenEdit(null);
+  $("qBack").onclick=qShowList;
+  $("qSlipBack").onclick=qShowList;
+  $("qSlipEdit").onclick=()=>{ if(qSlipId) qOpenEdit(qSlipId); };
+  $("qTel").addEventListener("input",()=>{ const p=$("qTel"); p.value=formatTel(p.value); });
+  [...$("qAnsSeg").children].forEach(b=>b.onclick=()=>{ qAnsType=b.dataset.a; qAnsUI(); if(qAnsType!=="max") $("qIAnsLo").focus(); });
+  $("qAddItem").onclick=()=>{
+    const it={name:$("qIName").value.trim(),maker:$("qIMaker").value.trim(),model:$("qIModel").value.trim(),
+              genre:$("qIGenre").value.trim(),memo:$("qIMemo").value.trim(),img:window.__qImg||"",
+              sell:num($("qISell").value)||0,buyMax:num($("qIBuyMax").value)||0,
+              ansType:qAnsType,ansLo:num($("qIAnsLo").value)||0,ansHi:num($("qIAnsHi").value)||0};
+    if(!it.name&&!it.model){ alert("品名か型番を入れてください"); return; }
+    if(qItemEditIdx>=0&&qDraftItems[qItemEditIdx]) qDraftItems[qItemEditIdx]=it;
+    else qDraftItems.push(it);
+    qItemEditReset(); window.__qImg=""; qRenderItems();
+    $("qKw").focus();
+  };
+  $("qEditCancel").onclick=()=>{ qItemEditReset(); };
+  $("qAutoBtn").onclick=()=>{
+    const kw=$("qKw").value.trim(); if(!kw){ $("qKw").focus(); return; }
+    const before=[$("pname").value,$("maker").value,$("model").value].join("|");
+    window.__lastAutoItem=null; window.__qImg="";
+    $("janCode").value=kw;
+    try{ autoFill(); }catch(e){}
+    $("qAutoBtn").textContent="⏳ 取得中…"; $("qAutoBtn").disabled=true;
+    const t0=Date.now();
+    const timer=setInterval(()=>{
+      const now=[$("pname").value,$("maker").value,$("model").value].join("|");
+      const done=(now!==before&&($("pname").value||$("model").value));
+      if(done||Date.now()-t0>9000){
+        clearInterval(timer); $("qAutoBtn").textContent="🔍 自動入力"; $("qAutoBtn").disabled=false;
+        if(done){ qCopyFromMain(); $("qISell").focus(); }
+      }
+    },300);
+  };
+  $("qPullMain").onclick=()=>{ qCopyFromMain(); $("qISell").focus(); };
+  $("qDraftClear").onclick=()=>{ if(!confirm("下書きを破棄して、保存済みの内容で開き直しますか？"))return;
+    store.set("quoteDraft",null); qOpenEdit(qEditId); };
+  ["qName","qTel","qAddr","qNote"].forEach(id=>$(id).addEventListener("input",qDraftSave));
+  ["qIName","qIModel"].forEach(id=>$(id).addEventListener("input",qAutoGenre));
+  $("qIGenre").addEventListener("change",()=>{ qGenreAuto=false; });
+  if($("qFSrc")) $("qFSrc").addEventListener("change",qRenderList);
+  if($("qFGenre")) $("qFGenre").addEventListener("change",qRenderList);
+  $("qMapBtn").onclick=()=>{ const a=$("qAddr").value.trim();
+    if(!a){ alert("住所を入力してください"); $("qAddr").focus(); return; }
+    window.open("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(a),"_blank","noopener"); };
+  $("qKw").addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.isComposing){ e.preventDefault(); $("qAutoBtn").click(); } });
+  /* Enter＝上から順に移動し、最後の欄で「追加」 */
+  ["qIName","qIMaker","qIModel","qIGenre","qISell","qIBuyMax","qIAnsLo","qIAnsHi"].forEach(id=>
+    $(id).addEventListener("keydown",e=>{
+      if(e.key!=="Enter"||e.isComposing) return;
+      e.preventDefault();
+      const chain=["qIName","qIMaker","qIModel","qIGenre","qISell","qIBuyMax"];
+      if(qAnsType==="about") chain.push("qIAnsLo");
+      if(qAnsType==="range"){ chain.push("qIAnsLo","qIAnsHi"); }
+      const i=chain.indexOf(id);
+      if(i<0||i===chain.length-1){ $("qAddItem").click(); }
+      else { const nx=$(chain[i+1]); nx.focus(); try{nx.select();}catch(x){} }
+    }));
+  $("qSave").onclick=()=>{
+    const a=quotes();
+    const base={name:$("qName").value.trim(),tel:$("qTel").value.trim(),sex:qSex,age:qAge,addr:$("qAddr").value.trim(),src:qSrc,
+                note:$("qNote").value.trim(),items:qDraftItems.slice(),
+                total:qDraftItems.reduce((s,i)=>s+(num(i.buyMax)||0),0)};
+    if(qEditId){ const j=a.findIndex(x=>x&&x.id===qEditId); if(j>=0) a[j]=Object.assign({},a[j],base,{u:Date.now()}); }
+    else a.push(Object.assign({id:"q"+Date.now()+Math.random().toString(36).slice(2,6),t:Date.now()},base));
+    quotesSave(a); store.set("quoteDraft",null); qShowList();
+  };
+  $("qDelete").onclick=()=>{
+    if(!qEditId) return;
+    if(!confirm("この見積を削除しますか？")) return;
+    quotesSave(quotes().filter(x=>x&&x.id!==qEditId)); store.set("quoteDraft",null); qShowList();
+  };
+  quotePrune();
+}
+window.addEventListener("hashchange",function(){
+  try{ const ev=$("qEditView");
+    if(ev&&ev.style.display!=="none"&&/hsslabel=/.test(location.hash)){ setTimeout(function(){ qCopyFromMain(); qRenderSiteBtns(); },700); }
+  }catch(e){}
+});
+document.addEventListener("click",function(e){
+  const b=e.target&&e.target.closest&&e.target.closest("#quoteBtn");
+  if(!b) return;
+  try{ $("quoteModal").classList.add("open"); qShowList(); }catch(err){ alert("見積画面エラー: "+(err&&err.message||err)); }
+},true);
+try{ if(/quote/.test(location.hash)) setTimeout(function(){ $("quoteModal").classList.add("open"); qShowList(); },400); }catch(e){}
 function kbdHints(){
   try{
     const c=kbdCfg();
@@ -5014,9 +5568,15 @@ function accSoloInit(){
     const p=$("accSoloPlace"); if(p&&!p.dataset.man){ const s=accSoloSuggest(); if(s&&!p.value.trim()) p.value=s; accSoloSyncNo(); }
     accSoloPreviewSoon(); }); });
   if(pl) pl.addEventListener("change",()=>{ pl.dataset.man="1"; });
-  // Enterで印刷（品名→型番→保管場所→番号のどこからでも）
-  ["accSoloName","accSoloModel","accSoloPlace","accSoloNo"].forEach(id=>{ const el=$(id); if(el)
-    el.addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.isComposing&&!e.ctrlKey&&!e.metaKey){ e.preventDefault(); accSoloDoPrint(); } }); });
+  // Enter＝次の項目へ移動（品名→型番→メーカー→税抜価格→保管場所→番号→品名…）。印刷は Ctrl+P かボタンのみ
+  (function(){ const chain=["accSoloName","accSoloModel","accSoloMaker","accSoloPrice","accSoloPlace","accSoloNo"];
+    chain.forEach(id=>{ const el=$(id); if(el)
+      el.addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.isComposing&&!e.ctrlKey&&!e.metaKey){
+        e.preventDefault();
+        const i=chain.indexOf(id); const nx=$(chain[(i+1)%chain.length]);
+        if(nx){ nx.focus(); try{nx.select();}catch(x){} }
+      } }); });
+  })();
   // #accsolo 付きURLで開いたら最初からこの画面（ブックマーク運用）
   try{ if(/accsolo/.test(location.hash)) setTimeout(accSoloOpen,300); }catch(e){}
 }
@@ -5499,7 +6059,10 @@ function splitHobbyName(name){
 /* 自動入力の反映は「全置換」＋「新しい商品」扱い：
    前回の価格は消し（誤価格での印刷防止）、ジャンルも自動で該当のものへ切り替える。
    ホビー商品（ジャンルがホビー系 or 駿河屋由来）は「…」以降をコンディションへ移す。 */
-function applyItem(it){
+function applyItem(it){ try{window.__lastAutoItem=it;
+    var ev=document.getElementById("qEditView");
+    if(ev&&ev.style.display!=="none"){ setTimeout(function(){ try{qCopyFromMain(); qRenderSiteBtns();}catch(x){} },80); }
+  }catch(e){}
   var nm=it.name||"";
   var g=(it.genre!=null&&it.genre!=="")?it.genre:detectGenreFromName(nm+" "+(it.brand||""));
   var cm="";
@@ -5666,6 +6229,10 @@ function applyIncomingLabel(){
   try{
     var hh=location.hash||""; var m=hh.match(/hsslabel=([^&]+)/); if(!m) return;
     var o=JSON.parse(decodeURIComponent(m[1]));
+    try{ window.__extPayload=o;
+      var _ev=document.getElementById("qEditView");
+      if(_ev&&_ev.style.display!=="none"){ setTimeout(function(){ try{qCopyFromMain();}catch(x){} },250); }
+    }catch(e){}
     // ===== 相場カメラ等から「名前だけ」で届いた時：学習→ローカル解析で メーカー/型番/品名/ジャンル に自動振り分け =====
     try{
       window.__inName=(o&&o.name)?String(o.name):"";
@@ -6169,7 +6736,7 @@ function wire(){
   }
   renderSiteButtons();
 }
-buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); kbdHints(); setTimeout(fitBar,50); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
+buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); kbdHints(); try{qInit();}catch(e){} setTimeout(fitBar,50); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
 </script>
 <script>
 /* ===== 進化UI v5：操作レイヤー（検証済みエンジン・既存関数には触れない、追加のみ） ===== */
