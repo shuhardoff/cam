@@ -439,7 +439,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v10.4</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v10.5</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -682,6 +682,7 @@
             <input id="qSearch" placeholder="名前・電話・商品・ジャンル・備考で検索" style="width:100%;box-sizing:border-box;padding:11px 64px 11px 36px;border-radius:999px;border:1.5px solid var(--line);background:#fbfdff">
             <span id="qCount" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--sub);font-weight:800;pointer-events:none"></span>
           </div>
+          <span id="qSyncInfo" style="font-size:10.5px;color:var(--sub);flex:0 0 auto;white-space:nowrap"></span>
           <select id="qFSrc" style="flex:0 0 auto;width:auto;max-width:110px;font-size:12px;padding:8px 6px;border-radius:10px"><option value="">種別:全て</option><option value="電話">📞 電話</option><option value="店頭">🏬 店頭</option></select>
           <select id="qFGenre" style="flex:0 0 auto;width:auto;max-width:150px;font-size:12px;padding:8px 6px;border-radius:10px"><option value="">ジャンル:全て</option></select>
           <button class="printbtn" id="qNew" style="margin:0;width:auto;padding:10px 18px;flex:0 0 auto">＋新規</button>
@@ -4843,6 +4844,7 @@ function shareApply(d){
     .forEach(k=>{ if(d[k]!==undefined) store.set(k,d[k]); });
   try{ renderHistory(); accFillDatalist(); renderPrevPrice(); }catch(e){}
   try{ if($("quoteModal")&&$("quoteModal").classList.contains("open")&&$("qListView").style.display!=="none") qRenderList(); }catch(e){}
+  try{ const si=$("qSyncInfo"); if(si){ const d=new Date(); si.textContent="☁ 共有OK "+("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2)+":"+("0"+d.getSeconds()).slice(-2); } }catch(e){}
 }
 async function shareSync(){
   const url=proxyURL(); if(!url||_shareBusy) return;
@@ -5364,14 +5366,14 @@ function qInit(){
                 total:qDraftItems.reduce((s,i)=>s+(num(i.buyMax)||0),0)};
     if(qEditId){ const j=a.findIndex(x=>x&&x.id===qEditId); if(j>=0) a[j]=Object.assign({},a[j],base,{u:Date.now()}); }
     else a.push(Object.assign({id:"q"+Date.now()+Math.random().toString(36).slice(2,6),t:Date.now()},base));
-    quotesSave(a); store.set("quoteDraft",null); try{shareSoon();}catch(e){} qShowList();
+    quotesSave(a); store.set("quoteDraft",null); try{shareSync();}catch(e){} qShowList();
   };
   $("qDelete").onclick=()=>{
     if(!qEditId) return;
     if(!confirm("この見積を削除しますか？")) return;
     const _a=store.get("quotes",[]); const _j=_a.findIndex(x=>x&&x.id===qEditId);
     if(_j>=0){ _a[_j]={id:qEditId,t:_a[_j].t||Date.now(),del:1,u:Date.now()}; quotesSave(_a); }
-    store.set("quoteDraft",null); try{shareSoon();}catch(e){} qShowList();
+    store.set("quoteDraft",null); try{shareSync();}catch(e){} qShowList();
   };
   quotePrune();
 }
@@ -5386,6 +5388,7 @@ document.addEventListener("click",function(e){
   try{ $("quoteModal").classList.add("open"); qShowList(); try{shareSync();}catch(e2){} }catch(err){ alert("見積画面エラー: "+(err&&err.message||err)); }
 },true);
 try{ if(/quote/.test(location.hash)) setTimeout(function(){ $("quoteModal").classList.add("open"); qShowList(); },400); }catch(e){}
+setInterval(function(){ try{ if($("quoteModal")&&$("quoteModal").classList.contains("open")) shareSync(); }catch(e){} },30000);
 function kbdHints(){
   try{
     const c=kbdCfg();
