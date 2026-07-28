@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>フォロワー登山 〜山口5店 山頂アタック〜</title>
+<style>
+  :root{
+    --page:#0d1117;
+    --surface:#171c28;
+    --surface2:#1d2433;
+    --line:rgba(255,255,255,.08);
+    --ink:#ffffff;
+    --ink2:#c3c2b7;
+    --muted:#898781;
+    --good:#0ca30c;
+    --gold:#e8c15a;
+    --s1:#3987e5; /* 周南秋月 */
+    --s2:#d95926; /* 宇部 */
+    --s3:#199e70; /* 山口 */
+    --s4:#c98500; /* 長府 */
+    --s5:#d55181; /* 新下関 */
+    --rival:#8b93a7;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:var(--page);
+    color:var(--ink);
+    font-family:"Segoe UI","Yu Gothic UI",Meiryo,system-ui,sans-serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:1280px;margin:0 auto;padding:20px 20px 60px}
+  header.top{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:26px;font-weight:700;letter-spacing:.06em}
+  h1 .sub{font-size:13px;color:var(--ink2);font-weight:500;margin-left:10px;letter-spacing:.12em}
+  .updated{font-size:12px;color:var(--muted)}
+  .todaychip{font-size:13px;color:var(--good);font-weight:700;background:rgba(12,163,12,.12);
+    border:1px solid rgba(12,163,12,.35);border-radius:20px;padding:3px 12px}
+
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 18px}
+  .tab{
+    border:1px solid var(--line);background:var(--surface);color:var(--ink2);
+    border-radius:10px;padding:8px 16px;font-size:14px;cursor:pointer;
+    display:flex;align-items:center;gap:8px;transition:all .15s;font-family:inherit;
+  }
+  .tab:hover{background:var(--surface2)}
+  .tab.active{color:var(--ink);border-color:var(--tc);box-shadow:0 0 0 1px var(--tc),0 4px 18px -6px var(--tc);background:var(--surface2)}
+  .tab .dot{width:10px;height:10px;border-radius:50%;background:var(--tc)}
+  .tab .cnt{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  .grid{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(300px,1fr);gap:16px}
+  @media(max-width:980px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;overflow:hidden}
+  .card h2{font-size:14px;color:var(--ink2);font-weight:700;letter-spacing:.14em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .card h2::before{content:"";width:4px;height:14px;border-radius:2px;background:var(--gold)}
+
+  #mountainCard{padding:0;position:relative}
+  #mountain{display:block;width:100%;height:auto}
+
+  .side{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .hero{display:flex;flex-direction:column;gap:4px}
+  .hero .name{font-size:15px;color:var(--ink2);font-weight:600}
+  .hero .big{font-size:44px;font-weight:700;line-height:1.1}
+  .hero .big small{font-size:16px;color:var(--muted);font-weight:500;margin-left:6px}
+  .hero .meta{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--ink2);margin-top:4px}
+  .hero .meta b{color:var(--ink)}
+  .delta-up{color:var(--good);font-weight:700}
+  .delta-zero{color:var(--muted)}
+
+  .target{border-top:1px solid var(--line);padding:10px 0}
+  .target:first-of-type{border-top:none}
+  .target .row1{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .target .tname{font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .target .gap{font-size:13px;color:var(--gold);font-weight:700;white-space:nowrap}
+  .target .row2{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px}
+  .bar{flex:1;height:6px;border-radius:3px;background:var(--surface2);overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--tc,#3987e5),var(--gold))}
+  .target .eta{font-size:11px;color:var(--muted);white-space:nowrap}
+  .target .tcount{font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums}
+
+  .milestone .row1{display:flex;justify-content:space-between;align-items:baseline}
+  .milestone .mname{font-size:15px;font-weight:700;color:var(--gold)}
+  .milestone .mleft{font-size:12px;color:var(--ink2)}
+
+  .log{list-style:none;display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto}
+  .log li{font-size:13px;color:var(--ink2);display:flex;gap:8px;align-items:baseline}
+  .log .d{color:var(--muted);font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .log .new{color:var(--page);background:var(--gold);font-size:10px;font-weight:700;border-radius:4px;padding:1px 5px}
+  .log .empty{color:var(--muted);font-size:12px}
+
+  .below{display:flex;flex-direction:column;gap:16px;margin-top:16px}
+  .legend{display:flex;gap:6px 14px;flex-wrap:wrap;margin-bottom:10px}
+  .legend label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink2);cursor:pointer;user-select:none}
+  .legend .chip{width:12px;height:12px;border-radius:3px;background:var(--c)}
+  .legend input{accent-color:var(--gold)}
+  .legend details{width:100%;border-top:1px solid var(--line);padding-top:8px}
+  .legend summary{cursor:pointer;font-size:13px;color:var(--ink2);user-select:none}
+  .legend .rlist{display:flex;gap:6px 16px;flex-wrap:wrap;margin-top:10px;max-height:150px;overflow-y:auto;padding-right:6px}
+  .chartwrap{position:relative}
+  #chart{display:block;width:100%;height:auto}
+  #tooltip{
+    position:absolute;pointer-events:none;display:none;background:var(--surface2);
+    border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;
+    box-shadow:0 8px 30px rgba(0,0,0,.5);z-index:5;min-width:150px;
+  }
+  #tooltip .tdate{color:var(--muted);margin-bottom:5px;font-size:11px}
+  #tooltip .trow{display:flex;align-items:center;gap:6px;justify-content:space-between;padding:1px 0}
+  #tooltip .trow .l{display:flex;align-items:center;gap:6px;color:var(--ink2)}
+  #tooltip .trow .v{font-variant-numeric:tabular-nums;color:var(--ink)}
+  #tooltip .chip{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .chartnote{font-size:12px;color:var(--muted);margin-top:6px}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{font-size:11px;color:var(--muted);text-align:right;font-weight:600;letter-spacing:.08em;
+     padding:6px 10px;border-bottom:1px solid var(--line)}
+  th:nth-child(2){text-align:left}
+  td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;color:var(--ink2)}
+  td.namecell{text-align:left;color:var(--ink)}
+  tr.ownrow{background:rgba(232,193,90,.05)}
+  tr.selrow{background:rgba(232,193,90,.12)}
+  td .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:1px}
+  td .hdl{color:var(--muted);font-size:11px;margin-left:8px}
+  td .own-badge{font-size:10px;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:0 4px;margin-left:8px;vertical-align:1px}
+  tr:last-child td{border-bottom:none}
+
+  footer{margin-top:26px;font-size:12px;color:var(--muted);line-height:1.9}
+  footer b{color:var(--ink2)}
+
+  /* 自動ツイート管理 */
+  .twstatus{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--ink2);margin-bottom:12px;align-items:center}
+  .twstatus .ok{color:var(--good);font-weight:700}
+  .twstatus .ng{color:#e66767;font-weight:700}
+  .twitem{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;background:var(--surface2)}
+  .twitem .num{font-size:12px;color:var(--gold);font-weight:700;white-space:nowrap;padding-top:8px;width:38px}
+  .twitem .num .next{display:block;font-size:10px;color:var(--good)}
+  .twitem textarea{flex:1;min-height:74px;background:var(--page);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13px;line-height:1.6;resize:vertical}
+  .twitem .imgcol{display:flex;flex-direction:column;gap:6px;width:150px}
+  .twitem select{background:var(--page);color:var(--ink2);border:1px solid var(--line);border-radius:8px;padding:6px;font-size:12px;font-family:inherit;max-width:150px}
+  .twitem .thumb{width:150px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:none}
+  .twitem .del{background:none;border:1px solid var(--line);color:#e66767;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:inherit}
+  .twbtns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  .twbtns button,.twbtns label.upl{background:var(--surface2);border:1px solid var(--line);color:var(--ink);
+    border-radius:10px;padding:8px 18px;font-size:13px;cursor:pointer;font-family:inherit}
+  .twbtns button.primary{border-color:var(--gold);color:var(--gold);font-weight:700}
+  .twbtns button:hover,.twbtns label.upl:hover{background:var(--surface)}
+  .twconf{display:flex;gap:14px;align-items:center;font-size:13px;color:var(--ink2);margin-top:12px;flex-wrap:wrap}
+  .twconf input[type=time]{background:var(--page);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-family:inherit}
+  #twOut{background:var(--page);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:12px;
+    color:var(--ink2);white-space:pre-wrap;margin-top:12px;max-height:220px;overflow-y:auto;display:none;font-family:Consolas,monospace}
+  #twOffline{font-size:13px;color:var(--muted);line-height:1.9}
+
+  #banner{
+    position:fixed;top:0;left:0;right:0;bottom:0;display:none;z-index:50;
+    background:rgba(13,17,23,.82);align-items:center;justify-content:center;flex-direction:column;gap:18px;
+  }
+  #banner.show{display:flex}
+  #banner .msg{
+    font-size:30px;font-weight:700;text-align:center;padding:30px 46px;line-height:1.6;
+    background:var(--surface);border:1px solid var(--gold);border-radius:18px;
+    box-shadow:0 0 80px rgba(232,193,90,.25);
+  }
+  #banner .msg .em{color:var(--gold)}
+  #banner .close{font-size:13px;color:var(--ink2);cursor:pointer;border:1px solid var(--line);
+    border-radius:20px;padding:8px 22px;background:var(--surface)}
+  #confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>フォロワー登山<span class="sub">山口5店 山頂アタック</span></h1>
+    <span class="todaychip" id="todayGain" style="display:none"></span>
+    <span class="updated" id="updated"></span>
+  </header>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="grid">
+    <div class="card" id="mountainCard">
+      <svg id="mountain" viewBox="0 0 1000 640" role="img" aria-label="フォロワー数を標高で表した登山マップ"></svg>
+    </div>
+
+    <div class="side">
+      <div class="card hero" id="heroCard"></div>
+      <div class="card">
+        <h2>次の目標</h2>
+        <div id="targets"></div>
+      </div>
+      <div class="card milestone">
+        <h2>次の山小屋</h2>
+        <div id="milestone"></div>
+      </div>
+      <div class="card">
+        <h2>追い抜きログ</h2>
+        <ul class="log" id="log"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="below">
+    <div class="card">
+      <h2>推移グラフ</h2>
+      <div class="legend" id="legend"></div>
+      <div class="chartwrap">
+        <svg id="chart" viewBox="0 0 1000 380"></svg>
+        <div id="tooltip"></div>
+      </div>
+      <div class="chartnote" id="chartnote"></div>
+    </div>
+    <div class="card">
+      <h2>全アカウント順位表</h2>
+      <div style="overflow-x:auto">
+      <table id="ranking">
+        <thead><tr><th>順位</th><th>店舗</th><th>フォロワー</th><th>前日比</th><th>週間比</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>自動ツイート管理</h2>
+      <div id="twOffline" style="display:none">
+        ここでツイートの編集・画像添付・即時投稿をするには、<b style="color:var(--ink2)">「登山＋ツイート管理を起動.bat」</b>から開いてください（フォロワー登山フォルダ内）。
+      </div>
+      <div id="twUI" style="display:none">
+        <div class="twstatus" id="twStatus"></div>
+        <div id="twList"></div>
+        <div class="twbtns">
+          <button id="twAdd">＋ ツイートを追加</button>
+          <label class="upl">📷 画像をアップロード<input type="file" id="twUpload" accept=".png,.jpg,.jpeg,.gif,.webp" style="display:none"></label>
+          <button id="twSave" class="primary">💾 保存</button>
+          <button id="twTest">テスト（投稿しない）</button>
+          <button id="twPost">🚀 いますぐ1件投稿</button>
+        </div>
+        <div class="twconf">
+          <span>毎日の投稿時刻: <input type="time" id="twTime"></span>
+          <label><input type="checkbox" id="twDate"> 日付【7/28】を自動で頭に付ける（重複拒否対策）</label>
+          <button id="twConfSave" style="background:var(--surface2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:5px 14px;font-size:12px;cursor:pointer;font-family:inherit">設定を保存</button>
+        </div>
+        <pre id="twOut"></pre>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <b>使い方</b>：「フォロワー登山を起動.bat」をダブルクリックすると最新のフォロワー数を自動取得してこの画面が開きます（毎日1回でOK）。<br>
+    <b>ライバル追加</b>：accounts.json に <code>{"handle":"アカウントID","name":"店名","short":"略称","type":"rival"}</code> の行を足すだけで山に登場します。目標は自動で「自店より少し上」の相手が選ばれます。
+  </footer>
+</div>
+
+<div id="banner"><div class="msg" id="bannerMsg"></div><div class="close" onclick="closeBanner()">閉じる</div></div>
+<canvas id="confetti"></canvas>
+
+<script>document.write('<script src="data.js?t=' + Date.now() + '"><\/script>');</script>
+<script>
+'use strict';
+// ================= データ準備 =================
+const D = window.MOUNTAIN_DATA || {updated:'-', accounts:{}, history:[]};
+const ACC = D.accounts || {};
+const HISTORY = (D.history || []).slice().sort((a,b)=> a.date < b.date ? -1 : 1);
+const HANDLES = Object.keys(ACC);
+const OWN = HANDLES.filter(h => ACC[h].type === 'own');
+const RIVALS = HANDLES.filter(h => ACC[h].type !== 'own');
+
+const OWN_COLORS = ['#3987e5','#d95926','#199e70','#c98500','#d55181'];
+const RIVAL_SLOT_COLORS = ['#2fae2f','#9085e9','#e66767']; // グラフでライバルを表示する時用
+const COLOR = {};
+OWN.forEach((h,i)=> COLOR[h] = OWN_COLORS[i % OWN_COLORS.length]);
+
+const fmt = n => n==null ? '—' : n.toLocaleString('ja-JP');
+
+function valueAt(handle, idx){
+  for(let i=idx;i>=0;i--){
+    const c = HISTORY[i] && HISTORY[i].counts ? HISTORY[i].counts[handle] : null;
+    if(c!=null) return c;
+  }
+  return null;
+}
+const lastIdx = HISTORY.length-1;
+const latest = h => lastIdx<0 ? null : valueAt(h,lastIdx);
+const prevDay = h => lastIdx<1 ? null : valueAt(h,lastIdx-1);
+function weekAgo(h){
+  if(lastIdx<0) return null;
+  const lastDate = new Date(HISTORY[lastIdx].date);
+  for(let i=lastIdx-1;i>=0;i--){
+    const d = new Date(HISTORY[i].date);
+    if((lastDate-d)/86400000 >= 7) return valueAt(h,i);
+  }
+  return lastIdx>0 ? valueAt(h,0) : null;
+}
+function dailyPace(h){ // 直近7日（無ければ全期間）の1日あたり平均増加
+  if(lastIdx<1) return null;
+  const lastDate = new Date(HISTORY[lastIdx].date);
+  let baseIdx = 0;
+  for(let i=lastIdx-1;i>=0;i--){
+    baseIdx = i;
+    if((lastDate-new Date(HISTORY[i].date))/86400000 >= 7) break;
+  }
+  const days = (lastDate-new Date(HISTORY[baseIdx].date))/86400000;
+  const a = valueAt(h,baseIdx), b = valueAt(h,lastIdx);
+  if(days<=0 || a==null || b==null) return null;
+  return (b-a)/days;
+}
+
+// ================= 追い抜き・節目イベント =================
+const MILESTONES = [
+  {v:100,label:'一合目'},{v:250,label:'二合目'},{v:500,label:'三合目'},{v:1000,label:'四合目'},
+  {v:2000,label:'五合目'},{v:4000,label:'六合目'},{v:8000,label:'七合目'},{v:16000,label:'八合目'},
+  {v:32000,label:'九合目'},{v:50000,label:'山頂（公式超え）'}
+];
+function computeOvertakes(){
+  const ev = [];
+  for(const s of OWN){
+    for(const r of HANDLES){
+      if(r===s) continue;
+      for(let i=1;i<HISTORY.length;i++){
+        const sp=valueAt(s,i-1), rp=valueAt(r,i-1), sn=valueAt(s,i), rn=valueAt(r,i);
+        if(sp==null||rp==null||sn==null||rn==null) continue;
+        if(sp<=rp && sn>rn) ev.push({date:HISTORY[i].date, store:s, rival:r, sn, rn});
+      }
+    }
+  }
+  return ev.sort((a,b)=> a.date<b.date?1:(a.date>b.date?-1:0));
+}
+function computeMilestoneEvents(){
+  const ev = [];
+  for(const s of OWN){
+    for(let i=1;i<HISTORY.length;i++){
+      const p=valueAt(s,i-1), n=valueAt(s,i);
+      if(p==null||n==null) continue;
+      for(const m of MILESTONES){
+        if(p<m.v && n>=m.v) ev.push({date:HISTORY[i].date, store:s, m});
+      }
+    }
+  }
+  return ev;
+}
+const OVERTAKES = computeOvertakes();
+const MILE_EVENTS = computeMilestoneEvents();
+
+// ================= 山（SVG） =================
+const SUMMIT = 50000;
+const tOf = c => Math.max(0, Math.min(1, Math.log(Math.max(c,10)/10)/Math.log(SUMMIT/10)));
+
+const TRAIL = (()=>{
+  const pts=[]; const N=9, yTop=100, yBase=580;
+  for(let k=0;k<=N;k++){
+    const y = yBase - (yBase-yTop)*k/N;
+    const f = (y-yTop)/(yBase-yTop);
+    const hw = 52 + 305*f;
+    pts.push([500 + (k%2===0?-1:1)*hw*.85, y]);
+  }
+  pts.push([500,82]);
+  const cum=[0];
+  for(let i=1;i<pts.length;i++){
+    const dx=pts[i][0]-pts[i-1][0], dy=pts[i][1]-pts[i-1][1];
+    cum.push(cum[i-1]+Math.hypot(dx,dy));
+  }
+  return {pts,cum,total:cum[cum.length-1]};
+})();
+function posOnTrail(t){
+  const d = t*TRAIL.total;
+  for(let i=1;i<TRAIL.cum.length;i++){
+    if(d<=TRAIL.cum[i]){
+      const f=(d-TRAIL.cum[i-1])/(TRAIL.cum[i]-TRAIL.cum[i-1]);
+      const a=TRAIL.pts[i-1], b=TRAIL.pts[i];
+      return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f];
+    }
+  }
+  return TRAIL.pts[TRAIL.pts.length-1];
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+
+function getTargets(sel){
+  const own = latest(sel);
+  if(own==null) return [];
+  return HANDLES.filter(h=>h!==sel).map(h=>({h,c:latest(h)}))
+    .filter(o=>o.c!=null && o.c>own).sort((a,b)=>a.c-b.c).slice(0,3);
+}
+
+function seededRand(seed){ let x=seed; return ()=>{ x=(x*48271)%2147483647; return x/2147483647; }; }
+
+function renderMountain(sel){
+  const svg = document.getElementById('mountain');
+  let s = '';
+  // 空
+  s += `<defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b1020"/><stop offset=".55" stop-color="#141c33"/>
+      <stop offset=".85" stop-color="#2b2a44"/><stop offset="1" stop-color="#4a3550"/>
+    </linearGradient>
+    <linearGradient id="mt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a4258"/><stop offset="1" stop-color="#1c2233"/>
+    </linearGradient>
+    <linearGradient id="mtFar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#262e42"/><stop offset="1" stop-color="#161c2b"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="3.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>`;
+  s += `<rect width="1000" height="640" fill="url(#sky)"/>`;
+  // 星
+  const rnd = seededRand(20260728);
+  for(let i=0;i<70;i++){
+    const x=rnd()*1000, y=rnd()*300, r=rnd()*1.1+.3, o=(rnd()*.5+.25).toFixed(2);
+    s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(2)}" fill="#fff" opacity="${o}"/>`;
+  }
+  s += `<circle cx="850" cy="90" r="26" fill="#f2ead8" opacity=".9"/><circle cx="840" cy="82" r="24" fill="url(#sky)" opacity=".92"/>`;
+  // 遠景の山
+  s += `<polygon points="0,640 90,430 210,520 330,400 430,510 520,430 640,540 760,420 880,530 1000,460 1000,640" fill="url(#mtFar)"/>`;
+  // 主峰
+  s += `<polygon points="60,640 500,62 940,640" fill="url(#mt)"/>`;
+  s += `<polygon points="500,62 560,168 528,150 505,180 478,148 445,166" fill="#e8ecf4" opacity=".92"/>`;
+  s += `<polyline points="500,62 500,30" stroke="#e8c15a" stroke-width="2.5"/><polygon points="500,30 540,40 500,52" fill="#e8c15a"/>`;
+  s += `<text x="514" y="24" fill="#e8c15a" font-size="13" font-weight="700">山頂 50,000（公式超え）</text>`;
+  // 登山道
+  const trailPts = TRAIL.pts.map(p=>p.join(',')).join(' ');
+  s += `<polyline points="${trailPts}" fill="none" stroke="#c9cfdd" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round" opacity=".55"/>`;
+  // 山小屋（節目）
+  MILESTONES.forEach(m=>{
+    if(m.v>=SUMMIT) return;
+    const [x,y] = posOnTrail(tOf(m.v));
+    s += `<g opacity=".85">
+      <rect x="${x-6}" y="${y-6}" width="12" height="7" fill="#5b4a3a"/>
+      <polygon points="${x-8},${y-6} ${x},${y-13} ${x+8},${y-6}" fill="#8a6f52"/>
+      <text x="${x}" y="${y+14}" fill="#7d8598" font-size="10" text-anchor="middle">${m.label} ${fmt(m.v)}</text>
+    </g>`;
+  });
+  // 登山者（マーカー）
+  // ラベル表示は「自社5店＋選択店の次の目標＋最上位」に絞る（80店全部に付けると読めないため）
+  const targets = new Set(getTargets(sel).map(o=>o.h));
+  const ranked = HANDLES.map(h=>({h,c:latest(h)})).filter(o=>o.c!=null).sort((a,b)=>b.c-a.c);
+  const labeled = new Set(OWN);
+  targets.forEach(h=>labeled.add(h));
+  if(ranked.length) labeled.add(ranked[0].h);
+  const climbers = ranked
+    .map(o=>{ const [x,y]=posOnTrail(tOf(o.c)); return {...o, x, y, own:ACC[o.h].type==='own', lab:labeled.has(o.h)}; });
+  // まず無ラベルのライバル（点のみ・ホバーで店名表示）
+  for(const cl of climbers){
+    if(cl.lab) continue;
+    s += `<circle cx="${cl.x}" cy="${cl.y}" r="2.6" fill="#5d6577" stroke="#0d1117" stroke-width=".8" opacity=".85"><title>${esc(ACC[cl.h].name)} ${fmt(cl.c)}人</title></circle>`;
+  }
+  // ラベル付きだけで重なり回避（左右交互＋縦方向に押し出し）
+  const labClimbers = climbers.filter(cl=>cl.lab).sort((a,b)=>a.y-b.y);
+  const lastY = {left:-1e9, right:-1e9};
+  labClimbers.forEach(cl=>{
+    const side = cl.x>500 ? 'right' : 'left';
+    let ly = cl.y;
+    if(ly-lastY[side]<15) ly = lastY[side]+15;
+    lastY[side]=ly;
+    cl.side = side; cl.ly = ly;
+  });
+  for(const cl of labClimbers){
+    const anchor = cl.side==='right'?'start':'end';
+    const lx = cl.x + (cl.side==='right'?14:-14);
+    if(cl.own){
+      const col = COLOR[cl.h];
+      const isSel = cl.h===sel;
+      s += `<g ${isSel?'filter="url(#glow)"':''}>
+        <line x1="${cl.x}" y1="${cl.y}" x2="${cl.x}" y2="${cl.y-16}" stroke="${col}" stroke-width="2"/>
+        <polygon points="${cl.x},${cl.y-16} ${cl.x+13},${cl.y-12} ${cl.x},${cl.y-8}" fill="${col}"/>
+        <circle cx="${cl.x}" cy="${cl.y}" r="${isSel?7:5}" fill="${col}" stroke="#fff" stroke-width="${isSel?2.2:1.4}"/>
+        <text x="${lx}" y="${cl.ly+4}" fill="${isSel?'#fff':'#c3c2b7'}" font-size="${isSel?14:12}" font-weight="700" text-anchor="${anchor}">${esc(ACC[cl.h].short)} ${fmt(cl.c)}</text>
+      </g>`;
+    }else{
+      const isTarget = targets.has(cl.h);
+      const col = isTarget ? '#e8c15a' : '#8b93a7';
+      s += `<circle cx="${cl.x}" cy="${cl.y}" r="4" fill="${col}" stroke="#0d1117" stroke-width="1"><title>${esc(ACC[cl.h].name)} ${fmt(cl.c)}人</title></circle>
+        <text x="${lx}" y="${cl.ly+3.5}" fill="${col}" font-size="11" font-weight="${isTarget?'700':'400'}" text-anchor="${anchor}">${isTarget?'🎯':''}${esc(ACC[cl.h].short)} ${fmt(cl.c)}</text>`;
+    }
+  }
+  svg.innerHTML = s;
+}
+
+// ================= 店舗タブ・サイドパネル =================
+let SEL = localStorage.getItem('fm_store');
+if(!OWN.includes(SEL)) SEL = OWN[0];
+
+function renderTabs(){
+  const el = document.getElementById('tabs');
+  el.innerHTML = OWN.map(h=>`
+    <button class="tab ${h===SEL?'active':''}" style="--tc:${COLOR[h]}" data-h="${esc(h)}">
+      <span class="dot"></span>${esc(ACC[h].short)}<span class="cnt">${fmt(latest(h))}</span>
+    </button>`).join('');
+  el.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
+    SEL = b.dataset.h; localStorage.setItem('fm_store',SEL); renderAll();
+  }));
+}
+
+function renderHero(){
+  const c = latest(SEL), pd = prevDay(SEL), wa = weekAgo(SEL);
+  const dDay = (c!=null&&pd!=null)? c-pd : null;
+  const dWeek = (c!=null&&wa!=null)? c-wa : null;
+  const rank = OWN.map(h=>({h,c:latest(h)||0})).sort((a,b)=>b.c-a.c).findIndex(o=>o.h===SEL)+1;
+  const deltaHtml = v => v==null ? `<span class="delta-zero">—</span>`
+    : v>0 ? `<span class="delta-up">+${fmt(v)}</span>` : `<span class="delta-zero">${fmt(v)}</span>`;
+  document.getElementById('heroCard').innerHTML = `
+    <div class="name" style="color:${COLOR[SEL]}">● ${esc(ACC[SEL].name)}</div>
+    <div class="big">${fmt(c)}<small>フォロワー ＝ 標高${fmt(c)}m</small></div>
+    <div class="meta">
+      <span>前日比 ${deltaHtml(dDay)}</span>
+      <span>週間 ${deltaHtml(dWeek)}</span>
+      <span>社内 <b>${rank}位</b> / ${OWN.length}店</span>
+    </div>`;
+  const chip = document.getElementById('todayGain');
+  if(dDay!=null && dDay>0){ chip.style.display=''; chip.textContent=`今日の獲得標高 +${fmt(dDay)}m（${ACC[SEL].short}）`; }
+  else chip.style.display='none';
+}
+
+function renderTargets(){
+  const own = latest(SEL);
+  const el = document.getElementById('targets');
+  if(own==null){ el.innerHTML = '<div class="log"><span class="empty">データがありません</span></div>'; return; }
+  const above = getTargets(SEL);
+  if(above.length===0){ el.innerHTML = `<div style="font-size:15px;color:var(--gold);font-weight:700">全アカウント制覇！次のライバルを accounts.json に追加しよう🏔</div>`; return; }
+  const pace = dailyPace(SEL);
+  el.innerHTML = above.map((o,i)=>{
+    const gap = o.c-own;
+    const pct = Math.min(100, own/o.c*100).toFixed(1);
+    const eta = (pace&&pace>0) ? `この調子なら 約${Math.ceil(gap/pace)}日` : '';
+    const isOwn = ACC[o.h].type==='own';
+    return `<div class="target" style="--tc:${COLOR[SEL]}">
+      <div class="row1">
+        <span class="tname">${i===0?'🎯 ':''}${esc(ACC[o.h].name)}${isOwn?' <span style="color:var(--gold);font-size:11px">（社内）</span>':''}</span>
+        <span class="gap">あと ${fmt(gap)}人</span>
+      </div>
+      <div class="row2">
+        <span class="tcount">${fmt(o.c)}人</span>
+        <span class="bar"><i style="width:${pct}%"></i></span>
+        <span class="eta">${eta}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderMilestone(){
+  const own = latest(SEL) || 0;
+  const next = MILESTONES.find(m=>m.v>own);
+  const el = document.getElementById('milestone');
+  if(!next){ el.innerHTML = `<div class="mname">全山踏破！🏆</div>`; return; }
+  const prevIdx = MILESTONES.indexOf(next)-1;
+  const base = prevIdx>=0 ? MILESTONES[prevIdx].v : 0;
+  const pct = Math.max(0, Math.min(100, (own-base)/(next.v-base)*100)).toFixed(1);
+  el.innerHTML = `
+    <div class="row1"><span class="mname">⛺ ${esc(next.label)}（${fmt(next.v)}人）</span>
+    <span class="mleft">あと ${fmt(next.v-own)}人</span></div>
+    <div class="row2" style="display:flex;align-items:center;gap:10px;margin-top:8px">
+      <span style="font-size:11px;color:var(--muted)">${fmt(base)}</span>
+      <span class="bar" style="flex:1"><i style="width:${pct}%;background:linear-gradient(90deg,${COLOR[SEL]},var(--gold))"></i></span>
+      <span style="font-size:11px;color:var(--muted)">${fmt(next.v)}</span>
+    </div>`;
+}
+
+function renderLog(){
+  const el = document.getElementById('log');
+  const latestDate = lastIdx>=0 ? HISTORY[lastIdx].date : '';
+  const evs = OVERTAKES.filter(e=>e.store===SEL).slice(0,8);
+  if(evs.length===0){
+    el.innerHTML = `<li><span class="empty">まだ追い抜き記録はありません。毎日更新すると、ライバルを抜いた日がここに刻まれます。</span></li>`;
+    return;
+  }
+  el.innerHTML = evs.map(e=>`
+    <li><span class="d">${e.date.slice(5).replace('-','/')}</span>
+    <span>🚩 <b>${esc(ACC[e.rival].name)}</b> を追い抜いた！（${fmt(e.sn)} vs ${fmt(e.rn)}）</span>
+    ${e.date===latestDate?'<span class="new">NEW</span>':''}</li>`).join('');
+}
+
+// ================= 推移グラフ =================
+const visible = new Set(OWN);
+const rivalColorMap = {};
+function rivalColor(h){
+  if(rivalColorMap[h]) return rivalColorMap[h];
+  const used = new Set(Object.entries(rivalColorMap).filter(([k])=>visible.has(k)).map(([,v])=>v));
+  const free = RIVAL_SLOT_COLORS.find(c=>!used.has(c));
+  rivalColorMap[h] = free || RIVAL_SLOT_COLORS[0];
+  return rivalColorMap[h];
+}
+function seriesColor(h){ return ACC[h].type==='own' ? COLOR[h] : rivalColor(h); }
+
+let legendOpen = false;
+function renderLegend(){
+  const el = document.getElementById('legend');
+  const mk = h => `<label style="--c:${visible.has(h)?seriesColor(h):'#3a4258'}">
+    <input type="checkbox" data-h="${esc(h)}" ${visible.has(h)?'checked':''}>
+    <span class="chip"></span>${esc(ACC[h].short)}</label>`;
+  const rivalsSorted = RIVALS.slice().sort((a,b)=>(latest(b)||0)-(latest(a)||0));
+  el.innerHTML = OWN.map(mk).join('')
+    + `<details ${legendOpen?'open':''}><summary>ライバル店をグラフに追加（全${RIVALS.length}店・同時に3店まで）</summary>`
+    + `<div class="rlist">` + rivalsSorted.map(mk).join('') + `</div></details>`;
+  const det = el.querySelector('details');
+  det.addEventListener('toggle', ()=>{ legendOpen = det.open; });
+  el.querySelectorAll('input').forEach(cb=>cb.addEventListener('change',()=>{
+    const h = cb.dataset.h;
+    if(cb.checked){
+      if(ACC[h].type!=='own' && RIVALS.filter(r=>visible.has(r)).length>=3){
+        cb.checked=false;
+        document.getElementById('chartnote').textContent='ライバルは同時に3店まで表示できます（色の見分けが付かなくなるため）。';
+        return;
+      }
+      visible.add(h);
+    }else{
+      visible.delete(h); delete rivalColorMap[h];
+    }
+    renderLegend(); renderChart();
+  }));
+}
+
+function renderChart(){
+  const svg = document.getElementById('chart');
+  const note = document.getElementById('chartnote');
+  const W=1000,H=380,L=70,R=120,T=18,B=34;
+  const pw=W-L-R, ph=H-T-B;
+  const idxs = HISTORY.map((_,i)=>i).slice(-60);
+  const vis = [...visible];
+  if(idxs.length===0 || vis.length===0){ svg.innerHTML=''; note.textContent='表示できるデータがありません。'; return; }
+  let maxV = 0;
+  for(const h of vis) for(const i of idxs){ const v=valueAt(h,i); if(v!=null&&v>maxV) maxV=v; }
+  maxV = Math.max(maxV,10)*1.12;
+  const step = niceStep(maxV/4.5);
+  const x = i => idxs.length===1 ? L+pw/2 : L + pw*(idxs.indexOf(i))/(idxs.length-1);
+  const y = v => T + ph*(1 - v/maxV);
+  let s = '';
+  for(let g=0;g<=maxV;g+=step){
+    s += `<line x1="${L}" y1="${y(g)}" x2="${W-R}" y2="${y(g)}" stroke="rgba(255,255,255,.07)"/>
+      <text x="${L-8}" y="${y(g)+4}" fill="#898781" font-size="11" text-anchor="end">${fmt(g)}</text>`;
+  }
+  s += `<line x1="${L}" y1="${T+ph}" x2="${W-R}" y2="${T+ph}" stroke="#383835" stroke-width="1"/>`;
+  const tickEvery = Math.max(1, Math.ceil(idxs.length/8));
+  idxs.forEach((i,k)=>{
+    if(k%tickEvery!==0 && k!==idxs.length-1) return;
+    s += `<text x="${x(i)}" y="${H-10}" fill="#898781" font-size="11" text-anchor="middle">${HISTORY[i].date.slice(5).replace('-','/')}</text>`;
+  });
+  const endLabels=[];
+  for(const h of vis){
+    const col = seriesColor(h);
+    const pts = idxs.map(i=>({i,v:valueAt(h,i)})).filter(p=>p.v!=null);
+    if(pts.length===0) continue;
+    if(pts.length>1){
+      s += `<polyline points="${pts.map(p=>`${x(p.i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ')}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/>`;
+    }
+    const lastP = pts[pts.length-1];
+    s += `<circle cx="${x(lastP.i)}" cy="${y(lastP.v)}" r="4" fill="${col}" stroke="#171c28" stroke-width="1.5"/>`;
+    endLabels.push({y:y(lastP.v), col, text:`${ACC[h].short} ${fmt(lastP.v)}`});
+  }
+  endLabels.sort((a,b)=>a.y-b.y);
+  let ly=-1e9;
+  for(const el2 of endLabels){
+    let yy = Math.max(el2.y, ly+14); ly=yy;
+    s += `<text x="${W-R+10}" y="${yy+4}" fill="${el2.col}" font-size="12" font-weight="600">${esc(el2.text)}</text>`;
+  }
+  s += `<line id="xhair" x1="0" y1="${T}" x2="0" y2="${T+ph}" stroke="rgba(255,255,255,.25)" stroke-width="1" style="display:none"/>`;
+  s += `<rect id="hitbox" x="${L}" y="${T}" width="${pw}" height="${ph}" fill="transparent"/>`;
+  svg.innerHTML = s;
+  note.textContent = idxs.length<2 ? '履歴が2日分たまると折れ線グラフになります。まずは明日もう一度更新！' : '';
+
+  // ホバー（クロスヘア＋ツールチップ）
+  const hitbox = svg.querySelector('#hitbox');
+  const xhair = svg.querySelector('#xhair');
+  const tip = document.getElementById('tooltip');
+  hitbox.addEventListener('mousemove', ev=>{
+    const rect = svg.getBoundingClientRect();
+    const sx = (ev.clientX-rect.left) * (W/rect.width);
+    let best=idxs[0], bd=1e9;
+    for(const i of idxs){ const d=Math.abs(x(i)-sx); if(d<bd){bd=d;best=i;} }
+    xhair.style.display=''; xhair.setAttribute('x1',x(best)); xhair.setAttribute('x2',x(best));
+    const rows = vis.map(h=>({h,v:valueAt(h,best)})).filter(r=>r.v!=null).sort((a,b)=>b.v-a.v)
+      .map(r=>`<div class="trow"><span class="l"><span class="chip" style="background:${seriesColor(r.h)}"></span>${esc(ACC[r.h].short)}</span><span class="v">${fmt(r.v)}</span></div>`).join('');
+    tip.innerHTML = `<div class="tdate">${HISTORY[best].date}</div>${rows}`;
+    tip.style.display='block';
+    const wrapRect = svg.parentElement.getBoundingClientRect();
+    let tx = (x(best)/W)*wrapRect.width + 14;
+    if(tx+170 > wrapRect.width) tx -= 190;
+    tip.style.left = tx+'px';
+    tip.style.top = '20px';
+  });
+  hitbox.addEventListener('mouseleave', ()=>{ xhair.style.display='none'; tip.style.display='none'; });
+}
+function niceStep(raw){
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  for(const m of [1,2,2.5,5,10]) if(m*p>=raw) return m*p;
+  return 10*p;
+}
+
+// ================= 順位表 =================
+function renderTable(){
+  const tb = document.querySelector('#ranking tbody');
+  const rows = HANDLES.map(h=>({h,c:latest(h)})).filter(o=>o.c!=null).sort((a,b)=>b.c-a.c);
+  tb.innerHTML = rows.map((o,i)=>{
+    const own = ACC[o.h].type==='own';
+    const pd = prevDay(o.h), wa = weekAgo(o.h);
+    const d1 = pd!=null? o.c-pd : null, d7 = wa!=null? o.c-wa : null;
+    const dHtml = v => v==null?'<span class="delta-zero">—</span>':(v>0?`<span class="delta-up">+${fmt(v)}</span>`:`<span class="delta-zero">${fmt(v)}</span>`);
+    return `<tr class="${own?(o.h===SEL?'selrow':'ownrow'):''}">
+      <td>${i+1}</td>
+      <td class="namecell"><span class="dot" style="background:${own?COLOR[o.h]:'#8b93a7'}"></span>${esc(ACC[o.h].name)}${own?'<span class="own-badge">自社</span>':''}<span class="hdl">@${esc(o.h)}</span></td>
+      <td style="color:var(--ink);font-weight:600">${fmt(o.c)}</td>
+      <td>${dHtml(d1)}</td><td>${dHtml(d7)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ================= お祝い演出 =================
+function celebrate(){
+  if(lastIdx<0) return;
+  const latestDate = HISTORY[lastIdx].date;
+  const news = [];
+  for(const e of OVERTAKES){
+    if(e.date!==latestDate) continue;
+    const key = `fm_c_ot_${e.date}_${e.store}_${e.rival}`;
+    if(!localStorage.getItem(key)){ news.push({key, html:`<span class="em">${esc(ACC[e.store].name)}</span> が<br>${esc(ACC[e.rival].name)} を追い抜きました！🚩`}); }
+  }
+  for(const e of MILE_EVENTS){
+    if(e.date!==latestDate) continue;
+    const key = `fm_c_ms_${e.date}_${e.store}_${e.m.v}`;
+    if(!localStorage.getItem(key)){ news.push({key, html:`<span class="em">${esc(ACC[e.store].name)}</span><br>${esc(e.m.label)}（${fmt(e.m.v)}人）に到達！⛺`}); }
+  }
+  if(news.length===0) return;
+  news.forEach(n=>localStorage.setItem(n.key,'1'));
+  document.getElementById('bannerMsg').innerHTML = news.map(n=>n.html).join('<hr style="border:none;border-top:1px solid var(--line);margin:14px 0">');
+  document.getElementById('banner').classList.add('show');
+  runConfetti();
+}
+function closeBanner(){ document.getElementById('banner').classList.remove('show'); }
+function runConfetti(){
+  const cv = document.getElementById('confetti');
+  cv.width = innerWidth; cv.height = innerHeight;
+  const ctx = cv.getContext('2d');
+  const cols = ['#e8c15a','#3987e5','#d95926','#199e70','#d55181','#ffffff'];
+  const ps = Array.from({length:130},()=>({
+    x:Math.random()*cv.width, y:-20-Math.random()*cv.height*.5,
+    vy:2+Math.random()*3.5, vx:(Math.random()-.5)*1.6,
+    r:3+Math.random()*4, a:Math.random()*Math.PI, va:(Math.random()-.5)*.2,
+    c:cols[Math.floor(Math.random()*cols.length)]
+  }));
+  const t0 = performance.now();
+  (function frame(t){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    for(const p of ps){
+      p.x+=p.vx; p.y+=p.vy; p.a+=p.va;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a);
+      ctx.fillStyle=p.c; ctx.fillRect(-p.r,-p.r/2,p.r*2,p.r);
+      ctx.restore();
+    }
+    if(t-t0<3800) requestAnimationFrame(frame); else ctx.clearRect(0,0,cv.width,cv.height);
+  })(t0);
+}
+
+// ================= 全体描画 =================
+function renderAll(){
+  document.getElementById('updated').textContent = `最終更新: ${D.updated}`;
+  renderTabs(); renderMountain(SEL); renderHero(); renderTargets();
+  renderMilestone(); renderLog(); renderLegend(); renderChart(); renderTable();
+}
+renderAll();
+celebrate();
+
+// ================= 自動ツイート管理（サーバー起動時のみ） =================
+(function initTweetManager(){
+  const isServer = location.protocol === 'http:' || location.protocol === 'https:';
+  document.getElementById(isServer ? 'twUI' : 'twOffline').style.display = '';
+  if(!isServer) return;
+  const $ = id => document.getElementById(id);
+  let twData = {tweets:[]};
+  let images = [];
+
+  async function jget(u){ const r = await fetch(u); if(!r.ok) throw new Error(u + ' → ' + r.status); return r.json(); }
+  function showOut(t){ const o = $('twOut'); o.style.display = 'block'; o.textContent = t; }
+
+  function renderStatus(st){
+    $('twStatus').innerHTML =
+      `<span>APIキー: ${st.keysConfigured ? '<span class="ok">設定済み</span>' : '<span class="ng">未設定（セットアップ手順.txt 参照）</span>'}</span>` +
+      `<span>毎日の自動投稿: ${st.scheduled ? '<span class="ok">ON（' + esc(st.postTime||'') + '）</span>' : '<span class="ng">OFF（「毎日の自動投稿を設定.bat」で有効化）</span>'}</span>` +
+      (st.lastPosted ? `<span>前回投稿: ${esc(st.lastPosted)}</span>` : '') +
+      `<span>ストック: ${st.stockCount}件</span>`;
+  }
+  function renderList(nextIndex){
+    const list = $('twList');
+    list.innerHTML = '';
+    twData.tweets.forEach((t,i)=>{
+      const div = document.createElement('div');
+      div.className = 'twitem';
+      const opts = ['<option value="">画像なし</option>']
+        .concat(images.map(n=>`<option value="${esc(n)}" ${t.image===n?'selected':''}>${esc(n)}</option>`)).join('');
+      div.innerHTML = `
+        <span class="num">${i+1}番${i===nextIndex?'<span class="next">← 次に投稿</span>':''}</span>
+        <textarea placeholder="ツイート本文（140文字まで）"></textarea>
+        <div class="imgcol">
+          <select>${opts}</select>
+          <img class="thumb" alt="">
+          <button class="del">削除</button>
+        </div>`;
+      const ta = div.querySelector('textarea');
+      ta.value = t.text || '';
+      ta.addEventListener('input', ()=>{ twData.tweets[i].text = ta.value; });
+      const sel = div.querySelector('select');
+      const img = div.querySelector('img.thumb');
+      function syncThumb(){
+        if(twData.tweets[i].image){ img.src = '/images/' + encodeURIComponent(twData.tweets[i].image); img.style.display = 'block'; }
+        else img.style.display = 'none';
+      }
+      sel.addEventListener('change', ()=>{ twData.tweets[i].image = sel.value; syncThumb(); });
+      syncThumb();
+      div.querySelector('.del').addEventListener('click', ()=>{
+        if(confirm((i+1) + '番のツイートを削除しますか？（「保存」を押すまで確定しません）')){
+          twData.tweets.splice(i,1); refreshList();
+        }
+      });
+      list.appendChild(div);
+    });
+  }
+  async function refreshList(){
+    let next = 0;
+    try{ next = (await jget('/api/status')).nextIndex; }catch(e){}
+    renderList(next);
+  }
+  async function loadAll(){
+    try{
+      const [tw, imgs, st] = await Promise.all([jget('/api/tweets'), jget('/api/images'), jget('/api/status')]);
+      twData = tw; images = imgs;
+      renderStatus(st); renderList(st.nextIndex);
+      $('twTime').value = st.postTime || '12:00';
+      $('twDate').checked = !!st.addDatePrefix;
+    }catch(e){
+      $('twStatus').innerHTML = '<span class="ng">サーバーに接続できません（' + esc(e.message) + '）</span>';
+    }
+  }
+  async function runPost(dry){
+    showOut('実行中...');
+    try{
+      const r = await fetch('/api/postnow' + (dry ? '?dry=1' : ''), {method:'POST'});
+      showOut(await r.text());
+      if(!dry) loadAll();
+    }catch(e){ showOut('実行失敗: ' + e.message); }
+  }
+
+  $('twAdd').addEventListener('click', ()=>{ twData.tweets.push({text:'', image:''}); refreshList(); });
+  $('twSave').addEventListener('click', async ()=>{
+    const bad = twData.tweets.findIndex(t=>!t.text.trim());
+    if(bad >= 0){ showOut('保存できません: ' + (bad+1) + '番の本文が空です。'); return; }
+    try{
+      const r = await (await fetch('/api/tweets', {method:'POST', body: JSON.stringify(twData)})).json();
+      showOut(r.ok ? '保存しました。' : ('保存失敗: ' + r.error));
+      loadAll();
+    }catch(e){ showOut('保存失敗: ' + e.message); }
+  });
+  $('twUpload').addEventListener('change', async ev=>{
+    const f = ev.target.files[0]; if(!f) return;
+    try{
+      const r = await (await fetch('/api/upload?name=' + encodeURIComponent(f.name), {method:'POST', body: f})).json();
+      showOut(r.ok ? ('画像「' + r.name + '」をアップロードしました。各ツイートの画像欄で選んで「保存」してください。') : ('アップロード失敗: ' + r.error));
+      images = await jget('/api/images');
+      refreshList();
+    }catch(e){ showOut('アップロード失敗: ' + e.message); }
+    ev.target.value = '';
+  });
+  $('twTest').addEventListener('click', ()=>runPost(true));
+  $('twPost').addEventListener('click', ()=>{
+    if(confirm('今すぐ1件、Xに実際に投稿します。よろしいですか？\n（編集中の内容は先に「保存」を押さないと反映されません）')) runPost(false);
+  });
+  $('twConfSave').addEventListener('click', async ()=>{
+    try{
+      const r = await (await fetch('/api/config', {method:'POST', body: JSON.stringify({postTime: $('twTime').value, addDatePrefix: $('twDate').checked})})).json();
+      showOut(r.ok ? '設定を保存しました。※毎日の自動投稿がONの場合、時刻の変更は「毎日の自動投稿を設定.bat」をもう一度実行すると反映されます。' : '設定の保存に失敗しました。');
+    }catch(e){ showOut('設定の保存に失敗: ' + e.message); }
+  });
+  loadAll();
+})();
+</script>
+</body>
+</html>
