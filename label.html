@@ -439,7 +439,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v10.5</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v10.8</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -454,6 +454,7 @@
       <span class="hsep"></span>
       <label class="acctgl" title="値札＋付属品ラベル（QRなし）＋裏ラベル（保管場所）の3枚を印刷（F4で切替）"><input type="checkbox" id="accOn"> 付属品</label>
       <button class="acctgl" id="accSoloBtn" type="button" title="値札なしで、付属品ラベル＋裏ラベル（保管場所・管理番号）だけを印刷する画面を開く">📎 付属品のみ</button>
+      <button class="acctgl" id="qrvBtn" type="button" style="padding:6px 9px;line-height:1" title="動作動画QRラベル：Xに上げた動作確認動画のQRラベルを1枚印刷します（お客様がスマホで動作状況を確認できます）">🎬</button>
       <span class="brk"></span>
       <button class="acctgl" id="histBtn" type="button" title="印刷履歴：クリックで内容を呼び出して再印刷。前回の値付けも価格欄の下に自動表示">📜 履歴</button>
       <button class="acctgl" id="quoteBtn" type="button" title="買取見積り：お客様情報と商品・見積額を保存（3ヶ月）して後日確認できます">📋 見積もり</button>
@@ -658,6 +659,46 @@
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
         <button class="ghostbtn" id="accSoloCancel">閉じる</button>
         <button class="printbtn" id="accSoloPrint" style="padding:12px 26px">この2枚を印刷</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- 動作動画QRラベル（Xのポストへ誘導するQRだけを1枚印刷） -->
+<div class="modal-bg" id="qrvModal">
+  <div class="modal" style="max-width:620px">
+    <div class="mhead">
+      <div><h3>🎬 動作動画QRラベル</h3><div class="mhint">Xに上げた動作確認動画のURLを貼ると、お客様がスマホで読み取れるQRラベルを1枚印刷します。値札・バーコードは載せません。</div></div>
+      <button class="xbtn" id="qrvClose" aria-label="閉じる">×</button>
+    </div>
+    <div style="padding:18px 22px">
+      <div class="f"><label>XのポストURL（貼り付けると自動でQR生成）</label>
+        <input id="qrvUrl" autocomplete="off" placeholder="https://x.com/xxxx/status/1234567890123456789"></div>
+      <div class="f" style="margin-top:10px"><label>品名（任意・ラベルに印字）</label>
+        <div style="display:flex;gap:8px">
+          <input id="qrvName" autocomplete="off" placeholder="例：ニンテンドー3DS LL SPR-001" style="flex:1 1 auto;min-width:0">
+          <button class="ghostbtn" id="qrvFromForm" type="button" title="ラベル入力欄の品名・型番を取り込む" style="flex:0 0 auto">⬇ ラベル欄から</button>
+        </div></div>
+      <div class="g2" style="margin-top:10px">
+        <div class="f"><label>見出し（黒帯）</label><input id="qrvTitle" autocomplete="off" value="動作確認 動画"></div>
+        <div class="f"><label>案内文</label><input id="qrvLead" autocomplete="off" value="スマホのカメラでQRを読み取ってください"></div>
+      </div>
+      <div class="f" style="margin-top:10px"><label>注意書き</label>
+        <textarea id="qrvNote" rows="2" style="width:100%;box-sizing:border-box">X(旧Twitter)のページが開きます。端末やアプリの設定により表示できない場合があります。</textarea></div>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:12px">
+        <span class="hint" style="margin:0">QRサイズ</span>
+        <select id="qrvSize" style="width:auto"><option>14</option><option>16</option><option>18</option><option selected>20</option><option>22</option><option>24</option></select>
+        <span class="hint" style="margin:0">mm　誤り訂正</span>
+        <select id="qrvEcc" style="width:auto"><option value="M">M (15%)</option><option value="Q" selected>Q (25%)</option><option value="H">H (30%)</option></select>
+        <label class="acctgl"><input type="checkbox" id="qrvShort" checked> URL短縮</label>
+        <label class="acctgl"><input type="checkbox" id="qrvDate" checked> 日付</label>
+      </div>
+      <div class="accpv" style="margin-top:12px"><canvas id="qrvCv"></canvas></div>
+      <div class="hint" id="qrvStat" style="margin-top:8px">XのポストURLを貼り付けてください。</div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;align-items:center">
+        <div class="copywrap"><label>枚数</label>
+          <input id="qrvCopies" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="1" autocomplete="off"></div>
+        <button class="ghostbtn" id="qrvCancel">閉じる</button>
+        <button class="printbtn" id="qrvDoPrintBtn" style="padding:12px 26px">このラベルを印刷</button>
       </div>
     </div>
   </div>
@@ -4656,6 +4697,202 @@ function accCanvas(kind,place,no5,ov){
   out.getContext("2d").drawImage(c,0,0,W8,H,0,0,W8,H);
   return out;
 }
+/* ===== 動作動画QRラベル（v10.6で新設） =====
+   Xに上げた動作確認動画のポストURL → QRラベル1枚。
+   ・QRは既存の QRMini（qrcode-generator・バイトモード）をそのまま使用。
+   ・共有URLに付く ?t=…&s=… は除去、ユーザー名は i に短縮できる（QRを1～2バージョン小さくできる）。
+   ・値札・バーコード・NONPLUは載せない（レジ打ち防止／付属品ラベルと同じ思想）。 */
+var QRV_RE=/(?:x|twitter)\.com\/([A-Za-z0-9_]{1,15})\/status\/(\d{5,25})/i;
+function qrvParse(raw){ var m=QRV_RE.exec(String(raw||"").trim()); return m?{user:m[1],id:m[2]}:null; }
+function qrvUrlText(){
+  var p=qrvParse($("qrvUrl")?$("qrvUrl").value:""); if(!p) return "";
+  var sh=$("qrvShort")&&$("qrvShort").checked;
+  return "https://x.com/"+(sh?"i":p.user)+"/status/"+p.id;
+}
+function qrvCfgSave(){ try{ store.set("qrvCfg",{size:$("qrvSize").value,ecc:$("qrvEcc").value,
+  short:$("qrvShort").checked,date:$("qrvDate").checked,
+  title:$("qrvTitle").value,lead:$("qrvLead").value,note:$("qrvNote").value}); }catch(e){} }
+function qrvCfgLoad(){ var c=null; try{ c=store.get("qrvCfg",null); }catch(e){}
+  if(!c) return;
+  if(c.size&&$("qrvSize")) $("qrvSize").value=c.size;
+  if(c.ecc&&$("qrvEcc")) $("qrvEcc").value=c.ecc;
+  if(typeof c.short==="boolean"&&$("qrvShort")) $("qrvShort").checked=c.short;
+  if(typeof c.date==="boolean"&&$("qrvDate")) $("qrvDate").checked=c.date;
+  if(c.title&&$("qrvTitle")) $("qrvTitle").value=c.title;
+  if(c.lead&&$("qrvLead")) $("qrvLead").value=c.lead;
+  if(typeof c.note==="string"&&$("qrvNote")) $("qrvNote").value=c.note;
+}
+/* QRラベルの描画（値札と同じ幅・解像度。バーコードは載せない） */
+function qrvCanvas(o){
+  o=o||{};
+  const Wmm=parseFloat($("setW").value)||38;
+  DPMM=(parseInt($("setDpi").value,10)||203)/25.4;
+  FS=parseFloat($("setFs").value)||1;
+  const W8=Math.ceil(Math.round(Wmm*DPMM)/8)*8;
+  const c=document.createElement("canvas"); c.width=W8; c.height=Math.round(mm(95));
+  const g2=c.getContext("2d");
+  g2.fillStyle="#fff"; g2.fillRect(0,0,c.width,c.height);
+  const mx=Math.round(mm(2.2)), cw=W8-2*mx;
+  const {slash}=dateParts();
+  let y=Math.round(mm(1.2));
+  function txt(t,font,x,yy){ g2.font=font; g2.textBaseline="top"; g2.fillStyle="#000"; g2.fillText(t,x,yy); }
+  function center(t,font,yy){ g2.font=font; const w=g2.measureText(t).width; txt(t,font,Math.max(mx,(W8-w)/2),yy); }
+  function fitPx(t,basePx,weight,maxW){ g2.font=jpFont(basePx,weight); const w=g2.measureText(String(t)).width; return (w>maxW)?Math.max(basePx*0.55,basePx*maxW/w):basePx; }
+  function wrap2(text,font,maxw){ g2.font=font; const out=[]; let line="";
+    for(const ch of String(text)){ const t=line+ch; if(g2.measureText(t).width>maxw&&line){out.push(line);line=ch;} else line=t; }
+    if(line)out.push(line); return out.length?out:[""]; }
+  function dline(yy){ g2.save(); g2.strokeStyle="#000"; g2.lineWidth=Math.max(1,Math.round(mm(0.16)));
+    g2.setLineDash([mm(0.6),mm(0.6)]); g2.beginPath(); g2.moveTo(mx,yy+0.5); g2.lineTo(W8-mx,yy+0.5); g2.stroke(); g2.restore(); }
+
+  /* 黒帯（見出しのみ・中央・帯を厚く）
+     ★反転文字（白抜き）は strokeText で肉太にするとフトコロが埋まって潰れる。
+       付属品ラベルは「付 属 品」の3文字だから成立していたが、ここは6文字なので白フチは使わない。
+     ★日付を帯の中から出したことで、同じ幅のまま見出しを約1.5倍（2.9mm→4.4mm）にできる。 */
+  const title=(o.title||"動作確認 動画");
+  const bandH=Math.round(mm(7.0));
+  g2.fillStyle="#000"; g2.fillRect(mx,y,cw,bandH);
+  const tpx=fitPx(title,mm(5.0)*FS,"700",cw-mm(3.0));
+  g2.font=jpFont(tpx,"700"); g2.textBaseline="middle"; g2.fillStyle="#fff";
+  const tw=g2.measureText(title).width;
+  g2.fillText(title,Math.max(mx+mm(1.0),(W8-tw)/2),y+bandH/2+Math.round(mm(0.15)));
+  g2.textBaseline="top"; y+=bandH+Math.round(mm(1.6));
+
+  /* QR本体（中央・モジュール整数ドット＝読み取り優先で固定サイズにはしない） */
+  let meta={ok:false,n:0,mod:0,realmm:0,ver:0,len:0,url:""};
+  const url=o.url||"";
+  if(url){
+    let mat=null;
+    try{ mat=QRMini.generate(url,(o.ecc||"Q"),true); }catch(e){ mat=null; }
+    if(mat&&mat.length){
+      const n=mat.length;
+      const qmm=parseFloat(o.qmm)||20;
+      const mod=Math.max(3,Math.round(qmm*DPMM/n));   /* 1モジュール＝整数ドット */
+      const qpx=mod*n, qx=Math.round((W8-qpx)/2);
+      g2.fillStyle="#fff"; g2.fillRect(0,y,W8,qpx);   /* 静音域は左右いっぱいの白 */
+      g2.fillStyle="#000";
+      for(let r=0;r<n;r++) for(let cc=0;cc<n;cc++) if(mat[r][cc]) g2.fillRect(qx+cc*mod,y+r*mod,mod,mod);
+      y+=qpx+Math.round(mm(1.4));
+      meta={ok:true,n:n,mod:mod,realmm:qpx/DPMM,ver:Math.round((n-17)/4),len:url.length,url:url};
+    }
+  }
+  if(!meta.ok){
+    const bh=Math.round(mm(18));
+    g2.save(); g2.strokeStyle="#999"; g2.lineWidth=Math.max(1,Math.round(mm(0.3))); g2.setLineDash([mm(1),mm(1)]);
+    g2.strokeRect(Math.round((W8-bh)/2),y,bh,bh); g2.restore();
+    g2.fillStyle="#999"; center("QR",jpFont(mm(3.0),"900"),y+bh/2-mm(1.6));
+    g2.fillStyle="#000"; y+=bh+Math.round(mm(1.4));
+  }
+
+  /* 案内文（中央・太字） */
+  const lead=(o.lead||"");
+  if(lead){ const lp=mm(2.2)*FS;
+    wrap2(lead,jpFont(lp,"900"),cw).slice(0,3).forEach(ln=>{ center(ln,jpFont(lp,"900"),y); y+=Math.round(lp*1.45); });
+    y+=Math.round(mm(0.6)); }
+
+  /* 品名 */
+  if(o.name){
+    dline(y); y+=Math.round(mm(1.2));
+    const s=String(o.name).replace(/\n+/g," ");
+    const sp=fitPx(s,mm(2.5)*FS,"900",cw);
+    wrap2(s,jpFont(sp,"900"),cw).slice(0,2).forEach(ln=>{ txt(ln,jpFont(sp,"900"),mx,y); y+=Math.round(mm(3.3)*FS); });
+    y+=Math.round(mm(0.4));
+  }
+
+  /* 注意書き */
+  if(o.note){
+    if(!o.name){ dline(y); y+=Math.round(mm(1.2)); }
+    const np=mm(2.0)*FS;
+    String(o.note).split("\n").forEach(par=>{
+      wrap2(par,jpFont(np,"700"),cw).forEach(ln=>{ txt(ln,jpFont(np,"700"),mx,y); y+=Math.round(np*1.45); });
+    });
+    y+=Math.round(mm(0.6));
+  }
+
+  /* 最下行：左＝撮影日（帯から移動）／右＝識別 */
+  { const sp=mm(1.8)*FS; const st="— 動作確認 —";
+    if(o.useDate&&slash) txt(slash,monoFont(mm(2.1)*FS,"700"),mx,y);
+    g2.font=jpFont(sp,"700"); const stw=g2.measureText(st).width;
+    txt(st,jpFont(sp,"700"),W8-mx-stw,y); y+=Math.round(mm(2.9)*FS); }
+
+  const H=Math.min(c.height,y+Math.round(mm(1.2)));
+  const out=document.createElement("canvas"); out.width=W8; out.height=H;
+  const og=out.getContext("2d"); og.fillStyle="#fff"; og.fillRect(0,0,W8,H);
+  og.drawImage(c,0,0,W8,H,0,0,W8,H);
+  out._qrmeta=meta;
+  return out;
+}
+function qrvOpts(){
+  return { url:qrvUrlText(),
+           name:(($("qrvName")&&$("qrvName").value)||"").trim(),
+           title:(($("qrvTitle")&&$("qrvTitle").value)||"").trim(),
+           lead:(($("qrvLead")&&$("qrvLead").value)||"").trim(),
+           note:(($("qrvNote")&&$("qrvNote").value)||"").trim(),
+           qmm:($("qrvSize")&&$("qrvSize").value)||20,
+           ecc:($("qrvEcc")&&$("qrvEcc").value)||"Q",
+           useDate:!!($("qrvDate")&&$("qrvDate").checked) };
+}
+var _qrvPvT=null;
+function qrvPreviewSoon(){ clearTimeout(_qrvPvT); _qrvPvT=setTimeout(qrvPreview,220); }
+function qrvPreview(){
+  const el=$("qrvCv"); if(!el) return;
+  const src=qrvCanvas(qrvOpts());
+  el.width=src.width; el.height=src.height; el.getContext("2d").drawImage(src,0,0);
+  const st=$("qrvStat"); if(!st) return;
+  const m=src._qrmeta;
+  if(!m.ok){
+    st.innerHTML = (($("qrvUrl")&&$("qrvUrl").value.trim()) ? '<b style="color:var(--err)">XのポストURLとして認識できません。</b>' : "XのポストURLを貼り付けてください。");
+    return;
+  }
+  const dots=m.mod;
+  const judge = dots>=4 ? '<b style="color:var(--ok)">良好</b>' : (dots>=3 ? '<b>読取り可（やや小）</b>' : '<b style="color:var(--err)">小さすぎ</b>');
+  st.innerHTML = m.url+"<br>文字数 "+m.len+" ／ Ver."+m.ver+"（"+m.n+"モジュール） ／ 実寸 "+m.realmm.toFixed(1)+"mm ／ 1モジュール "+dots+"ドット … "+judge
+    + (($("qrvShort")&&$("qrvShort").checked) ? "<br>短縮ON：ユーザー名を i に置換しています（同じ投稿が開きます）。" : "");
+  qrvCfgSave();
+}
+function qrvOpen(){
+  $("qrvModal").classList.add("open");
+  qrvPreview();
+  const u=$("qrvUrl"); if(u){ u.focus(); try{u.select();}catch(e){} }
+}
+function qrvClose(){ $("qrvModal").classList.remove("open"); }
+function qrvDoPrint(){
+  const o=qrvOpts();
+  if(!o.url){ alert("XのポストURLを貼り付けてください"); $("qrvUrl").focus(); return; }
+  const cv1=qrvCanvas(o);
+  if(!cv1._qrmeta.ok){ alert("QRを生成できませんでした"); return; }
+  let n=parseInt(($("qrvCopies")&&$("qrvCopies").value)||"1",10); if(!n||n<1)n=1; if(n>50)n=50;
+  const jobs=[{canvas:cv1,copies:n,noRotate:true}];
+  const ip=$("printerIp").value.trim();
+  if(ip) eposPrintMulti(jobs); else browserPrintMulti(jobs);
+  qrvCfgSave();
+  status("動作動画QRラベルを印刷しました","ok");
+}
+function qrvInit(){
+  const b=$("qrvBtn"); if(!b) return;
+  qrvCfgLoad();
+  b.onclick=qrvOpen;
+  $("qrvClose").onclick=qrvClose; $("qrvCancel").onclick=qrvClose;
+  $("qrvDoPrintBtn").onclick=qrvDoPrint;
+  ["qrvUrl","qrvName","qrvTitle","qrvLead","qrvNote"].forEach(id=>{ const el=$(id); if(el) el.addEventListener("input",qrvPreviewSoon); });
+  ["qrvSize","qrvEcc","qrvShort","qrvDate"].forEach(id=>{ const el=$(id); if(el) el.addEventListener("change",qrvPreview); });
+  const ff=$("qrvFromForm");
+  if(ff) ff.onclick=function(){
+    const pn=(($("pname")&&$("pname").value)||"").replace(/\n+/g," ").trim();
+    const md=(($("model")&&$("model").value)||"").trim();
+    const v=[pn,md].filter(Boolean).join(" ");
+    if(v){ $("qrvName").value=v; qrvPreview(); } else { alert("ラベル欄に品名・型番が入力されていません"); }
+  };
+  /* Enter＝次の項目へ（URL→品名→URL…）。印刷は Ctrl+P かボタンのみ */
+  (function(){ const chain=["qrvUrl","qrvName"];
+    chain.forEach(id=>{ const el=$(id); if(el)
+      el.addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.isComposing&&!e.ctrlKey&&!e.metaKey){
+        e.preventDefault();
+        const i=chain.indexOf(id), nx=$(chain[(i+1)%chain.length]);
+        if(nx){ nx.focus(); try{nx.select();}catch(x){} }
+      } }); });
+  })();
+  try{ if(/qrv/.test(location.hash)) setTimeout(qrvOpen,300); }catch(e){}
+}
 /* 複数ラベルの一括印刷（IP直接印刷：1リクエストで枚数分カットまで） */
 async function eposPrintMulti(jobs){
   const ip=$("printerIp").value.trim();
@@ -6796,7 +7033,7 @@ function wire(){
   }
   renderSiteButtons();
 }
-buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); kbdHints(); try{qInit();}catch(e){} setTimeout(fitBar,50); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
+buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); kbdHints(); try{qInit();}catch(e){} try{qrvInit();}catch(e){} setTimeout(fitBar,50); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
 </script>
 <script>
 /* ===== 進化UI v5：操作レイヤー（検証済みエンジン・既存関数には触れない、追加のみ） ===== */
