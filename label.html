@@ -439,7 +439,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v12.3</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v12.5</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -938,8 +938,16 @@
         <div class="seclbl">プリンター・印刷</div>
         <div class="g2">
           <div class="f"><label>プリンターのIP（入れると自動印刷・任意）</label><input id="printerIp" inputmode="decimal" placeholder="例: 192.168.1.50" autocomplete="off"></div>
+          <div class="f"><label>デバイスID（通常は local_printer）</label><input id="printerDev" placeholder="local_printer" autocomplete="off"></div>
+          <div class="f"><label>接続の確認</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="ghostbtn" id="pdiagBtn" type="button" title="紙を出さずに、どこで止まっているか調べます">🔍 接続テスト</button>
+              <button class="ghostbtn" id="pdiagPrint" type="button" title="1行だけ試し印刷します">🖨 試し印刷</button>
+            </div></div>
         </div>
         <div id="ipMode" class="hint" style="margin-top:6px"></div>
+        <div id="pdiagOut" style="display:none;margin-top:8px;padding:10px 12px;border:2px solid #cfd6dd;
+             border-radius:10px;background:#f8fafc;font-size:12.5px;line-height:1.75"></div>
       </div>
       <div style="grid-column:1/-1">
         <div class="seclbl">ラベル・コードの詳細設定</div>
@@ -4590,7 +4598,7 @@ async function eposPrint(copies){
   const xml='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'+
     '<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">'+body+'</epos-print></s:Body></s:Envelope>';
   status(n>1?("印刷を送信中…（"+n+"枚）"):"印刷を送信中…","");
-  try{const res=await fetch(`http://${ip}/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000`,{method:"POST",headers:{"Content-Type":"text/xml; charset=utf-8","SOAPAction":'""'},body:xml});
+  try{const res=await fetch(`http://${ip}/cgi-bin/epos/service.cgi?devid=${encodeURIComponent(pdDevId())}&timeout=10000`,{method:"POST",headers:{"Content-Type":"text/xml; charset=utf-8","SOAPAction":'""'},body:xml});
     const t=await res.text();status(/success="true"/.test(t)?"印刷しました ✓":"プリンターから応答がありました。確認してください","ok");
   }catch(e){status("プリンターに接続できませんでした（IP・同じLAN・ePOS-Print有効化を確認）","err");}
 }
@@ -5390,6 +5398,112 @@ function ppInit(){
   }
   try{ if(/photo|pp/.test((location.hash||"").replace("#hsslabel",""))&&/#(photo|pp)\b/.test(location.hash)) setTimeout(ppOpen,300); }catch(e){}
 }
+/* プリンター側のePOS-Print設定にある「Device ID」。既定は local_printer。
+   店舗によって別の名前が登録されていると、送っても弾かれる。 */
+function pdDevId(){
+  const v=(($("printerDev")&&$("printerDev").value)||"").trim();
+  return v||"local_printer";
+}
+function pdDevInit(){
+  const el=$("printerDev"); if(!el) return;
+  try{ el.value=store.get("printerDev","")||""; }catch(e){}
+  const sv=function(){ try{ store.set("printerDev",el.value.trim()); }catch(e){} };
+  el.addEventListener("change",sv); el.addEventListener("blur",sv);
+}
+/* ===== プリンター接続の診断（v12.4で新設） =====
+   「印刷を押しても何も起きない」を切り分ける。よくある詰まりどころは3つ。
+     ①ページがhttpsなのにプリンターはhttp → Chromeが混在コンテンツとして遮断する
+     ②IPが違う／別ネットワーク／電源が入っていない
+     ③届いてはいるが、機種に無い命令を送っていて拒否される（ラベル用の頭出し命令など） */
+function pdOut(html){
+  const el=$("pdiagOut"); if(!el) return;
+  el.style.display="block"; el.innerHTML=html;
+  try{ el.scrollIntoView({block:"nearest",behavior:"smooth"}); }catch(e){}
+}
+function pdRow(ok,label,detail){
+  const mark = ok===true?'<b style="color:#047857">OK</b>' : (ok===false?'<b style="color:#b91c1c">NG</b>':'<b style="color:#b45309">--</b>');
+  return '<div>'+mark+'　'+label+(detail?'<br>　　<span style="color:#64748b">'+detail+'</span>':'')+'</div>';
+}
+async function pdiagRun(doPrint){
+  const ip=($("printerIp")&&$("printerIp").value.trim())||"";
+  let out="<b>プリンター接続テスト</b><br>";
+  /* ① ページの配信方法 */
+  const proto=location.protocol;
+  const mixed=(proto==="https:");
+  out+=pdRow(!mixed, "ページの配信 … "+proto+"//"+(location.host||"（ファイル）"),
+    mixed ? 'httpsのページからhttpのプリンターへは、Chromeが既定で遮断します。'
+           +'アドレスバー左の設定アイコン → サイトの設定 → <b>安全でないコンテンツ を「許可」</b>にしてから、ページを再読み込みしてください。'
+          : '遮断の心配はありません。');
+  /* ② IPの体裁 */
+  const okIp=/^\d{1,3}(\.\d{1,3}){3}$/.test(ip);
+  out+=pdRow(okIp, "プリンターのIP … "+(ip||"（未入力）"),
+    okIp?"":"IPが入っていないと、押しても<b>ブラウザの印刷ダイアログ</b>になります（画面下のメッセージも出ません）。");
+  if(!okIp){ pdOut(out); return; }
+  /* ③ 実際に届くか */
+  pdOut(out+pdRow(null,"プリンターへ接続中…",""));
+  const dev=pdDevId();
+  const url="http://"+ip+"/cgi-bin/epos/service.cgi?devid="+encodeURIComponent(dev)+"&timeout=8000";
+  const body='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'
+    +'<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">'
+    +(doPrint?'<text lang="ja">setuzoku test OK\n</text><feed unit="24"/><cut type="feed"/>':'')
+    +'</epos-print></s:Body></s:Envelope>';
+  const t0=Date.now();
+  try{
+    const res=await fetch(url,{method:"POST",headers:{"Content-Type":"text/xml; charset=utf-8","SOAPAction":'""'},body:body});
+    const txt=await res.text();
+    const ms=Date.now()-t0;
+    out+=pdRow(true,"プリンターに届きました（"+ms+"ms・HTTP "+res.status+"）","");
+    const succ=/success="true"/.test(txt);
+    const code=(/code="([^"]*)"/.exec(txt)||[])[1]||"";
+    const st=(/status="([^"]*)"/.exec(txt)||[])[1]||"";
+    out+=pdRow(true,"デバイスID … "+dev,"");
+    out+=pdRow(succ, "プリンターの返事 … "+(succ?"成功":"失敗"+(code?"（"+code+"）":"")),
+      succ ? (doPrint?"1行だけ印刷したはずです。":"命令は受け付けられました。")
+           : "コード:"+(code||"不明")+" / status:"+(st||"不明")
+             +"<br>用紙切れ・カバー開き・機種に無い命令などが原因です。"
+             +"<b>「印刷前に頭出し（実験）」のチェックを外して</b>もう一度お試しください"
+             +"（ラベル紙専用の命令なので、レシート紙の機種では拒否されます）。");
+    if(!succ){
+      out+='<div style="color:#64748b;margin-top:4px">返答: '+txt.replace(/[<>]/g,c=>c==="<"?"&lt;":"&gt;").slice(0,200)+'</div>';
+      /* デバイスIDが合っていない可能性があるので、よくある名前を順に試す */
+      pdOut(out+pdRow(null,"ほかのデバイスIDを試しています…",""));
+      const cand=["local_printer","local_printer1","local_printer2","printer","tm_printer","local_printer_1"];
+      let hit=null;
+      for(const d of cand){
+        if(d===dev) continue;
+        try{
+          const r2=await fetch("http://"+ip+"/cgi-bin/epos/service.cgi?devid="+encodeURIComponent(d)+"&timeout=5000",
+            {method:"POST",headers:{"Content-Type":"text/xml; charset=utf-8","SOAPAction":'""'},body:body});
+          const t2=await r2.text();
+          if(/success="true"/.test(t2)){ hit=d; break; }
+        }catch(x){}
+      }
+      out+=pdRow(!!hit, hit?("通るデバイスIDが見つかりました … "+hit)
+                            :"ほかのデバイスIDでも通りませんでした",
+        hit?('上の<b>デバイスID</b>欄に <b>'+hit+'</b> を入れて保存しました。もう一度印刷してみてください。')
+           :('用紙切れ・カバー開き・機種に無い命令などが考えられます。'
+            +'<b>「印刷前に頭出し（実験）」のチェックを外して</b>お試しください。'
+            +'<br>デバイスIDはプリンターの設定画面（http://'+ip+'/ → ePOS-Print）でも確認できます。'));
+      if(hit && $("printerDev")){ $("printerDev").value=hit; try{ store.set("printerDev",hit); }catch(e){} }
+    }
+  }catch(e){
+    const ms=Date.now()-t0;
+    out+=pdRow(false,"プリンターに届きませんでした（"+ms+"ms）",
+      "内容: "+(e&&e.name?e.name:"Error")+" / "+(e&&e.message?e.message:"")
+      +"<br>次の順に確認してください。"
+      +"<br>　1. "+(mixed?'<b>上の「安全でないコンテンツを許可」</b>（この構成では最有力）':'プリンターの電源とLANケーブル')
+      +"<br>　2. ブラウザで <b>http://"+ip+"/</b> を開けるか（開けなければIPかネットワークの問題）"
+      +"<br>　3. プリンターの設定画面で <b>ePOS-Print が有効</b>か");
+  }
+  pdOut(out);
+}
+function pdiagInit(){
+  const b=$("pdiagBtn"); if(!b) return;
+  pdDevInit();
+  b.onclick=function(){ pdiagRun(false); };
+  const p2=$("pdiagPrint");
+  if(p2) p2.onclick=function(){ pdiagRun(true); };
+}
 /* 複数ラベルの一括印刷（IP直接印刷：1リクエストで枚数分カットまで） */
 async function eposPrintMulti(jobs){
   const ip=$("printerIp").value.trim();
@@ -5401,7 +5515,7 @@ async function eposPrintMulti(jobs){
   const xml='<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'+
     '<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">'+body+'</epos-print></s:Body></s:Envelope>';
   status("印刷を送信中…（付属品ラベル込み・計"+total+"枚）","");
-  try{const res=await fetch(`http://${ip}/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000`,{method:"POST",headers:{"Content-Type":"text/xml; charset=utf-8","SOAPAction":'""'},body:xml});
+  try{const res=await fetch(`http://${ip}/cgi-bin/epos/service.cgi?devid=${encodeURIComponent(pdDevId())}&timeout=10000`,{method:"POST",headers:{"Content-Type":"text/xml; charset=utf-8","SOAPAction":'""'},body:xml});
     const t=await res.text();status(/success="true"/.test(t)?"印刷しました ✓（値札＋付属品＋裏ラベル）":"プリンターから応答がありました。確認してください","ok");
   }catch(e){status("プリンターに接続できませんでした（IP・同じLAN・ePOS-Print有効化を確認）","err");}
 }
@@ -7530,7 +7644,7 @@ function wire(){
   }
   renderSiteButtons();
 }
-buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); kbdHints(); try{qInit();}catch(e){} try{qrvInit();}catch(e){} try{ppInit();}catch(e){} setTimeout(fitBar,50); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
+buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); kbdHints(); try{qInit();}catch(e){} try{qrvInit();}catch(e){} try{ppInit();}catch(e){} try{pdiagInit();}catch(e){} setTimeout(fitBar,50); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
 </script>
 <script>
 /* ===== 進化UI v5：操作レイヤー（検証済みエンジン・既存関数には触れない、追加のみ） ===== */
