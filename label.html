@@ -439,7 +439,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v10.8</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v12.3</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -454,7 +454,12 @@
       <span class="hsep"></span>
       <label class="acctgl" title="値札＋付属品ラベル（QRなし）＋裏ラベル（保管場所）の3枚を印刷（F4で切替）"><input type="checkbox" id="accOn"> 付属品</label>
       <button class="acctgl" id="accSoloBtn" type="button" title="値札なしで、付属品ラベル＋裏ラベル（保管場所・管理番号）だけを印刷する画面を開く">📎 付属品のみ</button>
-      <button class="acctgl" id="qrvBtn" type="button" style="padding:6px 9px;line-height:1" title="動作動画QRラベル：Xに上げた動作確認動画のQRラベルを1枚印刷します（お客様がスマホで動作状況を確認できます）">🎬</button>
+      <span id="xmodeWrap" style="position:relative;display:inline-block">
+        <button class="acctgl" id="xmodeBtn" type="button" style="padding:3px 5px;line-height:1;font-size:26px" title="その他の印刷（動作動画QRラベル／写真プリント）">🖨</button>
+        <div id="xmodeMenu" style="display:none;position:absolute;top:calc(100% + 8px);right:0;z-index:70;background:#fff;border:1px solid #cfd6dd;border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.22);padding:8px;min-width:330px;text-align:left">
+          <button class="acctgl" id="qrvBtn" type="button" style="display:block;width:100%;text-align:left;margin:0 0 6px;padding:14px 16px;font-size:16px;font-weight:800;line-height:1.35" title="Xに上げた動作確認動画のQRラベルを1枚印刷（ラベルプリンター）">🎬　動作動画QRラベル</button>
+          <button class="acctgl" id="ppBtn" type="button" style="display:block;width:100%;text-align:left;margin:0;padding:14px 16px;font-size:16px;font-weight:800;line-height:1.35" title="商品写真をL判／A4に印刷（いつものプリンター）">🖼　写真プリント（L判／A4）</button>
+        </div></span>
       <span class="brk"></span>
       <button class="acctgl" id="histBtn" type="button" title="印刷履歴：クリックで内容を呼び出して再印刷。前回の値付けも価格欄の下に自動表示">📜 履歴</button>
       <button class="acctgl" id="quoteBtn" type="button" title="買取見積り：お客様情報と商品・見積額を保存（3ヶ月）して後日確認できます">📋 見積もり</button>
@@ -659,6 +664,96 @@
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
         <button class="ghostbtn" id="accSoloCancel">閉じる</button>
         <button class="printbtn" id="accSoloPrint" style="padding:12px 26px">この2枚を印刷</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- 写真プリント（商品写真をL判／A4へ。ラベルプリンターではなく通常プリンター） -->
+<div class="modal-bg" id="ppModal">
+  <div class="modal" style="max-width:900px">
+    <div class="mhead">
+      <div><h3>🖼 写真プリント</h3><div class="mhint">商品の写真をL判またはA4に印刷します。<b>ラベル用プリンターではなく、いつものプリンター</b>に出ます。</div></div>
+      <button class="xbtn" id="ppClose" aria-label="閉じる">×</button>
+    </div>
+    <div style="padding:16px 20px">
+      <div id="ppDrop" style="border:2px dashed #b9c3cc;border-radius:12px;padding:16px;text-align:center;background:#fafbfc;cursor:pointer">
+        <div style="font-size:15px;font-weight:800">ここに画像をドラッグ＆ドロップ／クリックでファイル選択</div>
+        <div class="hint" style="margin-top:6px">どのサイトでもOK：画像を右クリック →「<b>画像をコピー</b>」→ この画面で <b>Ctrl+V</b></div>
+      </div>
+      <input type="file" id="ppFile" accept="image/*" multiple style="display:none">
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input id="ppUrl" autocomplete="off" placeholder="画像URLを貼り付け（右クリック→「画像アドレスをコピー」）" style="flex:1 1 auto;min-width:0">
+        <button class="ghostbtn" id="ppUrlAdd" type="button" style="flex:0 0 auto">追加</button>
+      </div>
+      <div id="ppList" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"></div>
+      <style>
+        #ppModal .ppseg{display:flex;gap:8px}
+        #ppModal .ppseg button{min-width:130px;padding:11px 12px;border:2px solid #d7dbe0;border-radius:10px;
+          background:#fff;cursor:pointer;font-weight:800;font-size:15px;line-height:1.2;color:#334155;text-align:center}
+        #ppModal .ppseg button span{display:block;font-weight:600;font-size:11px;line-height:1.35;color:#64748b;margin-top:4px}
+        #ppModal .ppseg button.on{border-color:#2563eb;background:#eff6ff;color:#1d4ed8}
+        #ppModal .ppseg button.on span{color:#2563eb}
+        #ppModal details.ppmore{margin-top:12px}
+        #ppModal details.ppmore>summary{cursor:pointer;font-size:12px;color:#64748b;user-select:none}
+      </style>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;margin-top:14px;padding-top:12px;border-top:1px solid #e6ebef">
+        <div><div class="hint" style="margin:0 0 6px">用紙サイズ</div>
+          <div class="ppseg" id="ppPaperSeg">
+            <button type="button" data-v="l" class="on">L判<span>89 × 127 mm</span></button>
+            <button type="button" data-v="a4">A4<span>210 × 297 mm</span></button>
+          </div></div>
+        <div><div class="hint" style="margin:0 0 6px">用紙の種類</div>
+          <div class="ppseg" id="ppMediaSeg">
+            <button type="button" data-v="photo" class="on">写真用紙<span>フチなし・余白0</span></button>
+            <button type="button" data-v="plain">普通紙<span>端が切れない</span></button>
+          </div></div>
+        <div><div class="hint" style="margin:0 0 6px">紙の向き</div>
+          <div class="ppseg" id="ppSheetSeg">
+            <button type="button" data-v="auto" class="on" style="min-width:96px">自動<span>写真に合わせる</span></button>
+            <button type="button" data-v="port" style="min-width:80px">たて<span>89 x 127</span></button>
+            <button type="button" data-v="land" style="min-width:80px">よこ<span>127 x 89</span></button>
+          </div></div>
+      </div>
+      <input type="hidden" id="ppPaper" value="l"><input type="hidden" id="ppMedia" value="photo"><input type="hidden" id="ppSheet" value="auto">
+      <details class="ppmore">
+        <summary>詳しい設定（向き・面付け・余白）— ふだんは触らなくて大丈夫です</summary>
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px">
+          <span class="hint" style="margin:0">よこ長写真</span>
+          <select id="ppOrient" style="width:auto"><option value="port" selected>そのまま（確実）</option><option value="auto">よこ長だけ90°倒して大きく</option><option value="land">いつも90°倒す</option></select>
+          <span class="hint" style="margin:0">1枚に</span>
+          <select id="ppUp" style="width:auto"><option value="1" selected>1面</option><option value="2">2面</option><option value="4">4面</option></select>
+          <label class="acctgl" title="HobbyAutoPrint（自動印刷ツール）を常駐させている場合はONにしてください。ボタンを押すだけで印刷されます"><input type="checkbox" id="ppAuto"> 自動印刷ツールを使う</label>
+          <span class="hint" style="margin:0">余白</span>
+          <select id="ppMargin" style="width:auto"><option value="auto" selected>自動（種類にあわせる）</option><option value="0">0mm</option><option value="3">3mm</option><option value="5">5mm</option></select>
+        </div>
+      </details>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
+        <span class="hint" style="margin:0;flex:0 0 auto">見出し</span>
+        <input id="ppCap" autocomplete="off" placeholder="写真の下に印字する文字（空欄なら印字しません）" style="flex:1 1 240px;min-width:0">
+        <button class="ghostbtn" id="ppFromForm" type="button" style="flex:0 0 auto">⬇ ラベル欄から</button>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex:0 0 auto">
+          <div class="hint" style="margin:0 0 6px">仕上がりプレビュー</div>
+          <div id="ppPv" style="background:#e9edf1;border:1px solid #d7dbe0;border-radius:8px;padding:10px;overflow:hidden"></div>
+        </div>
+        <div class="hint" id="ppStat" style="flex:1 1 240px;margin:0"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap">
+        <button class="ghostbtn" id="ppClear" type="button">全部消す</button>
+        <button class="ghostbtn" id="ppCancel" type="button">閉じる</button>
+        <button class="ghostbtn" id="ppDoPrintBtn" type="button" title="ブラウザから直接印刷します。うまく出ない環境では左の「保存して印刷」をお使いください">ブラウザで印刷</button>
+        <button class="printbtn" id="ppSave" type="button" style="padding:12px 26px">💾 保存して印刷</button>
+      </div>
+      <div id="ppGuide" style="display:none;margin-top:12px;padding:12px 14px;border:2px solid #f97316;
+           border-radius:10px;background:#fff7ed;font-size:13px;line-height:1.7">
+        <b style="font-size:14px">保存しました。この3手順で印刷できます</b>
+        <div style="margin-top:6px">
+          <b>1.</b> 画面右上のダウンロード通知（↓マーク）から、保存した画像をクリック → Windowsの「フォト」で開きます<br>
+          <b>2.</b> <b>Ctrl+P</b> を押す<br>
+          <b>3.</b> 下の設定にして「印刷」
+        </div>
+        <div style="margin-top:8px;padding:8px 10px;background:#fff;border-radius:8px" id="ppGuideSet"></div>
       </div>
     </div>
   </div>
@@ -4893,6 +4988,408 @@ function qrvInit(){
   })();
   try{ if(/qrv/.test(location.hash)) setTimeout(qrvOpen,300); }catch(e){}
 }
+/* ===== 写真プリント（v10.9で新設） =====
+   商品写真をL判／A4に印刷する。出力先は「いつものプリンター」＝ブラウザの印刷ダイアログ。
+   ラベルプリンター(ePOS/IP直接)の経路とは完全に別で、別ウィンドウを作ってそこだけ印刷する。
+   画像の入手経路は3つ用意し、どのサイトでも通るようにしている：
+     ①貼り付け(Ctrl+V) …右クリック「画像をコピー」。実データが来るので最も確実。
+     ②ドラッグ＆ドロップ …タブ間ドラッグはURLで来ることがあるので両対応。
+     ③画像URL …「画像アドレスをコピー」。サイトによっては直リンクを拒否されることがある。 */
+var PP_IMGS=[];   /* {src, w, h, ok} */
+var PP_PAPER={ l:{w:89,h:127,name:"L判"}, a4:{w:210,h:297,name:"A4"} };
+
+function ppCfg(){
+  const media=($("ppMedia")&&$("ppMedia").value)||"photo";
+  const raw=($("ppMargin")&&$("ppMargin").value)||"auto";
+  /* 余白は基本ゼロ。ただし普通紙はフチなし印刷ができない機種が大半で、
+     0mmのままだと端が切れるため3mmだけ内側に置く（Excelの「1ページに収める」相当）。 */
+  const margin = (raw==="auto") ? (media==="photo"?0:3) : (parseFloat(raw)||0);
+  return { paper:($("ppPaper")&&$("ppPaper").value)||"l",
+           media:media,
+           sheet:($("ppSheet")&&$("ppSheet").value)||"auto",
+           orient:($("ppOrient")&&$("ppOrient").value)||"auto",
+           up:parseInt(($("ppUp")&&$("ppUp").value)||"1",10),
+           margin:margin, marginRaw:raw,
+           cap:(($("ppCap")&&$("ppCap").value)||"").trim() };
+}
+function ppSegSet(id,v){
+  const box=$(id); if(!box) return;
+  [...box.children].forEach(b=>b.classList.toggle("on", b.dataset.v===v));
+}
+function ppCfgSave(){ try{ const c=ppCfg();
+  store.set("ppCfg",{paper:c.paper,media:c.media,sheet:c.sheet,orient:c.orient,up:c.up,margin:c.marginRaw,
+    auto:!!($("ppAuto")&&$("ppAuto").checked)}); }catch(e){} }
+function ppCfgLoad(){ var c=null; try{ c=store.get("ppCfg",null); }catch(e){} if(!c) return;
+  if(c.paper&&$("ppPaper")){ $("ppPaper").value=c.paper; ppSegSet("ppPaperSeg",c.paper); }
+  if(c.media&&$("ppMedia")){ $("ppMedia").value=c.media; ppSegSet("ppMediaSeg",c.media); }
+  if(c.sheet&&$("ppSheet")){ $("ppSheet").value=c.sheet; ppSegSet("ppSheetSeg",c.sheet); }
+  if(c.orient&&$("ppOrient")) $("ppOrient").value=c.orient;
+  if(c.up&&$("ppUp")) $("ppUp").value=String(c.up);
+  if(typeof c.margin!=="undefined"&&$("ppMargin")) $("ppMargin").value=String(c.margin);
+  if(typeof c.auto==="boolean"&&$("ppAuto")) $("ppAuto").checked=c.auto;
+  ppSyncAutoUi();
+}
+/* 自動印刷ツールの有無でボタン名と案内を切り替える */
+function ppSyncAutoUi(){
+  const on=!!($("ppAuto")&&$("ppAuto").checked);
+  const b=$("ppSave"); if(b) b.textContent = on ? "🖨 即印刷" : "💾 保存して印刷";
+  const g=$("ppGuide"); if(g && on) g.style.display="none";
+}
+/* 用紙サイズは絶対に入れ替えない（★重要）
+   印刷ダイアログの用紙一覧は「L判 89 x 127 mm」のように"たて"の寸法で登録されている。
+   ここで @page に 127mm 89mm のような"よこ"を宣言すると、用紙より中身が広くなり、
+   Chromeが勝手に縮小して左上に寄せる（＝小さく左端に印刷される）。
+   そこで用紙は常にたてのまま出し、よこ長の写真は"中身のほうを90度回して"用紙いっぱいに置く。 */
+function ppPaperSize(){
+  const c=ppCfg(), P=PP_PAPER[c.paper]||PP_PAPER.l;
+  /* 紙の向き。自動＝1枚目の写真の縦横に合わせる（よこ長の写真はよこの紙で一番大きく出る）。
+     ここで入れ替えるのは"紙面の画像そのもの"の縦横であって、CSSの回転は一切使わない。 */
+  let land = (c.sheet==="land");
+  if(c.sheet==="auto"){
+    const im=PP_IMGS.filter(v=>v.ok)[0];
+    land = !!(im && im.w && im.h && im.w>im.h);
+  }
+  return { w: land?P.h:P.w, h: land?P.w:P.h, name:P.name, land:land };
+}
+function ppGrid(up,land){
+  if(up>=4) return {c:2,r:2};
+  if(up===2) return land?{c:2,r:1}:{c:1,r:2};
+  return {c:1,r:1};
+}
+/* 用紙CSS＋各ページのHTMLを作る（プレビューと印刷で共通） */
+/* ===== 用紙まるごと1枚の画像にしてから印刷する（v11.3で全面変更） =====
+   これまではCSS(@page/grid)で紙面を組み、印刷エンジンに配置を任せていたが、
+   実機では中身が用紙の端に寄って一部しか出ない事故が繰り返し起きた。
+   そこで値札ラベルと同じ「canvasに描いてから出す」方式に統一する。
+   1ページ＝1枚の画像なので、仮にブラウザ側で拡大縮小がかかっても
+   紙面まるごとが等倍で縮むだけで、写真は必ず中央のまま。ズレようがない。
+   おまけに画面のプレビューと印刷結果が同じ画像になり、完全に一致する。 */
+function ppDpi(S){ /* 長辺2400pxを上限に。L判=300dpi、A4=205dpi相当 */
+  return Math.max(150, Math.min(300, Math.floor(2400/(Math.max(S.w,S.h)/25.4))));
+}
+function ppWantRot(rec){
+  const o=ppCfg().orient;
+  if(!rec||!rec.w||!rec.h) return false;
+  if(o==="land") return true;
+  if(o==="auto") return rec.w>rec.h;
+  return false;
+}
+/* 1ページ分をcanvasに描く */
+function ppSheetCanvas(items){
+  const c=ppCfg(), S=ppPaperSize(), up=Math.max(1,c.up), g=ppGrid(up,S.land);
+  const k=ppDpi(S)/25.4;
+  const W=Math.round(S.w*k), H=Math.round(S.h*k);
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+  const x=cv.getContext("2d");
+  x.fillStyle="#fff"; x.fillRect(0,0,W,H);
+  const m=c.margin*k, gap=Math.max(1,c.margin)*k;
+  const cw=(W-2*m-gap*(g.c-1))/g.c, ch=(H-2*m-gap*(g.r-1))/g.r;
+  const capPx=c.cap?4.2*k:0, capBox=c.cap?(capPx*1.35+1.4*k):0;
+  for(let i=0;i<up;i++){
+    const it=items[i]; if(!it||!it.el) continue;
+    const gx=i%g.c, gy=Math.floor(i/g.c);
+    const x0=m+gx*(cw+gap), y0=m+gy*(ch+gap), boxH=ch-capBox;
+    const rot=ppWantRot(it);
+    const iw=rot?it.h:it.w, ih=rot?it.w:it.h;
+    const s=Math.min(cw/iw, boxH/ih);
+    const dw=iw*s, dh=ih*s;
+    const dx=x0+(cw-dw)/2, dy=y0+(boxH-dh)/2;   /* ← 水平・垂直とも中央 */
+    x.save();
+    if(rot){ x.translate(dx+dw/2, dy+dh/2); x.rotate(Math.PI/2);
+             x.drawImage(it.el, -dh/2, -dw/2, dh, dw); }
+    else   { x.drawImage(it.el, dx, dy, dw, dh); }
+    x.restore();
+    if(c.cap){
+      x.fillStyle="#000"; x.textAlign="center"; x.textBaseline="top";
+      x.font='700 '+Math.round(capPx)+'px "Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP","Meiryo",sans-serif';
+      let t=String(c.cap);
+      while(t.length>1 && x.measureText(t).width>cw) t=t.slice(0,-1);
+      x.fillText(t, x0+cw/2, y0+ch-capBox+1.4*k);
+    }
+  }
+  return cv;
+}
+function ppBuild(){
+  const c=ppCfg(), S=ppPaperSize(), up=Math.max(1,c.up);
+  const imgs=PP_IMGS.filter(v=>v.ok&&v.el);
+  const groups=[]; for(let i=0;i<imgs.length;i+=up) groups.push(imgs.slice(i,i+up));
+  if(!groups.length) groups.push([]);
+  const sheets=[]; let tainted=0;
+  groups.forEach(gp=>{
+    const cv=ppSheetCanvas(gp);
+    try{ sheets.push(cv.toDataURL("image/jpeg",0.93)); }
+    catch(e){ tainted++; }   /* よそのサイトの画像URLはcanvasから取り出せない */
+  });
+  /* 紙面は @page で寸法を確定させる（vh は使わない）。
+     ★vh は印刷時にウィンドウ側の高さを指すことがあり、紙面が1ページに収まらなくなる。
+     画像は width:100% / height:auto。仮に用紙が違っても比率を保ったまま収まる。 */
+  const css='@page{ size:'+S.w+'mm '+S.h+'mm; margin:0 }'
+    +'html,body{margin:0;padding:0;background:#fff;'
+      +'-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+    /* ★改ページは「2枚目以降の前」に入れる（v11.6）
+       page-break-after を使うと、最後の1枚のあとにも改ページが入って白紙が1枚余分に出る。
+       :last-child での打ち消しは、後ろに script 要素があると一致せず効かない。 */
+    /* ★用紙よりわずかに小さく置く（v11.8・これが端切れの真因だった）
+       画像を用紙と同じ寸法にすると、丸め誤差で 0.1〜0.3mm はみ出し、
+       あふれた分が次のページに送られて「紙の端に細長く一部だけ」印刷される。
+       上下左右に 0.75mm の逃げを作り、margin:auto で中央に置く。 */
+    +'img.pg{display:block;height:calc('+S.h+'mm - 1.5mm);width:auto;'
+      +'max-width:calc(100% - 1.5mm);margin:0.75mm auto;'
+      +'page-break-inside:avoid;break-inside:avoid}'
+    +'img.pg + img.pg{page-break-before:always;break-before:page}'
+    /* 画面にだけ出る操作バー（印刷には出さない） */
+    +'#bar{position:fixed;left:0;right:0;top:0;z-index:9;background:#111827;color:#fff;'
+      +'font:600 13px/1.4 system-ui,sans-serif;padding:8px 12px;display:flex;gap:10px;align-items:center}'
+    +'#bar button{font:inherit;padding:6px 14px;border:0;border-radius:6px;background:#f97316;color:#fff;cursor:pointer}'
+    +'@media print{ #bar{display:none !important} }';
+  const html=sheets.map(s=>'<img class="pg" decoding="sync" src="'+s+'">').join("");
+  return {css:css, html:html, sheets:sheets, pages:sheets.length, S:S, up:up,
+          count:imgs.length, tainted:tainted};
+}
+function ppRender(){
+  const list=$("ppList"); if(!list) return;
+  list.innerHTML="";
+  PP_IMGS.forEach((im,i)=>{
+    const d=document.createElement("div");
+    d.style.cssText="position:relative;width:104px;height:104px;border:1px solid #d7dbe0;border-radius:8px;"
+      +"background:#fff center/contain no-repeat;display:flex;align-items:center;justify-content:center;overflow:hidden";
+    if(im.ok){ d.style.backgroundImage='url("'+im.src.replace(/"/g,'%22')+'")';
+      if(im.tainted){ const w=document.createElement("div");
+        w.textContent="URL"; w.title="URLで追加した画像です。Ctrl+Vで入れ直すと確実です";
+        w.style.cssText="position:absolute;bottom:2px;right:2px;background:#b45309;color:#fff;"
+          +"font-size:10px;padding:1px 5px;border-radius:4px"; d.appendChild(w); } }
+    else { d.style.background="#fdf2f2"; d.innerHTML='<span style="font-size:11px;color:#b91c1c;text-align:center;padding:6px">読み込め<br>ませんでした</span>'; }
+    const b=document.createElement("button");
+    b.type="button"; b.textContent="×";
+    b.style.cssText="position:absolute;top:2px;right:2px;width:22px;height:22px;line-height:1;border-radius:50%;"
+      +"border:none;background:rgba(0,0,0,.62);color:#fff;cursor:pointer;font-size:14px;padding:0";
+    b.onclick=function(){ PP_IMGS.splice(i,1); ppRender(); };
+    d.appendChild(b);
+    if(i>0){ const u=document.createElement("button"); u.type="button"; u.textContent="←"; u.title="前へ";
+      u.style.cssText="position:absolute;bottom:2px;left:2px;width:22px;height:22px;line-height:1;"
+        +"border:none;border-radius:4px;background:rgba(0,0,0,.5);color:#fff;cursor:pointer;font-size:12px;padding:0";
+      u.onclick=function(){ const t=PP_IMGS[i-1]; PP_IMGS[i-1]=PP_IMGS[i]; PP_IMGS[i]=t; ppRender(); };
+      d.appendChild(u); }
+    list.appendChild(d);
+  });
+  /* プレビュー＝印刷に使う画像そのもの（見た目と印刷結果が必ず一致する） */
+  const b2=ppBuild(), pv=$("ppPv");
+  if(pv){
+    const wpx=Math.min(300, b2.S.w*96/25.4);
+    pv.innerHTML = b2.sheets.length
+      ? '<img src="'+b2.sheets[0]+'" style="display:block;width:'+wpx+'px;height:'+(wpx*b2.S.h/b2.S.w)
+        +'px;box-shadow:0 2px 10px rgba(0,0,0,.18);background:#fff">'
+      : '<div style="width:'+wpx+'px;height:'+(wpx*b2.S.h/b2.S.w)+'px;background:#fff;border:1px dashed #b9c3cc"></div>';
+  }
+  const st=$("ppStat");
+  if(st){
+    const c2=ppCfg(), photo=(c2.media==="photo");
+    const rotN=PP_IMGS.filter(v=>v.ok&&ppWantRot(v)).length;
+    st.innerHTML = b2.count
+      ? '写真 <b>'+b2.count+'枚</b> ／ '+b2.S.name+' <b>'+(b2.S.land?"よこ":"たて")+'</b>（'+b2.S.w+'×'+b2.S.h+'mm）'
+        +' ／ '+(photo?"写真用紙":"普通紙")+' ／ 1枚に'+b2.up+'面 → <b>用紙'+b2.pages+'枚</b>'
+        +'<br>上のプレビューがそのまま印刷されます。用紙がどれになっても、はみ出さず中央に入ります。'
+        +(rotN?'<br>よこ長の写真 '+rotN+'枚を90°倒して大きく印刷します（紙はたてのまま）。':'')
+        +(b2.tainted?'<br><b style="color:#b91c1c">'+b2.tainted+'ページ分はURLで追加した画像のため印刷できません。</b>'
+          +'その画像を右クリック→「画像をコピー」→ Ctrl+V で入れ直してください。':'')
+        +((($("ppAuto")&&$("ppAuto").checked))
+          ? '<br><b style="color:#c2410c">「🖨 即印刷」を押すだけでプリンターから出ます。</b>'
+            +'<br><span style="color:#64748b">出ないときは、自動印刷ツールの黒い画面が'
+            +'開いたままか確認してください。</span>'
+          : '<br><b style="color:#c2410c">「💾 保存して印刷」がおすすめです。</b>'
+            +'画像を保存 → Windowsの「フォト」で開いて Ctrl+P、が一番確実に出ます。'
+            +'<br><span style="color:#64748b">自動印刷ツールを入れると、ボタンを押すだけで'
+            +'紙が出るようになります（詳細設定の「自動印刷ツールを使う」をON）。</span>')
+      : '画像がまだありません。ドラッグ＆ドロップ、Ctrl+V、またはURLで追加してください。';
+  }
+  ppCfgSave();
+}
+function ppAddSrc(src){
+  if(!src) return;
+  if(PP_IMGS.some(v=>v.src===src)) return;   /* 同じ画像の二重追加を防ぐ */
+  const rec={src:src,w:0,h:0,ok:false,el:null,tainted:false};
+  PP_IMGS.push(rec); ppRender();
+  const im=new Image();
+  im.onload=function(){
+    rec.w=im.naturalWidth; rec.h=im.naturalHeight; rec.el=im; rec.ok=true;
+    /* canvasから取り出せる画像かをここで判定しておく（よそのサイトのURLは不可） */
+    try{ const t=document.createElement("canvas"); t.width=t.height=1;
+         t.getContext("2d").drawImage(im,0,0,1,1); t.toDataURL(); rec.tainted=false; }
+    catch(e){ rec.tainted=true; }
+    ppRender();
+  };
+  im.onerror=function(){ rec.ok=false; ppRender(); };
+  im.src=src;
+}
+function ppAddFile(f){
+  if(!f||!/^image\//.test(f.type||"")) return;
+  const r=new FileReader();
+  r.onload=function(){ ppAddSrc(String(r.result)); };
+  r.readAsDataURL(f);
+}
+function ppOpen(){ $("ppModal").classList.add("open"); ppRender(); }
+function ppClose(){ $("ppModal").classList.remove("open"); }
+function ppDoPrint(){
+  const b=ppBuild();
+  if(!b.count){ alert("印刷する画像がありません"); return; }
+  if(!b.pages){ alert("URLで追加した画像は印刷できません。\n画像を右クリック→「画像をコピー」→ Ctrl+V で入れ直してください。"); return; }
+  const w=window.open("","_blank","width=860,height=1000");
+  if(!w){ alert("ポップアップがブロックされました。アドレスバー右のブロック解除を許可してください。"); return; }
+  /* ★印刷前に必ずデコードを完了させる（v11.5）
+     img.complete が true でもデコードは終わっていないことがあり、
+     そのまま印刷するとデコード途中の絵（帯状に一部だけ）が紙に出る。
+     decode() の完了 → 2フレーム描画 → 余裕をとってから印刷する。 */
+  const boot='(function(){'
+    +'var st=function(t){var e=document.getElementById("stm"); if(e) e.textContent=t;};'
+    +'var imgs=[].slice.call(document.images);'
+    +'var done=0, n=imgs.length;'
+    +'function one(im){'
+      +'return new Promise(function(res){'
+        +'function fin(){ done++; st("画像を準備しています… "+done+"/"+n); res(); }'
+        +'if(im.decode){ im.decode().then(fin,function(){'
+          +'if(im.complete) fin(); else { im.onload=fin; im.onerror=fin; } }); }'
+        +'else if(im.complete){ fin(); } else { im.onload=fin; im.onerror=fin; }'
+      +'});'
+    +'}'
+    +'function go(){ st("印刷ダイアログを開いています…");'
+      +'requestAnimationFrame(function(){ requestAnimationFrame(function(){'
+        +'setTimeout(function(){ try{ window.focus(); window.print(); }catch(e){} '
+          +'st("印刷が終わったらこのタブは閉じてください"); },450); }); }); }'
+    +'if(!n){ go(); return; }'
+    +'Promise.all(imgs.map(one)).then(go,go);'
+    +'})();';
+  w.document.open();
+  w.document.write('<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>写真プリント</title>'
+    +'<style>'+b.css+'</style></head><body>'
+    +'<div id="bar"><button type="button" onclick="window.print()">もう一度印刷</button>'
+    +'<span id="stm">画像を準備しています…</span></div>'
+    +b.html
+    +'<scr'+'ipt>'+boot+'</scr'+'ipt></body></html>');
+  w.document.close();
+  status("写真プリントを開きました（画像の準備後に印刷画面が出ます）","ok");
+}
+/* 紙面を画像ファイルとして保存する。
+   ブラウザの印刷がうまくいかない環境では、保存した画像を右クリック→印刷（Windowsフォト）で
+   プリンター本来のL判・フチなし印刷が使えるため、確実な逃げ道になる。 */
+function ppSaveFiles(){
+  const b=ppBuild();
+  if(!b.pages){ alert("保存できる画像がありません"); return; }
+  const d=new Date(), z=n=>(n<10?"0":"")+n;
+  const stamp=d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+"_"+z(d.getHours())+z(d.getMinutes())+z(d.getSeconds());
+  const base="shashin_"+(b.S.name==="L判"?"L":"A4")+"_"+stamp;
+  b.sheets.forEach((s,i)=>{
+    setTimeout(()=>{
+      const a=document.createElement("a");
+      a.href=s; a.download=base+(b.sheets.length>1?("_"+(i+1)):"")+".jpg";
+      document.body.appendChild(a); a.click(); a.remove();
+    }, i*350);
+  });
+  if($("ppAuto")&&$("ppAuto").checked){
+    /* 自動印刷ツールが常駐していれば、保存＝そのまま印刷される */
+    if($("ppGuide")) $("ppGuide").style.display="none";
+    status(b.sheets.length+"枚をプリンターに送りました","ok");
+    return;
+  }
+  /* 保存直後に、実際に通った設定をそのまま案内する */
+  const g=$("ppGuide"), gs=$("ppGuideSet");
+  if(gs){
+    const photo=(ppCfg().media==="photo");
+    gs.innerHTML =
+      '　用紙サイズ … <b>'+b.S.name+' '+b.S.w+' x '+b.S.h+' mm</b><br>'
+     +'　用紙の種類 … <b>'+(photo?"写真用紙":"普通紙")+'</b><br>'
+     +'　写真のサイズ … <b>ページ全体</b><br>'
+     +'　ページの余白 … <b>通常</b>　／　自動調整 … <b>ページに合わせる</b>'
+     +(photo?'<br>　※フチなしにしたい場合は「その他の設定」でフチなしを選びます':'');
+  }
+  if(g){ g.style.display="block"; try{ g.scrollIntoView({block:"nearest",behavior:"smooth"}); }catch(e){} }
+  status(b.sheets.length+"枚の画像を保存しました（フォトを開いて Ctrl+P）","ok");
+}
+function ppInit(){
+  const bt=$("ppBtn"); if(!bt) return;
+  ppCfgLoad();
+  bt.onclick=function(){ if($("xmodeMenu")) $("xmodeMenu").style.display="none"; ppOpen(); };
+  $("ppClose").onclick=ppClose; $("ppCancel").onclick=ppClose;
+  $("ppDoPrintBtn").onclick=ppDoPrint;
+  if($("ppSave")) $("ppSave").onclick=ppSaveFiles;
+  if($("ppAuto")) $("ppAuto").addEventListener("change",function(){ ppSyncAutoUi(); ppRender(); });
+  $("ppClear").onclick=function(){ if(!PP_IMGS.length||confirm("追加した写真をすべて消しますか？")){ PP_IMGS=[]; ppRender(); } };
+  ["ppOrient","ppUp","ppMargin"].forEach(id=>{ const e=$(id); if(e) e.addEventListener("change",ppRender); });
+  /* サイズ／材質は2択トグル（クリック1回で決まる＝速さ優先） */
+  [["ppPaperSeg","ppPaper"],["ppMediaSeg","ppMedia"],["ppSheetSeg","ppSheet"]].forEach(([seg,hid])=>{
+    const box=$(seg); if(!box) return;
+    box.addEventListener("click",e=>{
+      const b=e.target.closest("button"); if(!b||!box.contains(b)) return;
+      $(hid).value=b.dataset.v; ppSegSet(seg,b.dataset.v); ppRender();
+    });
+  });
+  const cap=$("ppCap"); if(cap) cap.addEventListener("input",ppRender);
+  const ff=$("ppFromForm");
+  if(ff) ff.onclick=function(){
+    const pn=(($("pname")&&$("pname").value)||"").replace(/\n+/g," ").trim();
+    const md=(($("model")&&$("model").value)||"").trim();
+    const v=[pn,md].filter(Boolean).join(" ");
+    if(v){ $("ppCap").value=v; ppRender(); } else { alert("ラベル欄に品名・型番が入力されていません"); }
+  };
+  /* ファイル選択 */
+  const drop=$("ppDrop"), fi=$("ppFile");
+  drop.onclick=function(){ fi.click(); };
+  fi.onchange=function(){ [...(fi.files||[])].forEach(ppAddFile); fi.value=""; };
+  /* ドラッグ＆ドロップ（ファイル／タブ間ドラッグのURL 両対応） */
+  ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{
+    e.preventDefault(); e.stopPropagation(); drop.style.borderColor="#2563eb"; drop.style.background="#eff6ff"; }));
+  ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{
+    e.preventDefault(); e.stopPropagation(); drop.style.borderColor="#b9c3cc"; drop.style.background="#fafbfc"; }));
+  drop.addEventListener("drop",function(e){
+    const dt=e.dataTransfer; if(!dt) return;
+    if(dt.files&&dt.files.length){ [...dt.files].forEach(ppAddFile); return; }
+    let u=""; try{ u=dt.getData("text/uri-list")||dt.getData("text/plain")||""; }catch(x){}
+    u=String(u).split(/[\r\n]/)[0].trim();
+    if(/^(https?:|data:image\/)/i.test(u)) ppAddSrc(u);
+    else{
+      let html=""; try{ html=dt.getData("text/html")||""; }catch(x){}
+      const m=/<img[^>]+src="([^"]+)"/i.exec(html);
+      if(m) ppAddSrc(m[1]);
+    }
+  });
+  /* 貼り付け（右クリック→画像をコピー→Ctrl+V）。モーダルが開いている時だけ拾う */
+  document.addEventListener("paste",function(e){
+    if(!$("ppModal")||!$("ppModal").classList.contains("open")) return;
+    const it=(e.clipboardData&&e.clipboardData.items)||[];
+    let used=false;
+    for(let i=0;i<it.length;i++){
+      if(it[i].kind==="file"&&/^image\//.test(it[i].type)){ const f=it[i].getAsFile(); if(f){ ppAddFile(f); used=true; } }
+    }
+    if(used){ e.preventDefault(); return; }
+    if(document.activeElement&&document.activeElement.id==="ppUrl") return;
+    const t=(e.clipboardData&&e.clipboardData.getData("text/plain")||"").trim();
+    if(/^(https?:|data:image\/)/i.test(t)){ ppAddSrc(t); e.preventDefault(); }
+  });
+  /* URL追加 */
+  const add=function(){ const u=($("ppUrl").value||"").trim(); if(!u) return;
+    if(!/^(https?:|data:image\/)/i.test(u)){ alert("http(s) で始まる画像のURLを貼り付けてください"); return; }
+    ppAddSrc(u); $("ppUrl").value=""; };
+  $("ppUrlAdd").onclick=add;
+  $("ppUrl").addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.isComposing){ e.preventDefault(); add(); } });
+  /* 🖨メニューの開閉 */
+  const mb=$("xmodeBtn"), mm2=$("xmodeMenu");
+  if(mb&&mm2){
+    mb.onclick=function(e){ e.stopPropagation();
+      if(mm2.style.display==="block"){ mm2.style.display="none"; return; }
+      /* ヘッダーは .bar-actions に zoom がかかっていて、そのままだとメニューまで縮む。
+         開くたびに現在の zoom を打ち消し、メニューだけ等倍で表示する。 */
+      try{
+        const ba=document.querySelector(".bar-actions");
+        const z=parseFloat(getComputedStyle(ba).zoom)||1;
+        mm2.style.zoom = (z && z!==1) ? String(1/z) : "";
+      }catch(x){ mm2.style.zoom=""; }
+      mm2.style.display="block";
+    };
+    document.addEventListener("click",function(e){
+      if(!$("xmodeWrap")||!$("xmodeWrap").contains(e.target)) mm2.style.display="none"; });
+    document.addEventListener("keydown",function(e){ if(e.key==="Escape") mm2.style.display="none"; });
+  }
+  try{ if(/photo|pp/.test((location.hash||"").replace("#hsslabel",""))&&/#(photo|pp)\b/.test(location.hash)) setTimeout(ppOpen,300); }catch(e){}
+}
 /* 複数ラベルの一括印刷（IP直接印刷：1リクエストで枚数分カットまで） */
 async function eposPrintMulti(jobs){
   const ip=$("printerIp").value.trim();
@@ -7033,7 +7530,7 @@ function wire(){
   }
   renderSiteButtons();
 }
-buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); kbdHints(); try{qInit();}catch(e){} try{qrvInit();}catch(e){} setTimeout(fitBar,50); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
+buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); kbdHints(); try{qInit();}catch(e){} try{qrvInit();}catch(e){} try{ppInit();}catch(e){} setTimeout(fitBar,50); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
 </script>
 <script>
 /* ===== 進化UI v5：操作レイヤー（検証済みエンジン・既存関数には触れない、追加のみ） ===== */
