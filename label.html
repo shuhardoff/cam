@@ -439,7 +439,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v12.7</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v15.2</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -668,6 +668,48 @@
     </div>
   </div>
 </div>
+<!-- 写真の編集（背景を白く／消しゴム／切り抜き） -->
+<div class="modal-bg" id="edModal" style="z-index:80">
+  <div class="modal" style="max-width:960px">
+    <div class="mhead">
+      <div><h3>✏ 写真を編集</h3><div class="mhint">背景を消したり、いらない部分を白くしたりできます。元の写真は変わりません。</div></div>
+      <button class="xbtn" id="edClose" aria-label="閉じる">×</button>
+    </div>
+    <div style="padding:14px 18px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span id="edAiWrap" style="display:none">
+          <button class="acctgl" id="edAiBtn" type="button" style="background:#7c3aed;color:#fff;font-weight:800" title="AIが商品だけを判定して切り抜きます（店内で撮った写真でもきれいに抜けます）">🤖 AIで切り抜き</button>
+          <button class="acctgl" id="edAiFast" type="button" title="速さ優先。白い背景の写真ならこちらで十分です">⚡ 速い方で</button>
+        </span>
+        <button class="acctgl" id="edToolPick" type="button" style="background:#0f766e;color:#fff;font-weight:800" title="商品をクリックすると、そこだけ残して背景が白くなります">🎯 商品をクリック</button>
+        <button class="acctgl" id="edAutoCut" type="button" style="background:#f97316;color:#fff;font-weight:800" title="商品だけを残して、背景を自動で白くします">⚡ 自動で白抜き</button>
+        <button class="acctgl" id="edToolMagic" type="button" title="消したい物をなぞると、背景を推測して自然に埋めます">🪄 消しゴムマジック</button>
+        <button class="acctgl" id="edToolLasso" type="button" title="残したいものの周りをぐるっとなぞる。外側が全部白くなります">🎯 囲んで切り抜き</button>
+        <button class="acctgl" id="edToolWand" type="button" title="消したい背景をクリック。つながった似た色がまとめて消えます">🪄 クリックで消す</button>
+        <button class="acctgl" id="edToolEraser" type="button" title="なぞったところを白くします">🧽 消しゴム</button>
+        <button class="acctgl" id="edToolCrop" type="button" title="四角い範囲で切り取ります">✂ 四角で切取</button>
+        <span style="flex:1 1 auto"></span>
+        <button class="ghostbtn" id="edUndo" type="button">↩ 元に戻す</button>
+        <button class="ghostbtn" id="edReset" type="button">最初に戻す</button>
+      </div>
+      <div id="edOpts" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;
+           padding:8px 10px;background:#f8fafc;border:1px solid #e6ebef;border-radius:8px;min-height:44px"></div>
+      <div style="margin-top:10px;background:#e9edf1;border:1px solid #d7dbe0;border-radius:10px;
+           padding:10px;display:flex;justify-content:center;overflow:auto">
+        <div style="position:relative;line-height:0">
+          <canvas id="edCv" style="max-width:100%;background:
+            repeating-conic-gradient(#e8ecf0 0% 25%, #fff 0% 50%) 50%/16px 16px;cursor:crosshair"></canvas>
+          <canvas id="edOv" style="position:absolute;left:0;top:0;pointer-events:none"></canvas>
+        </div>
+      </div>
+      <div class="hint" id="edStat" style="margin-top:8px"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;align-items:center">
+        <button class="ghostbtn" id="edCancel" type="button">やめる</button>
+        <button class="printbtn" id="edApply" type="button" style="padding:11px 24px">この内容で反映</button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- 写真プリント（商品写真をL判／A4へ。ラベルプリンターではなく通常プリンター） -->
 <div class="modal-bg" id="ppModal">
   <div class="modal" style="max-width:900px">
@@ -686,6 +728,11 @@
         <button class="ghostbtn" id="ppUrlAdd" type="button" style="flex:0 0 auto">追加</button>
       </div>
       <div id="ppList" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"></div>
+      <div id="ppAiBar" style="display:none;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px">
+        <button class="printbtn" id="ppAiAll" type="button" style="padding:10px 20px;background:#7c3aed">🤖 全部まとめてAI切り抜き</button>
+        <label class="acctgl"><input type="checkbox" id="ppAiTrim" checked> 切り抜いたら余白を詰める</label>
+        <span class="hint" style="margin:0">1枚ずつ ✏ で手直しもできます</span>
+      </div>
       <style>
         #ppModal .ppseg{display:flex;gap:8px}
         #ppModal .ppseg button{min-width:130px;padding:11px 12px;border:2px solid #d7dbe0;border-radius:10px;
@@ -5174,6 +5221,15 @@ function ppRender(){
       +"border:none;background:rgba(0,0,0,.62);color:#fff;cursor:pointer;font-size:14px;padding:0";
     b.onclick=function(){ PP_IMGS.splice(i,1); ppRender(); };
     d.appendChild(b);
+    /* ✏ 編集ボタン（背景を白く／消しゴム／切り抜き） */
+    if(im.ok&&!im.tainted){
+      const ed=document.createElement("button");
+      ed.type="button"; ed.textContent="✏"; ed.title="背景やいらない部分を消す";
+      ed.style.cssText="position:absolute;bottom:2px;right:2px;height:22px;padding:0 7px;line-height:1;"
+        +"border:none;border-radius:11px;background:rgba(17,24,39,.78);color:#fff;cursor:pointer;font-size:12px";
+      ed.onclick=function(){ edOpen(i); };
+      d.appendChild(ed);
+    }
     if(i>0){ const u=document.createElement("button"); u.type="button"; u.textContent="←"; u.title="前へ";
       u.style.cssText="position:absolute;bottom:2px;left:2px;width:22px;height:22px;line-height:1;"
         +"border:none;border-radius:4px;background:rgba(0,0,0,.5);color:#fff;cursor:pointer;font-size:12px;padding:0";
@@ -5460,7 +5516,8 @@ async function pdiagRun(doPrint){
     out+=pdRow(true,"デバイスID … "+dev,"");
     out+=pdRow(succ, "プリンターの返事 … "+(succ?"成功":"失敗"+(code?"（"+code+"）":"")),
       succ ? (doPrint?"1行だけ印刷したはずです。":"命令は受け付けられました。")
-           : "コード:"+(code||"不明")+(pdCodeText(code)?("（"+pdCodeText(code)+"）"):"")+" / status:"+(st||"不明")
+           : "コード:"+(code||"不明")+(pdCodeText(code)?("（"+pdCodeText(code)+"）"):"")
+        +"<br>プリンターの状態: "+(pdStatusText(st)||("status="+(st||"不明")))
              +"<br>用紙切れ・カバー開き・機種に無い命令などが原因です。"
              +"<b>「印刷前に頭出し（実験）」のチェックを外して</b>もう一度お試しください"
              +"（ラベル紙専用の命令なので、レシート紙の機種では拒否されます）。");
@@ -5479,12 +5536,21 @@ async function pdiagRun(doPrint){
           if(/success="true"/.test(t2)){ hit=d; break; }
         }catch(x){}
       }
+      const asb=pdStatusText(st);
       out+=pdRow(!!hit, hit?("通るデバイスIDが見つかりました … "+hit)
-                            :"ほかのデバイスIDでも通りませんでした",
+                            :(asb?("デバイスIDの問題ではありません … "+asb):"ほかのデバイスIDでも通りませんでした"),
         hit?('上の<b>デバイスID</b>欄に <b>'+hit+'</b> を入れて保存しました。もう一度印刷してみてください。')
-           :('用紙切れ・カバー開き・機種に無い命令などが考えられます。'
-            +'<b>「印刷前に頭出し（実験）」のチェックを外して</b>お試しください。'
-            +'<br>デバイスIDはプリンターの設定画面（http://'+ip+'/ → ePOS-Print）でも確認できます。'));
+           :(/応答がありません/.test(asb)
+              ? ('<b>プリンター本体が応答していません。</b>'
+                +'ネットワークとePOSサービスは正常なので、原因は本体側です。'
+                +'<br>1. プリンターの<b>電源を入れ直す</b>'
+                +'<br>2. 電源ランプが点いているか、LANケーブルが挿さっているか確認'
+                +'<br>3. このIP（'+ip+'）が本当にこのプリンターのものか確認'
+                +'<br>4. それでも駄目なら<b>IP欄を空にして</b>、印刷ダイアログから'
+                +'Windowsのプリンタードライバー経由で印刷してください')
+              : ('用紙切れ・カバー開き・機種に無い命令などが考えられます。'
+                +'<b>「印刷前に頭出し（実験）」のチェックを外して</b>お試しください。'
+                +'<br>デバイスIDはプリンターの設定画面（http://'+ip+'/ → ePOS-Print）でも確認できます。')));
       if(hit && $("printerDev")){ $("printerDev").value=hit; try{ store.set("printerDev",hit); }catch(e){} }
     }
   }catch(e){
@@ -5513,6 +5579,30 @@ var PD_CODE={
  "EX_TIMEOUT":"プリンターが応答しませんでした"
 };
 function pdCodeText(c){ return PD_CODE[c] || ""; }
+/* ePOS-Print の status はビットの集まり（ASB）。中身を日本語にする。 */
+var PD_ASB=[
+ [0x00000001,"プリンター本体から応答がありません（本体の電源・ケーブル・接続先を確認）"],
+ [0x00000002,"印刷は完了しています"],
+ [0x00000004,"ドロワーが開いています"],
+ [0x00000008,"オフラインです"],
+ [0x00000020,"カバーが開いています"],
+ [0x00000040,"紙送りボタンが押されています"],
+ [0x00000100,"復帰待ちです"],
+ [0x00000200,"パネルスイッチがONです"],
+ [0x00000400,"機構のエラーです"],
+ [0x00000800,"オートカッターのエラーです"],
+ [0x00002000,"復帰できないエラーです（電源を入れ直してください）"],
+ [0x00004000,"自動復帰できるエラーです（ヘッド高温など。少し待ってください）"],
+ [0x00020000,"用紙が残り少なくなっています"],
+ [0x00080000,"用紙がありません"],
+ [0x01000000,"スプーラーが停止しています"]
+];
+function pdStatusText(s){
+  const n=parseInt(s,10);
+  if(!isFinite(n)||n<=0) return "";
+  const hit=PD_ASB.filter(v=>(n & v[0])).map(v=>v[1]);
+  return hit.length? hit.join(" / ") : "";
+}
 /* ★どの命令が拒否されているかを1つずつ試して特定する（v12.6）
    通信もデバイスIDも通っているのに印刷できない場合、
    紙面のどの要素が原因かは、送る中身を減らしていけば必ず分かる。 */
@@ -5595,6 +5685,1180 @@ function pdiagInit(){
   if(p2) p2.onclick=function(){ pdiagRun(true); };
   const p3=$("pdiagIso");
   if(p3) p3.onclick=function(){ pdiagIsolate(); };
+}
+/* 自動白抜きの原理検証（外部サービスに頼らない方式） */
+function autoCut(data,W,H,opt){
+  opt=opt||{}; const bias=opt.bias||0, spatial=(opt.spatial===undefined?2.2:opt.spatial);
+  const QB=5, Q=1<<QB, SH=8-QB, bins=Q*Q*Q;
+  const idx=(r,g,b)=>((r>>SH)*Q+(g>>SH))*Q+(b>>SH);
+  const bw=Math.max(4,Math.round(Math.min(W,H)*0.06));
+  const cx=W/2, cy=H/2, maxd=Math.sqrt(cx*cx+cy*cy), eps=1e-6;
+
+  /* 外周の色＝背景の候補、中央の色＝商品の候補 */
+  const Hb=new Float32Array(bins), Hc=new Float32Array(bins);
+  let nb=0,nc=0;
+  const rx=W*0.42, ry=H*0.42;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const i=(y*W+x)*4, b=idx(data[i],data[i+1],data[i+2]);
+    if(x<bw||y<bw||x>=W-bw||y>=H-bw){ Hb[b]++; nb++; }
+    const dx=(x-cx)/rx, dy=(y-cy)/ry;
+    if(dx*dx+dy*dy<=1){ Hc[b]++; nc++; }
+  }
+  for(let i=0;i<bins;i++){ Hb[i]/=(nb||1); Hc[i]/=(nc||1); }
+
+  /* ★商品が画面の端に接していると、その色まで背景として学習してしまう。
+     中央にも同じくらい多い色は「端に接した商品」とみなし、背景の重みを下げる。 */
+  const Hbe=new Float32Array(bins);
+  for(let i=0;i<bins;i++){
+    const ratio = Hb[i]/(Hb[i]+Hc[i]+eps);     // 1に近いほど純粋な背景色
+    Hbe[i] = Hb[i]*Math.max(0, (ratio-0.35)/0.65);
+  }
+  /* 前景の見本：中央にあって、背景色ではない画素 */
+  const Hf=new Float32Array(bins);
+  let nf=0;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const dx=(x-cx)/rx, dy=(y-cy)/ry;
+    if(dx*dx+dy*dy>1) continue;
+    const i=(y*W+x)*4, b=idx(data[i],data[i+1],data[i+2]);
+    if(Hbe[b]>2e-4) continue;
+    Hf[b]++; nf++;
+  }
+  if(nf<nc*0.15){ for(let i=0;i<bins;i++) Hf[i]=Hc[i]*(nc); nf=nc; }
+  else for(let i=0;i<bins;i++) Hf[i]/=1;
+  { let t=0; for(let i=0;i<bins;i++) t+=Hf[i]; if(t) for(let i=0;i<bins;i++) Hf[i]/=t; }
+
+  const bgProb=(r,g,b)=>{
+    let m=Hbe[idx(r,g,b)];
+    const sc=[1.12,1.25,1.4,1.6];
+    for(let k=0;k<sc.length;k++){
+      const nr=r*sc[k], ng=g*sc[k], nb2=b*sc[k];
+      if(nr>252||ng>252||nb2>252) break;
+      const q=Hbe[idx(nr|0,ng|0,nb2|0)];
+      if(q>m) m=q;
+    }
+    return m;
+  };
+  const mask=new Uint8Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const p=y*W+x, i=p*4;
+    const r=data[i],g=data[i+1],b=data[i+2];
+    const s=Math.log((Hf[idx(r,g,b)]+eps)/(bgProb(r,g,b)+eps));
+    const d=Math.sqrt((x-cx)*(x-cx)+(y-cy)*(y-cy))/maxd;
+    mask[p]=(s - d*spatial + bias > 0)?1:0;
+  }
+  return mask;
+}
+/* ★中央寄りで大きい塊を選ぶ。単純に最大だと、端の小物が選ばれることがある */
+function keepMain(mask,W,H){
+  const lab=new Int32Array(W*H).fill(-1);
+  const cx=W/2, cy=H/2, maxd=Math.sqrt(cx*cx+cy*cy);
+  const st=[]; let cur=0;
+  const info=[];
+  for(let s0=0;s0<W*H;s0++){
+    if(!mask[s0]||lab[s0]>=0) continue;
+    let n=0, sd=0; st.length=0; st.push(s0); lab[s0]=cur;
+    while(st.length){
+      const p=st.pop(); n++;
+      const x=p%W, y=(p-x)/W;
+      sd += Math.sqrt((x-cx)*(x-cx)+(y-cy)*(y-cy))/maxd;
+      if(x>0&&mask[p-1]&&lab[p-1]<0){lab[p-1]=cur;st.push(p-1);}
+      if(x<W-1&&mask[p+1]&&lab[p+1]<0){lab[p+1]=cur;st.push(p+1);}
+      if(y>0&&mask[p-W]&&lab[p-W]<0){lab[p-W]=cur;st.push(p-W);}
+      if(y<H-1&&mask[p+W]&&lab[p+W]<0){lab[p+W]=cur;st.push(p+W);}
+    }
+    info.push({id:cur,n:n,d:sd/n});
+    cur++;
+  }
+  if(!info.length) return new Uint8Array(W*H);
+  let best=info[0], bestScore=-1;
+  for(const c of info){
+    const score = c.n * (1.25 - c.d);       // 面積 × 中央への近さ
+    if(score>bestScore){ bestScore=score; best=c; }
+  }
+  const out=new Uint8Array(W*H);
+  for(let p=0;p<W*H;p++) out[p]=(lab[p]===best.id)?1:0;
+  return out;
+}
+/* 内側の穴を埋める。ただし小さい穴だけ（ヘッドホンの輪の中などは埋めない） */
+function fillHoles(mask,W,H,maxFrac){
+  maxFrac=maxFrac||0.02;
+  const out=Uint8Array.from(mask);
+  const seen=new Uint8Array(W*H); const st=[];
+  for(let x=0;x<W;x++){ st.push(x); st.push((H-1)*W+x); }
+  for(let y=0;y<H;y++){ st.push(y*W); st.push(y*W+W-1); }
+  while(st.length){
+    const p=st.pop();
+    if(seen[p]||mask[p]) continue;
+    seen[p]=1;
+    const x=p%W,y=(p-x)/W;
+    if(x>0)st.push(p-1); if(x<W-1)st.push(p+1);
+    if(y>0)st.push(p-W); if(y<H-1)st.push(p+W);
+  }
+  const lim=W*H*maxFrac;
+  const done=new Uint8Array(W*H);
+  for(let s0=0;s0<W*H;s0++){
+    if(mask[s0]||seen[s0]||done[s0]) continue;
+    const cell=[]; const st2=[s0]; done[s0]=1;
+    while(st2.length){
+      const p=st2.pop(); cell.push(p);
+      const x=p%W,y=(p-x)/W;
+      const nb=[];
+      if(x>0)nb.push(p-1); if(x<W-1)nb.push(p+1);
+      if(y>0)nb.push(p-W); if(y<H-1)nb.push(p+W);
+      for(const q of nb) if(!mask[q]&&!seen[q]&&!done[q]){ done[q]=1; st2.push(q); }
+    }
+    if(cell.length<=lim) for(const p of cell) out[p]=1;
+  }
+  return out;
+}
+/* 収縮→膨張でギザギザを整える */
+function morph(mask,W,H,r,grow){
+  const out=new Uint8Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    let v=grow?0:1;
+    for(let dy=-r;dy<=r&&(grow?!v:v);dy++)for(let dx=-r;dx<=r;dx++){
+      const nx=x+dx, ny=y+dy;
+      if(nx<0||ny<0||nx>=W||ny>=H) continue;
+      const m=mask[ny*W+nx];
+      if(grow){ if(m){v=1;break;} } else { if(!m){v=0;break;} }
+    }
+    out[y*W+x]=v;
+  }
+  return out;
+}
+
+/* 縮小して判定 → 元の大きさへ戻す。仕上げに縁を1px ぼかして自然に見せる */
+function edAutoCutRun(bias){
+  var W=ED.cv.width, H=ED.cv.height;
+  var SC=Math.min(1, 520/Math.max(W,H));
+  var sw=Math.max(32,Math.round(W*SC)), sh=Math.max(32,Math.round(H*SC));
+  var t=document.createElement("canvas"); t.width=sw; t.height=sh;
+  t.getContext("2d").drawImage(ED.cv,0,0,sw,sh);
+  var sd=t.getContext("2d").getImageData(0,0,sw,sh).data;
+  var m=autoCut(sd,sw,sh,{bias:bias||0});
+  m=keepMain(m,sw,sh);
+  m=fillHoles(m,sw,sh,0.02);
+  m=morph(m,sw,sh,2,false);
+  m=morph(m,sw,sh,2,true);
+  var area=0; for(var i=0;i<sw*sh;i++) area+=m[i];
+  if(area<sw*sh*0.005) return null;          /* ほとんど拾えなかった */
+  /* マスクを元の大きさへ（なめらかに拡大） */
+  var mc=document.createElement("canvas"); mc.width=sw; mc.height=sh;
+  var mg=mc.getContext("2d"), mi=mg.createImageData(sw,sh);
+  for(var p=0;p<sw*sh;p++){ var q=p*4; var v=m[p]?255:0;
+    mi.data[q]=v; mi.data[q+1]=v; mi.data[q+2]=v; mi.data[q+3]=255; }
+  mg.putImageData(mi,0,0);
+  var big=document.createElement("canvas"); big.width=W; big.height=H;
+  var bg2=big.getContext("2d");
+  bg2.imageSmoothingEnabled=true; bg2.imageSmoothingQuality="high";
+  bg2.drawImage(mc,0,0,W,H);
+  var bm=bg2.getImageData(0,0,W,H).data;
+  /* 白地に合成。マスクの濃さをそのまま透け具合に使うので、縁がギザギザにならない */
+  var img=ED.ctx.getImageData(0,0,W,H), d=img.data;
+  var kept=0;
+  for(var p2=0;p2<W*H;p2++){
+    var a=bm[p2*4]/255;
+    if(a>0.5) kept++;
+    var j=p2*4;
+    d[j]  = d[j]*a   + 255*(1-a);
+    d[j+1]= d[j+1]*a + 255*(1-a);
+    d[j+2]= d[j+2]*a + 255*(1-a);
+    d[j+3]=255;
+  }
+  ED.ctx.putImageData(img,0,0);
+  return {kept:kept, total:W*H};
+}
+/* ===== AIで切り抜き（v14.0で新設） =====
+   色でつなげる方式は「黒い本体＋灰色のキー＋灰色のカーペット」のような写真では
+   原理的に分離できない。そこで学習済みモデル（U^2-Net）で被写体を判定する。
+   ・推論はこのPCの中だけで行う。写真は外部に送らない。
+   ・onnxruntime-web は MIT、U^2-Net は Apache-2.0 で、業務利用に制限はない。
+   ・必要なファイル（ort.wasm.bundle.min.mjs / ort-wasm-simd-threaded.wasm / u2netp.onnx）を
+     label.html と同じ場所に置く。無ければボタンは出さない。 */
+/* モデルは2つ用意し、用途で選べるようにする。
+     きれい : silueta（43MB・320px固定）… 店内の雑然とした写真でも背景残り0%。約10秒
+     速い   : u2netp（4.4MB・224px）    … 白背景ならほぼ同等。約2.6秒
+   実測（IoU／背景残り）
+     店内の写真   きれい 97.2%／0%    速い 85.6%／14.3%
+     白背景       きれい 98.5%／0%    速い 99.7%／0.3%
+   店内写真では差が大きいので、既定は「きれい」。 */
+/* silueta は43MBあり、GitHubの画面からは上げられない（1ファイル25MBまで）。
+   4つに分割したものを取ってきて、ブラウザ側でつなぎ直す。 */
+var AI_MODELS={
+  fine:{parts:["silueta.onnx.001","silueta.onnx.002","silueta.onnx.003","silueta.onnx.004","silueta.onnx.005","silueta.onnx.006"],
+        size:320, label:"きれい", note:"店内の写真でもきれい"},
+  fast:{file:"u2netp_dyn.onnx", size:224, label:"速い", note:"白背景の写真向き"}
+};
+/* 分割されたモデルを取ってきてつなぐ（結果はこのPCに保持して2回目以降は使い回す） */
+async function aiFetchModel(M,base,onProg){
+  if(M._buf) return M._buf;
+  if(M.file){
+    const r=await fetch(base+M.file);
+    if(!r.ok) throw new Error(M.file+" が見つかりません");
+    M._buf=new Uint8Array(await r.arrayBuffer());
+    return M._buf;
+  }
+  const bufs=[];
+  let total=0;
+  for(let i=0;i<M.parts.length;i++){
+    onProg&&onProg("AIモデルを読み込んでいます… "+(i+1)+"/"+M.parts.length);
+    const r=await fetch(base+M.parts[i]);
+    if(!r.ok) throw new Error(M.parts[i]+" が見つかりません");
+    const a=new Uint8Array(await r.arrayBuffer());
+    bufs.push(a); total+=a.length;
+  }
+  const out=new Uint8Array(total);
+  let off=0;
+  for(const a of bufs){ out.set(a,off); off+=a.length; }
+  M._buf=out;
+  return out;
+}
+var AI={ ort:null, sess:null, busy:false, ready:null, lo:0.40, hi:0.80, flip:false,
+         mode:"fine", size:320, trim:true };
+function aiMode(){ return AI_MODELS[AI.mode]||AI_MODELS.fine; }
+
+function aiBase(){
+  try{
+    const u=new URL(location.href);
+    return u.href.replace(/[^/]*$/,"");
+  }catch(e){ return "./"; }
+}
+async function aiLoad(onProg){
+  if(AI.sess && AI.loaded===AI.mode) return AI.sess;
+  if(AI.ready && AI.loading===AI.mode) return AI.ready;
+  AI.sess=null; AI.loading=AI.mode;
+  AI.ready=(async function(){
+    const M=aiMode();
+    AI.size=M.size;
+    onProg&&onProg("AIの準備をしています（初回のみ少し時間がかかります）…");
+    const base=aiBase();
+    const mod=await import(base+"ort.webgpu.bundle.min.mjs");
+    const ort=mod.default||mod;
+    AI.ort=ort;
+    /* ★実行環境の本体(23MB)も分割して置く。
+       GitHubの画面からは、まとめて上げると合計サイズで弾かれるため、
+       すべて8MB未満に分けてある。取ってきてから結合して直接渡す。 */
+    onProg&&onProg("AIの準備をしています…");
+    if(!AI.wasmBin){
+      const wp=["ortwasm.bin.001","ortwasm.bin.002","ortwasm.bin.003"];
+      const bufs=[]; let total=0;
+      for(let i=0;i<wp.length;i++){
+        onProg&&onProg("AIの準備をしています… "+(i+1)+"/"+wp.length);
+        const r=await fetch(base+wp[i]);
+        if(!r.ok) throw new Error(wp[i]+" が見つかりません");
+        const a=new Uint8Array(await r.arrayBuffer()); bufs.push(a); total+=a.length;
+      }
+      const wb=new Uint8Array(total); let off=0;
+      for(const a of bufs){ wb.set(a,off); off+=a.length; }
+      AI.wasmBin=wb.buffer;
+    }
+    ort.env.wasm.wasmBinary=AI.wasmBin;
+    ort.env.wasm.wasmPaths=base;
+    /* 複数CPUは、GitHub Pages だと使えない設定になっている。使える環境なら使う。 */
+    ort.env.wasm.numThreads = (self.crossOriginIsolated && navigator.hardwareConcurrency>1)
+      ? Math.min(4, navigator.hardwareConcurrency) : 1;
+    ort.env.logLevel="error";
+    /* ★どちらが速いかはPCによる（GPUの有無・性能で逆転する）。
+       初回だけ両方ためして、速かった方をこのPCに覚えさせる。 */
+    let ep=null;
+    try{ ep=store.get("aiEP",null); }catch(e){}
+    if(!ep && typeof navigator!=="undefined" && navigator.gpu){
+      onProg&&onProg("このPCに合う設定を調べています（初回だけ）…");
+      const probe=new Float32Array(3*M.size*M.size);
+      const times={};
+      const probeBuf=await aiFetchModel(M,base,onProg);
+      for(const cand of ["webgpu","wasm"]){
+        try{
+          const s0=await ort.InferenceSession.create(probeBuf,
+            {executionProviders:[cand], graphOptimizationLevel:"all"});
+          const t0=performance.now();
+          await s0.run({[s0.inputNames[0]]: new ort.Tensor("float32",probe,[1,3,M.size,M.size])});
+          times[cand]=performance.now()-t0;
+          if(s0.release) try{ await s0.release(); }catch(x){}
+        }catch(e){ times[cand]=Infinity; }
+      }
+      ep = (times.webgpu < times.wasm*0.9) ? "webgpu" : "wasm";
+      AI.probe=times;
+      try{ store.set("aiEP",ep); }catch(e){}
+    }
+    if(!ep) ep="wasm";
+    AI.ep=ep;
+    const buf=await aiFetchModel(M,base,onProg);
+    onProg&&onProg("AIの準備をしています…");
+    try{
+      AI.sess=await ort.InferenceSession.create(buf,
+        {executionProviders:[ep,"wasm"], graphOptimizationLevel:"all"});
+    }catch(e){
+      AI.ep="wasm";
+      AI.sess=await ort.InferenceSession.create(buf,
+        {executionProviders:["wasm"], graphOptimizationLevel:"all"});
+    }
+    AI.loaded=AI.mode;
+    return AI.sess;
+  })();
+  try{ return await AI.ready; }
+  catch(e){ AI.ready=null; AI.loading=null; throw e; }
+}
+/* 画像 → 320x320 の入力に整える */
+function aiFit(cv,S){
+  /* ★縦横比を保ったまま収める。引き伸ばすと縦長の写真で輪郭がずれる */
+  const s=Math.min(S/cv.width, S/cv.height);
+  const w=Math.round(cv.width*s), hh=Math.round(cv.height*s);
+  return {s:s, w:w, h:hh, ox:Math.floor((S-w)/2), oy:Math.floor((S-hh)/2)};
+}
+function aiInput(cv,S,flip){
+  const t=document.createElement("canvas"); t.width=S; t.height=S;
+  const g=t.getContext("2d");
+  g.fillStyle="#fff"; g.fillRect(0,0,S,S);
+  g.imageSmoothingQuality="high";
+  const box=aiFit(cv,S);
+  if(flip){ g.save(); g.translate(S,0); g.scale(-1,1);
+    g.drawImage(cv,S-box.ox-box.w,box.oy,box.w,box.h); g.restore(); }
+  else g.drawImage(cv,box.ox,box.oy,box.w,box.h);
+  const d=g.getImageData(0,0,S,S).data;
+  const mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225];
+  const f=new Float32Array(3*S*S);
+  for(let p=0;p<S*S;p++){
+    const i=p*4;
+    f[p]        = ((d[i]  /255)-mean[0])/std[0];
+    f[S*S+p]    = ((d[i+1]/255)-mean[1])/std[1];
+    f[2*S*S+p]  = ((d[i+2]/255)-mean[2])/std[2];
+  }
+  return f;
+}
+/* 推論して、元の大きさのマスク（0〜1）を返す */
+async function aiMask(cv,onProg){
+  const S=AI.size;
+  const sess=await aiLoad(onProg);
+  onProg&&onProg("商品を判定しています…");
+  const f=aiInput(cv,S,false);
+  const out=await sess.run({[sess.inputNames[0]]: new AI.ort.Tensor("float32",f,[1,3,S,S])});
+  let d=Float32Array.from(out[sess.outputNames[0]].data);
+  let mx=0; for(let i=0;i<d.length;i++) if(d[i]>mx) mx=d[i];
+  if(mx<=0) return null;
+  for(let i=0;i<d.length;i++) d[i]/=mx;
+  if(AI.flip){
+    /* 左右反転でもう一度判定して平均を取ると、輪郭がわずかに安定する */
+    onProg&&onProg("仕上げを確認しています…");
+    const f2=aiInput(cv,S,true);
+    const o2=await sess.run({[sess.inputNames[0]]: new AI.ort.Tensor("float32",f2,[1,3,S,S])});
+    const e=o2[sess.outputNames[0]].data;
+    let m2=0; for(let i=0;i<e.length;i++) if(e[i]>m2) m2=e[i];
+    if(m2>0) for(let y=0;y<S;y++) for(let x=0;x<S;x++){
+      d[y*S+x]=(d[y*S+x] + e[y*S+(S-1-x)]/m2)/2;
+    }
+  }
+  mx=1;
+  /* 小さいマスクを画像の大きさへなめらかに拡大 */
+  const mc=document.createElement("canvas"); mc.width=S; mc.height=S;
+  const mg=mc.getContext("2d"), mi=mg.createImageData(S,S);
+  for(let p=0;p<S*S;p++){
+    let v=d[p]/mx;
+    /* 中間の曖昧な部分を締めて、輪郭をはっきりさせる */
+    v = v<=AI.lo ? 0 : (v>=AI.hi ? 1 : (v-AI.lo)/(AI.hi-AI.lo));
+    const q=p*4, g8=Math.round(v*255);
+    mi.data[q]=g8; mi.data[q+1]=g8; mi.data[q+2]=g8; mi.data[q+3]=255;
+  }
+  mg.putImageData(mi,0,0);
+  /* 余白を除いた部分だけを元の大きさへ戻す */
+  const box=aiFit(cv,S);
+  const big=document.createElement("canvas"); big.width=cv.width; big.height=cv.height;
+  const bg=big.getContext("2d");
+  bg.imageSmoothingEnabled=true; bg.imageSmoothingQuality="high";
+  bg.drawImage(mc, box.ox, box.oy, box.w, box.h, 0, 0, cv.width, cv.height);
+  return bg.getImageData(0,0,cv.width,cv.height).data;
+}
+/* 編集画面から呼ぶ本体 */
+async function edAiCut(){
+  if(AI.busy) return;
+  AI.busy=true;
+  const btns=[$("edAiBtn"),$("edAiFast")];
+  btns.forEach(b=>{ if(b){ b.disabled=true; b.style.opacity=.6; } });
+  edSetStat("AI（"+aiMode().label+"）で判定しています… "+aiMode().note);
+  try{
+    edPush();
+    const t0=Date.now();
+    const m=await aiMask(ED.cv, edSetStat);
+    if(!m){ ED.hist.pop(); edSetStat("<b>商品を見つけられませんでした。</b>ほかの道具をお試しください。"); return; }
+    const W=ED.cv.width, H=ED.cv.height;
+    /* ★AIは「目立つ物」を全部拾うので、床に転がった小物まで残ることがある。
+       中央寄りで大きい塊ひとつだけを商品として採用する。 */
+    const bin=new Uint8Array(W*H);
+    for(let p=0;p<W*H;p++) bin[p]=(m[p*4]>=128)?1:0;
+    const lab=new Int32Array(W*H).fill(-1);
+    const cx=W/2, cy=H/2, maxd=Math.sqrt(cx*cx+cy*cy);
+    const st=[]; let cur=0, best=-1, bestScore=-1;
+    for(let s0=0;s0<W*H;s0++){
+      if(!bin[s0]||lab[s0]>=0) continue;
+      let n=0, sd=0; st.length=0; st.push(s0); lab[s0]=cur;
+      while(st.length){
+        const q=st.pop(); n++;
+        const x=q%W, y=(q-x)/W;
+        sd+=Math.sqrt((x-cx)*(x-cx)+(y-cy)*(y-cy))/maxd;
+        if(x>0&&bin[q-1]&&lab[q-1]<0){lab[q-1]=cur;st.push(q-1);}
+        if(x<W-1&&bin[q+1]&&lab[q+1]<0){lab[q+1]=cur;st.push(q+1);}
+        if(y>0&&bin[q-W]&&lab[q-W]<0){lab[q-W]=cur;st.push(q-W);}
+        if(y<H-1&&bin[q+W]&&lab[q+W]<0){lab[q+W]=cur;st.push(q+W);}
+      }
+      const sc=n*(1.3-sd/n);
+      if(sc>bestScore){ bestScore=sc; best=cur; }
+      cur++;
+    }
+    const img=ED.ctx.getImageData(0,0,W,H), d=img.data;
+    let kept=0;
+    for(let p=0;p<W*H;p++){
+      let a=m[p*4]/255;
+      if(best>=0 && lab[p]!==best) a=0;      /* 選ばれた塊以外は消す */
+      if(a>0.5) kept++;
+      const j=p*4;
+      d[j]  = d[j]  *a + 255*(1-a);
+      d[j+1]= d[j+1]*a + 255*(1-a);
+      d[j+2]= d[j+2]*a + 255*(1-a);
+      d[j+3]=255;
+    }
+    ED.ctx.putImageData(img,0,0);
+    let trimmed="";
+    if(AI.trim!==false){
+      const t=edTrimWhite(ED.cv,ED.ctx,0.04);
+      if(t){ ED.cv.width=t.width; ED.cv.height=t.height;
+        ED.ctx=ED.cv.getContext("2d"); ED.ctx.drawImage(t,0,0); edFit();
+        trimmed="・余白を詰めて "+t.width+"×"+t.height; }
+    }
+    edClearOv();
+    edSetStat("AI（"+aiMode().label+"）で切り抜きました（残したのは画面の "+Math.round(kept/(W*H)*100)+"%・"
+      +((Date.now()-t0)/1000).toFixed(1)+"秒・"+(AI.ep==="webgpu"?"GPU":"CPU")+trimmed+"）。"
+      +"細かいはみ出しは「🧽 消しゴム」、消えすぎは「↩ 元に戻す」で直せます。");
+  }catch(e){
+    ED.hist.pop();
+    edSetStat('<b style="color:#b91c1c">AIの読み込みに失敗しました。</b>'
+      +'label.html と同じ場所に <b>ort.webgpu.bundle.min.mjs / ortwasm.bin.001〜003 / silueta.onnx.001〜006</b> '
+      +'の3つを置いてください。<br><span style="color:#64748b">'+(e&&e.message?String(e.message).slice(0,120):"")+'</span>');
+  }finally{
+    AI.busy=false;
+    btns.forEach(b=>{ if(b){ b.disabled=false; b.style.opacity=1; } });
+  }
+}
+/* ファイルが置かれているときだけボタンを出す */
+function aiProbe(){
+  const w=$("edAiWrap"); if(!w) return;
+  w.style.display="none";
+  try{
+    fetch(aiBase()+"silueta.onnx.001",{method:"HEAD"}).then(r=>{
+      if(r&&r.ok){
+        w.style.display="";
+        if($("ppAiBar")) $("ppAiBar").style.display="flex";
+        /* 速い方のモデルが無ければ、そのボタンは隠す */
+        fetch(aiBase()+"u2netp_dyn.onnx",{method:"HEAD"}).then(r2=>{
+          if(!(r2&&r2.ok)&&$("edAiFast")) $("edAiFast").style.display="none";
+        }).catch(function(){ if($("edAiFast")) $("edAiFast").style.display="none"; });
+      }
+    }).catch(function(){});
+  }catch(e){}
+}
+/* ===== 実務向けの仕上げ（v15.1） =====
+   ・写真が複数あるとき、1枚ずつ✏を押すのは手間なので、まとめて処理できるようにする。
+   ・切り抜いたあとは余白が大きく残る。L判に印刷すると商品が小さくなるので、自動で詰める。
+   ・切り抜き前と見比べられるようにする。 */
+
+/* 切り抜き後、白い余白を詰めて商品を大きくする */
+function edTrimWhite(cv,ctx,padRatio){
+  const W=cv.width,H=cv.height;
+  const d=ctx.getImageData(0,0,W,H).data;
+  let x0=W,y0=H,x1=-1,y1=-1;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const i=(y*W+x)*4;
+    if(d[i]>246&&d[i+1]>246&&d[i+2]>246) continue;
+    if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+  }
+  if(x1<0) return null;
+  const pad=Math.round(Math.max(x1-x0,y1-y0)*(padRatio===undefined?0.04:padRatio));
+  x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad);
+  x1=Math.min(W-1,x1+pad); y1=Math.min(H-1,y1+pad);
+  const w=x1-x0+1,h=y1-y0+1;
+  if(w<20||h<20||(w>=W-2&&h>=H-2)) return null;
+  const t=document.createElement("canvas"); t.width=w; t.height=h;
+  const tg=t.getContext("2d");
+  tg.fillStyle="#fff"; tg.fillRect(0,0,w,h);
+  tg.drawImage(cv,x0,y0,w,h,0,0,w,h);
+  return t;
+}
+/* 1枚の画像にAI切り抜きを適用して差し替える（画面を開かずに使える） */
+async function aiCutRecord(rec,onProg){
+  if(!rec||!rec.ok||!rec.el||rec.tainted) return {ok:false,why:"編集できない画像"};
+  const src=document.createElement("canvas");
+  const m=Math.min(1,1800/Math.max(rec.el.naturalWidth,rec.el.naturalHeight));
+  src.width=Math.round(rec.el.naturalWidth*m); src.height=Math.round(rec.el.naturalHeight*m);
+  const g=src.getContext("2d");
+  g.fillStyle="#fff"; g.fillRect(0,0,src.width,src.height);
+  g.drawImage(rec.el,0,0,src.width,src.height);
+  const mask=await aiMask(src,onProg);
+  if(!mask) return {ok:false,why:"商品を見つけられませんでした"};
+  const W=src.width,H=src.height;
+  /* 中央寄りで大きい塊だけ残す */
+  const bin=new Uint8Array(W*H);
+  for(let p=0;p<W*H;p++) bin[p]=(mask[p*4]>=128)?1:0;
+  const lab=new Int32Array(W*H).fill(-1);
+  const cx=W/2,cy=H/2,maxd=Math.sqrt(cx*cx+cy*cy);
+  const st=[]; let cur=0,best=-1,bs=-1;
+  for(let s0=0;s0<W*H;s0++){
+    if(!bin[s0]||lab[s0]>=0) continue;
+    let n=0,sd=0; st.length=0; st.push(s0); lab[s0]=cur;
+    while(st.length){
+      const q=st.pop(); n++;
+      const x=q%W,y=(q-x)/W;
+      sd+=Math.sqrt((x-cx)*(x-cx)+(y-cy)*(y-cy))/maxd;
+      if(x>0&&bin[q-1]&&lab[q-1]<0){lab[q-1]=cur;st.push(q-1);}
+      if(x<W-1&&bin[q+1]&&lab[q+1]<0){lab[q+1]=cur;st.push(q+1);}
+      if(y>0&&bin[q-W]&&lab[q-W]<0){lab[q-W]=cur;st.push(q-W);}
+      if(y<H-1&&bin[q+W]&&lab[q+W]<0){lab[q+W]=cur;st.push(q+W);}
+    }
+    const sc=n*(1.3-sd/n);
+    if(sc>bs){bs=sc;best=cur;}
+    cur++;
+  }
+  const img=g.getImageData(0,0,W,H), dd=img.data;
+  for(let p=0;p<W*H;p++){
+    let a=mask[p*4]/255;
+    if(best>=0&&lab[p]!==best) a=0;
+    const j=p*4;
+    dd[j]=dd[j]*a+255*(1-a); dd[j+1]=dd[j+1]*a+255*(1-a); dd[j+2]=dd[j+2]*a+255*(1-a); dd[j+3]=255;
+  }
+  g.putImageData(img,0,0);
+  let out=src;
+  if(AI.trim!==false){ const t=edTrimWhite(src,g,0.04); if(t) out=t; }
+  const url=out.toDataURL("image/png");
+  await new Promise(res=>{
+    const im=new Image();
+    im.onload=function(){
+      if(!rec.orig) rec.orig={src:rec.src,el:rec.el,w:rec.w,h:rec.h};
+      rec.src=url; rec.el=im; rec.w=im.naturalWidth; rec.h=im.naturalHeight; rec.tainted=false;
+      res();
+    };
+    im.src=url;
+  });
+  return {ok:true};
+}
+/* まとめてAI切り抜き */
+async function ppAiAll(){
+  const list=PP_IMGS.filter(v=>v.ok&&v.el&&!v.tainted);
+  if(!list.length){ alert("切り抜ける写真がありません"); return; }
+  const btn=$("ppAiAll"); if(btn){ btn.disabled=true; btn.style.opacity=.6; }
+  const st=$("ppStat");
+  let ok=0,ng=0;
+  for(let i=0;i<list.length;i++){
+    const prog=t=>{ if(st) st.innerHTML="<b>まとめてAI切り抜き "+(i+1)+"/"+list.length+"</b><br>"+t; };
+    prog("準備しています…");
+    try{
+      const r=await aiCutRecord(list[i],prog);
+      if(r.ok) ok++; else ng++;
+    }catch(e){ ng++; }
+    ppRender();
+  }
+  if(btn){ btn.disabled=false; btn.style.opacity=1; }
+  ppRender();
+  if(st) st.innerHTML="<b>まとめてAI切り抜きが終わりました。</b>成功 "+ok+"枚"
+    +(ng?("／できなかった "+ng+"枚（✏から手直ししてください）"):"")
+    +"<br>やり直したい写真は ✏ を押して「↩ 元に戻す」で戻せます。";
+}
+/* ===== 商品をクリックして残す（v13.7で新設） =====
+   完全自動の判定は、実際の店内写真（床・マット・影が入り組む）では外すことがある。
+   商品を1回クリックしてもらえば、そこから同じ色がつながる範囲を広げるだけで済むので、
+   どんな写真でも確実に切り抜ける。クリックを足せば別の色の部分も残せる。 */
+function edPickInit(){
+  const W=ED.cv.width, H=ED.cv.height;
+  ED.pickBase=ED.ctx.getImageData(0,0,W,H);
+  ED.pickMask=new Uint8Array(W*H);
+  ED.pickCount=0;
+}
+function edPickAdd(px,py,tol){
+  const W=ED.cv.width, H=ED.cv.height;
+  if(!ED.pickMask||ED.pickMask.length!==W*H) edPickInit();
+  const d=ED.pickBase.data;
+  const sx=Math.max(0,Math.min(W-1,Math.round(px))), sy=Math.max(0,Math.min(H-1,Math.round(py)));
+  const si=(sy*W+sx)*4, sr=d[si], sg=d[si+1], sb=d[si+2];
+  const lim=tol*tol*3;
+  const seen=new Uint8Array(W*H);
+  const st=[sy*W+sx];
+  let n=0;
+  while(st.length){
+    const p=st.pop();
+    if(seen[p]) continue;
+    seen[p]=1;
+    const i=p*4;
+    const dr=d[i]-sr, dg=d[i+1]-sg, db=d[i+2]-sb;
+    if(dr*dr+dg*dg+db*db>lim) continue;
+    if(!ED.pickMask[p]) n++;
+    ED.pickMask[p]=1;
+    const x=p%W, y=(p-x)/W;
+    if(x>0)st.push(p-1); if(x<W-1)st.push(p+1);
+    if(y>0)st.push(p-W); if(y<H-1)st.push(p+W);
+  }
+  ED.pickCount++;
+  return n;
+}
+/* 選んだ範囲の小さな穴を埋め、縁をなめらかにしてから白地に合成 */
+function edPickApply(){
+  const W=ED.cv.width, H=ED.cv.height, m=ED.pickMask;
+  if(!m) return null;
+  let area=0; for(let i=0;i<W*H;i++) area+=m[i];
+  if(area<W*H*0.002) return null;
+  const seen=new Uint8Array(W*H), st=[];
+  for(let x=0;x<W;x++){ st.push(x); st.push((H-1)*W+x); }
+  for(let y=0;y<H;y++){ st.push(y*W); st.push(y*W+W-1); }
+  while(st.length){
+    const p=st.pop();
+    if(seen[p]||m[p]) continue;
+    seen[p]=1;
+    const x=p%W,y=(p-x)/W;
+    if(x>0)st.push(p-1); if(x<W-1)st.push(p+1);
+    if(y>0)st.push(p-W); if(y<H-1)st.push(p+W);
+  }
+  const filled=Uint8Array.from(m);
+  for(let p=0;p<W*H;p++) if(!m[p]&&!seen[p]) filled[p]=1;
+  const soft=new Float32Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    let s=0,n=0;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      const nx=x+dx, ny=y+dy;
+      if(nx<0||ny<0||nx>=W||ny>=H) continue;
+      s+=filled[ny*W+nx]; n++;
+    }
+    soft[y*W+x]=s/n;
+  }
+  const img=ED.ctx.getImageData(0,0,W,H), dd=img.data, base=ED.pickBase.data;
+  for(let p=0;p<W*H;p++){
+    const a=soft[p], j=p*4;
+    dd[j]  = base[j]  *a + 255*(1-a);
+    dd[j+1]= base[j+1]*a + 255*(1-a);
+    dd[j+2]= base[j+2]*a + 255*(1-a);
+    dd[j+3]=255;
+  }
+  ED.ctx.putImageData(img,0,0);
+  return {area:area, total:W*H};
+}
+/* 選択中の見た目：消える所を暗く見せる */
+function edPickPreview(){
+  if(!ED.pickMask) return;
+  const W=ED.cv.width, H=ED.cv.height, s=ED.scale;
+  const ow=ED.ov.width, oh=ED.ov.height;
+  const im=ED.octx.createImageData(ow,oh), d=im.data;
+  for(let y=0;y<oh;y++)for(let x=0;x<ow;x++){
+    const sx=Math.min(W-1,Math.round(x/s)), sy=Math.min(H-1,Math.round(y/s));
+    const on=ED.pickMask[sy*W+sx];
+    const i=(y*ow+x)*4;
+    d[i]=255; d[i+1]=255; d[i+2]=255; d[i+3]= on?0:150;
+  }
+  ED.octx.putImageData(im,0,0);
+}
+/* ===== 消しゴムマジック（v13.4で新設） =====
+   なぞった物を消して、背景を周りから推測して埋める。
+   1) 多重解像度の拡散で、穴の色を周囲となじませる（Laplace方程式を粗い解像度から解く）
+   2) 近くの「消していない場所」から、ざらつき（高周波成分）を移植して質感を戻す
+   拡散だけだと のっぺり した仕上がりになるため、2 が要る。 */
+function mgInpaint(data,W,H,mask,levels,iters){
+  levels=levels||5; iters=iters||24;
+  var imgs=[{w:W,h:H,d:Float32Array.from(data)}], msks=[{w:W,h:H,m:Uint8Array.from(mask)}];
+  for(var l=1;l<levels;l++){
+    var pw=imgs[l-1].w, ph=imgs[l-1].h;
+    var w=Math.max(2,pw>>1), h=Math.max(2,ph>>1);
+    var d=new Float32Array(w*h*3), m=new Uint8Array(w*h);
+    var pd=imgs[l-1].d, pm=msks[l-1].m;
+    for(var y=0;y<h;y++)for(var x=0;x<w;x++){
+      var r=0,g=0,b=0,n=0,mk=1;
+      for(var dy=0;dy<2;dy++)for(var dx=0;dx<2;dx++){
+        var sx=Math.min(pw-1,x*2+dx), sy=Math.min(ph-1,y*2+dy), si=sy*pw+sx;
+        if(!pm[si]){ r+=pd[si*3];g+=pd[si*3+1];b+=pd[si*3+2];n++; mk=0; }
+      }
+      var i=y*w+x; m[i]=mk;
+      if(n){ d[i*3]=r/n; d[i*3+1]=g/n; d[i*3+2]=b/n; }
+    }
+    imgs.push({w:w,h:h,d:d}); msks.push({w:w,h:h,m:m});
+  }
+  var L=levels-1, top=imgs[L], tm=msks[L].m, rr=0,gg=0,bb=0,nn=0;
+  for(var i2=0;i2<top.w*top.h;i2++) if(!tm[i2]){ rr+=top.d[i2*3];gg+=top.d[i2*3+1];bb+=top.d[i2*3+2];nn++; }
+  if(nn){ rr/=nn;gg/=nn;bb/=nn; }
+  for(var i3=0;i3<top.w*top.h;i3++) if(tm[i3]){ top.d[i3*3]=rr;top.d[i3*3+1]=gg;top.d[i3*3+2]=bb; }
+  function relax(o,m,it){
+    var w=o.w,h=o.h,d=o.d;
+    for(var k=0;k<it;k++)
+      for(var y=0;y<h;y++)for(var x=0;x<w;x++){
+        var i=y*w+x; if(!m[i]) continue;
+        var r=0,g=0,b=0,n=0,j;
+        if(x>0){j=i-1;r+=d[j*3];g+=d[j*3+1];b+=d[j*3+2];n++;}
+        if(x<w-1){j=i+1;r+=d[j*3];g+=d[j*3+1];b+=d[j*3+2];n++;}
+        if(y>0){j=i-w;r+=d[j*3];g+=d[j*3+1];b+=d[j*3+2];n++;}
+        if(y<h-1){j=i+w;r+=d[j*3];g+=d[j*3+1];b+=d[j*3+2];n++;}
+        if(n){ d[i*3]=r/n; d[i*3+1]=g/n; d[i*3+2]=b/n; }
+      }
+  }
+  relax(imgs[L],msks[L].m,iters*3);
+  for(var l2=levels-2;l2>=0;l2--){
+    var cur=imgs[l2], m2=msks[l2].m, prev=imgs[l2+1];
+    for(var y2=0;y2<cur.h;y2++)for(var x2=0;x2<cur.w;x2++){
+      var i4=y2*cur.w+x2; if(!m2[i4]) continue;
+      var px=Math.min(prev.w-1,x2>>1), py=Math.min(prev.h-1,y2>>1), pi=py*prev.w+px;
+      cur.d[i4*3]=prev.d[pi*3]; cur.d[i4*3+1]=prev.d[pi*3+1]; cur.d[i4*3+2]=prev.d[pi*3+2];
+    }
+    relax(cur,m2,iters);
+  }
+  return imgs[0].d;
+}
+function mgTexture(out,W,H,mask,x0,y0,x1,y1){
+  var bw=x1-x0+1, bh=y1-y0+1;
+  /* 提供元の候補。範囲外なら弾かずに内側へ寄せる（弾くと候補が全滅して質感が戻らない） */
+  var offs=[], mul=[1.15,0.75,-0.75,-1.15];
+  for(var a=0;a<mul.length;a++){
+    offs.push([Math.round(bw*mul[a]),0]);
+    offs.push([0,Math.round(bh*mul[a])]);
+    offs.push([Math.round(bw*mul[a]),Math.round(bh*mul[a])]);
+  }
+  var best=null,bs=-1, total=Math.ceil(bh/2)*Math.ceil(bw/2);
+  for(var c=0;c<offs.length;c++){
+    var sx=x0+offs[c][0], sy=y0+offs[c][1];
+    if(sx<1) sx=1; if(sy<1) sy=1;
+    if(sx+bw>=W) sx=W-bw-1; if(sy+bh>=H) sy=H-bh-1;
+    if(sx<1||sy<1) continue;
+    var known=0;
+    for(var y=0;y<bh;y+=2)for(var x=0;x<bw;x+=2) if(!mask[(sy+y)*W+(sx+x)]) known++;
+    if(known>bs){ bs=known; best={sx:sx,sy:sy}; }
+  }
+  if(!best||bs<total*0.25) return 0;
+  var applied=0;
+  for(var y2=0;y2<bh;y2++)for(var x2=0;x2<bw;x2++){
+    var ti=(y0+y2)*W+(x0+x2);
+    if(!mask[ti]) continue;
+    var sxx=Math.min(W-3,Math.max(2,best.sx+x2)), syy=Math.min(H-3,Math.max(2,best.sy+y2));
+    var si=syy*W+sxx;
+    if(mask[si]) continue;
+    for(var ch=0;ch<3;ch++){
+      /* 5x5の平均を引いて、より広い帯域のざらつきを取り出す（3x3だと弱すぎた） */
+      var avg=0,na=0;
+      for(var dy=-2;dy<=2;dy++)for(var dx=-2;dx<=2;dx++){
+        var ax=sxx+dx, ay=syy+dy;
+        if(ax<0||ay<0||ax>=W||ay>=H) continue;
+        avg+=out[((ay*W)+ax)*3+ch]; na++;
+      }
+      avg/=na;
+      var hi=(out[si*3+ch]-avg)*1.35;
+      var v=out[ti*3+ch]+hi;
+      out[ti*3+ch]= v<0?0:(v>255?255:v);
+    }
+    applied++;
+  }
+  return applied;
+}
+/* 塗った範囲を消して埋める。ED.magic に Uint8Array のマスクが入っている */
+function edMagicRun(){
+  var W=ED.cv.width, H=ED.cv.height, mask=ED.magic;
+  if(!mask) return null;
+  var x0=W,y0=H,x1=-1,y1=-1,cnt=0;
+  for(var y=0;y<H;y++)for(var x=0;x<W;x++){
+    if(!mask[y*W+x]) continue;
+    cnt++;
+    if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+  }
+  if(cnt<4) return null;
+  /* 周囲の情報が要るので、少し広い範囲だけを処理する（速度のため） */
+  var pad=Math.max(32,Math.round(Math.max(x1-x0,y1-y0)*1.3));
+  var bx0=Math.max(0,x0-pad), by0=Math.max(0,y0-pad);
+  var bx1=Math.min(W-1,x1+pad), by1=Math.min(H-1,y1+pad);
+  var bw=bx1-bx0+1, bh=by1-by0+1;
+  var img=ED.ctx.getImageData(bx0,by0,bw,bh), d=img.data;
+  var rgb=new Float32Array(bw*bh*3), m=new Uint8Array(bw*bh);
+  for(var y3=0;y3<bh;y3++)for(var x3=0;x3<bw;x3++){
+    var i=y3*bw+x3, si=i*4;
+    rgb[i*3]=d[si]; rgb[i*3+1]=d[si+1]; rgb[i*3+2]=d[si+2];
+    m[i]=mask[(by0+y3)*W+(bx0+x3)]?1:0;
+  }
+  var out=mgInpaint(rgb,bw,bh,m,5,20);
+  mgTexture(out,bw,bh,m,x0-bx0,y0-by0,x1-bx0,y1-by0);
+  for(var y4=0;y4<bh;y4++)for(var x4=0;x4<bw;x4++){
+    var i2=y4*bw+x4; if(!m[i2]) continue;
+    var di=i2*4;
+    d[di]=out[i2*3]; d[di+1]=out[i2*3+1]; d[di+2]=out[i2*3+2]; d[di+3]=255;
+  }
+  ED.ctx.putImageData(img,bx0,by0);
+  ED.magic=null;
+  return {px:cnt};
+}
+/* ===== 写真の編集（v13.3で作り直し） =====
+   商品写真の背景やいらない部分を、その場で白くする。ネット接続なしで動く。
+   実際の店内写真は背景が床・棚・別の商品と入り組んでいて、
+   「四隅から色をたどる」方式ではまったく効かなかったため、次の4つに作り直した。
+     🎯 囲んで切り抜き … 残したい物の周りをなぞる。外側が全部白。形は自由。いちばん確実。
+     🪄 クリックで消す … 消したい背景をクリック。つながった似た色がまとめて消える。
+     🧽 消しゴム       … なぞって白くする。仕上げ用。
+     ✂ 四角で切取     … 周囲をまとめて落とす。 */
+var ED={ idx:-1, cv:null, ctx:null, ov:null, octx:null, tool:"lasso",
+         hist:[], orig:null, scale:1, drawing:false, brush:40, tol:45,
+         crop:null, lasso:null, magic:null, pickMask:null, pickCount:0, pickTol:40, pickBase:null };
+
+function edMaxSide(){ return 1800; }
+function edSetStat(t){ const e=$("edStat"); if(e) e.innerHTML=t; }
+function edLoadFrom(rec){
+  const im=rec.el;
+  let w=im.naturalWidth, h=im.naturalHeight;
+  const s=Math.min(1, edMaxSide()/Math.max(w,h));
+  w=Math.max(1,Math.round(w*s)); h=Math.max(1,Math.round(h*s));
+  const c=document.createElement("canvas"); c.width=w; c.height=h;
+  const g=c.getContext("2d");
+  g.fillStyle="#fff"; g.fillRect(0,0,w,h);
+  g.drawImage(im,0,0,w,h);
+  return c;
+}
+function edFit(){
+  const maxW=Math.min(720, (window.innerWidth||1000)-180);
+  const maxH=(window.innerHeight||800)-400;
+  ED.scale=Math.min(1, maxW/ED.cv.width, Math.max(0.15, maxH/ED.cv.height));
+  const w=Math.round(ED.cv.width*ED.scale), h=Math.round(ED.cv.height*ED.scale);
+  ED.cv.style.width=w+"px"; ED.cv.style.height=h+"px";
+  ED.ov.width=w; ED.ov.height=h;
+  ED.ov.style.width=w+"px"; ED.ov.style.height=h+"px";
+}
+function edPush(){ try{ ED.hist.push(ED.cv.toDataURL("image/png")); if(ED.hist.length>8) ED.hist.shift(); }catch(e){} }
+function edRestore(url,cb){
+  const im=new Image();
+  im.onload=function(){ ED.cv.width=im.naturalWidth; ED.cv.height=im.naturalHeight;
+    ED.ctx=ED.cv.getContext("2d"); ED.ctx.drawImage(im,0,0); edFit(); edClearOv(); if(cb)cb(); };
+  im.src=url;
+}
+function edClearOv(){ if(ED.octx) ED.octx.clearRect(0,0,ED.ov.width,ED.ov.height); }
+
+/* 🎯 なげなわ：なぞった内側だけ残して、外側を白くする */
+function edApplyLasso(){
+  const pts=ED.lasso;
+  if(!pts||pts.length<8) return false;
+  const W=ED.cv.width, H=ED.cv.height;
+  const t=document.createElement("canvas"); t.width=W; t.height=H;
+  const tg=t.getContext("2d");
+  tg.drawImage(ED.cv,0,0);
+  tg.globalCompositeOperation="destination-in";
+  tg.beginPath();
+  tg.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++) tg.lineTo(pts[i].x,pts[i].y);
+  tg.closePath(); tg.fill();
+  ED.ctx.fillStyle="#fff"; ED.ctx.fillRect(0,0,W,H);
+  ED.ctx.drawImage(t,0,0);
+  ED.lasso=null; edClearOv();
+  return true;
+}
+/* 囲んだ範囲に合わせて余白を自動で詰める */
+function edAutoTrim(){
+  const W=ED.cv.width, H=ED.cv.height;
+  const d=ED.ctx.getImageData(0,0,W,H).data;
+  let x0=W,y0=H,x1=-1,y1=-1;
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const i=(y*W+x)*4;
+    if(d[i]>247&&d[i+1]>247&&d[i+2]>247) continue;
+    if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+  }
+  if(x1<0) return false;
+  const pad=Math.round(Math.max(W,H)*0.02);
+  x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad);
+  x1=Math.min(W-1,x1+pad); y1=Math.min(H-1,y1+pad);
+  const w=x1-x0+1, h=y1-y0+1;
+  if(w<20||h<20||(w===W&&h===H)) return false;
+  const t=document.createElement("canvas"); t.width=w; t.height=h;
+  t.getContext("2d").drawImage(ED.cv,x0,y0,w,h,0,0,w,h);
+  ED.cv.width=w; ED.cv.height=h;
+  ED.ctx=ED.cv.getContext("2d"); ED.ctx.drawImage(t,0,0);
+  edFit(); edClearOv();
+  return true;
+}
+/* 🪄 クリックした場所から、つながった似た色を白くする */
+function edWandAt(px,py,tol){
+  const W=ED.cv.width, H=ED.cv.height;
+  const sx=Math.max(0,Math.min(W-1,Math.round(px))), sy=Math.max(0,Math.min(H-1,Math.round(py)));
+  const img=ED.ctx.getImageData(0,0,W,H), d=img.data;
+  const si=(sy*W+sx)*4;
+  const sr=d[si], sg=d[si+1], sb=d[si+2];
+  const lim=tol*tol*3;
+  const seen=new Uint8Array(W*H);
+  const stack=[sy*W+sx];
+  let filled=0;
+  while(stack.length){
+    const p=stack.pop();
+    if(seen[p]) continue;
+    seen[p]=1;
+    const i=p*4;
+    const dr=d[i]-sr, dg=d[i+1]-sg, db=d[i+2]-sb;
+    if(dr*dr+dg*dg+db*db > lim) continue;
+    d[i]=255; d[i+1]=255; d[i+2]=255; d[i+3]=255;
+    filled++;
+    const x=p%W, y=(p-x)/W;
+    if(x>0)   stack.push(p-1);
+    if(x<W-1) stack.push(p+1);
+    if(y>0)   stack.push(p-W);
+    if(y<H-1) stack.push(p+W);
+  }
+  ED.ctx.putImageData(img,0,0);
+  return {filled:filled,total:W*H};
+}
+/* 消しゴムマジック：なぞった場所を「消す予定」として記録する */
+function edMagicPaint(x,y){
+  if(!ED.magic) return;
+  const W=ED.cv.width, H=ED.cv.height, r=ED.brush/2, r2=r*r;
+  const x0=Math.max(0,Math.floor(x-r)), x1=Math.min(W-1,Math.ceil(x+r));
+  const y0=Math.max(0,Math.floor(y-r)), y1=Math.min(H-1,Math.ceil(y+r));
+  for(let yy=y0;yy<=y1;yy++) for(let xx=x0;xx<=x1;xx++){
+    const dx=xx-x, dy=yy-y;
+    if(dx*dx+dy*dy<=r2) ED.magic[yy*W+xx]=1;
+  }
+}
+function edEraseAt(x,y){
+  ED.ctx.save();
+  ED.ctx.fillStyle="#fff";
+  ED.ctx.beginPath(); ED.ctx.arc(x,y,ED.brush/2,0,Math.PI*2); ED.ctx.fill();
+  ED.ctx.restore();
+}
+function edApplyCrop(){
+  const r=ED.crop; if(!r) return false;
+  const x=Math.max(0,Math.round(Math.min(r.x0,r.x1))), y=Math.max(0,Math.round(Math.min(r.y0,r.y1)));
+  const w=Math.min(ED.cv.width-x, Math.round(Math.abs(r.x1-r.x0)));
+  const h=Math.min(ED.cv.height-y, Math.round(Math.abs(r.y1-r.y0)));
+  if(w<10||h<10) return false;
+  const t=document.createElement("canvas"); t.width=w; t.height=h;
+  t.getContext("2d").drawImage(ED.cv,x,y,w,h,0,0,w,h);
+  ED.cv.width=w; ED.cv.height=h;
+  ED.ctx=ED.cv.getContext("2d"); ED.ctx.drawImage(t,0,0);
+  ED.crop=null; edFit(); edClearOv();
+  return true;
+}
+function edOpts(){
+  const box=$("edOpts"); if(!box) return;
+  if(ED.tool==="pick"){
+    box.innerHTML='<b style="color:#0f766e">商品をクリックしてください。</b>'
+      +'<span class="hint" style="margin:0">足りなければ何回でもクリック（別の色の部分も足せます）</span>'
+      +'<span class="hint" style="margin:0 0 0 auto">広がり</span>'
+      +'<input type="range" id="edPTol" min="10" max="90" value="'+(ED.pickTol||40)+'" style="width:150px">'
+      +'<span id="edPTolV" style="font-weight:800;min-width:2.5em">'+(ED.pickTol||40)+'</span>'
+      +'<button class="printbtn" id="edPickGo" type="button" style="padding:8px 18px">背景を白く</button>';
+    $("edPTol").oninput=function(){ ED.pickTol=parseInt(this.value,10); $("edPTolV").textContent=ED.pickTol; };
+    $("edPickGo").onclick=function(){
+      if(!ED.pickMask||!ED.pickCount){ edSetStat("<b>先に商品をクリックしてください。</b>"); return; }
+      edPush();
+      const r=edPickApply();
+      edClearOv(); ED.pickMask=null; ED.pickCount=0;
+      edSetStat(r? ("背景を白くしました（残したのは画面の "+Math.round(r.area/r.total*100)+"%）。"
+                    +"はみ出しは「🧽 消しゴム」、消えすぎは「↩ 元に戻す」で。")
+                 : "<b>選んだ範囲が小さすぎます。</b>もう一度クリックしてください。");
+    };
+  }else if(ED.tool==="magic"){
+    box.innerHTML='<b style="color:#c2410c">消したい物をなぞってください。</b>'
+      +'<span class="hint" style="margin:0">指を離すと、背景を推測して自然に埋めます</span>'
+      +'<span class="hint" style="margin:0 0 0 auto">ブラシの太さ</span>'
+      +'<input type="range" id="edBr" min="10" max="220" value="'+ED.brush+'" style="width:170px">'
+      +'<span id="edBrV" style="font-weight:800;min-width:3em">'+ED.brush+'</span>';
+    $("edBr").oninput=function(){ ED.brush=parseInt(this.value,10); $("edBrV").textContent=ED.brush; };
+  }else if(ED.tool==="lasso"){
+    box.innerHTML='<b style="color:#c2410c">残したい物の周りを、ぐるっとなぞってください。</b>'
+      +'<span class="hint" style="margin:0">指を離すと外側が白くなります（形は自由）</span>'
+      +'<label class="acctgl" style="margin-left:auto"><input type="checkbox" id="edTrim" checked> 余白も詰める</label>';
+  }else if(ED.tool==="wand"){
+    box.innerHTML='<b style="color:#c2410c">消したい背景をクリック。</b>'
+      +'<span class="hint" style="margin:0">何回でも押せます</span>'
+      +'<span class="hint" style="margin:0 0 0 auto">効き具合</span>'
+      +'<input type="range" id="edTol" min="12" max="110" value="'+ED.tol+'" style="width:170px">'
+      +'<span id="edTolV" style="font-weight:800;min-width:2.5em">'+ED.tol+'</span>';
+    $("edTol").oninput=function(){ ED.tol=parseInt(this.value,10); $("edTolV").textContent=ED.tol; };
+  }else if(ED.tool==="eraser"){
+    box.innerHTML='<b style="color:#c2410c">なぞったところが白くなります。</b>'
+      +'<span class="hint" style="margin:0 0 0 auto">ブラシの太さ</span>'
+      +'<input type="range" id="edBr" min="8" max="220" value="'+ED.brush+'" style="width:170px">'
+      +'<span id="edBrV" style="font-weight:800;min-width:3em">'+ED.brush+'</span>';
+    $("edBr").oninput=function(){ ED.brush=parseInt(this.value,10); $("edBrV").textContent=ED.brush; };
+  }else{
+    box.innerHTML='<b style="color:#c2410c">残したい範囲を四角くドラッグ。</b>'
+      +'<button class="printbtn" id="edRun" type="button" style="padding:8px 18px;margin-left:auto">切り取る</button>';
+    $("edRun").onclick=function(){
+      edPush();
+      if(edApplyCrop()) edSetStat("切り取りました（"+ED.cv.width+"×"+ED.cv.height+"）。");
+      else { ED.hist.pop(); edSetStat("<b>範囲が選ばれていません。</b>画像の上をドラッグしてください。"); }
+    };
+  }
+  const map={edToolPick:"pick",edToolMagic:"magic",edToolLasso:"lasso",edToolWand:"wand",edToolEraser:"eraser",edToolCrop:"crop"};
+  Object.keys(map).forEach(function(id){
+    const b=$(id); if(!b) return;
+    const on=(map[id]===ED.tool);
+    b.style.background=on?"#111827":""; b.style.color=on?"#fff":"";
+  });
+  ED.cv.style.cursor = (ED.tool==="wand")?"pointer":"crosshair";
+}
+function edPos(e){
+  const r=ED.cv.getBoundingClientRect();
+  const t=(e.touches&&e.touches[0])||e;
+  return { x:(t.clientX-r.left)/ED.scale, y:(t.clientY-r.top)/ED.scale };
+}
+function edOpen(i){
+  const rec=PP_IMGS[i];
+  if(!rec||!rec.ok||!rec.el){ alert("この画像はまだ読み込めていません"); return; }
+  if(rec.tainted){
+    alert("URLで追加した画像は編集できません。\\n画像を右クリック→「画像をコピー」→ Ctrl+V で入れ直してください。");
+    return;
+  }
+  ED.idx=i; ED.tool="pick"; ED.hist=[]; ED.crop=null; ED.lasso=null; ED.magic=null; ED.pickMask=null; ED.pickCount=0; ED.pickTol=ED.pickTol||40;
+  ED.cv=$("edCv"); ED.ov=$("edOv");
+  const src=edLoadFrom(rec);
+  ED.cv.width=src.width; ED.cv.height=src.height;
+  ED.ctx=ED.cv.getContext("2d"); ED.ctx.drawImage(src,0,0);
+  ED.octx=ED.ov.getContext("2d");
+  try{ ED.orig=ED.cv.toDataURL("image/png"); }catch(e){ ED.orig=null; }
+  edFit(); edClearOv(); edOpts();
+  edSetStat("<b>商品をクリック</b>してください。そこから同じ色の範囲が選ばれます。足りなければ何回でもクリックできます。");
+  $("edModal").classList.add("open");
+}
+function edClose(){ $("edModal").classList.remove("open"); ED.idx=-1; }
+function edInit(){
+  const cv=$("edCv"); if(!cv) return;
+  ED.cv=cv; ED.ov=$("edOv");
+  $("edClose").onclick=$("edCancel").onclick=edClose;
+  const map={edToolPick:"pick",edToolMagic:"magic",edToolLasso:"lasso",edToolWand:"wand",edToolEraser:"eraser",edToolCrop:"crop"};
+  Object.keys(map).forEach(function(id){
+    const b=$(id); if(!b) return;
+    b.onclick=function(){ ED.tool=map[id]; ED.crop=null; ED.lasso=null; ED.pickMask=null; ED.pickCount=0; edClearOv(); edOpts(); };
+  });
+  if($("ppAiAll")) $("ppAiAll").onclick=function(){ ppAiAll(); };
+  if($("ppAiTrim")) $("ppAiTrim").onchange=function(){ AI.trim=this.checked; };
+  if($("edAiBtn")) $("edAiBtn").onclick=function(){ AI.mode="fine"; try{store.set("aiMode","fine");}catch(e){} edAiCut(); };
+  if($("edAiFast")) $("edAiFast").onclick=function(){ AI.mode="fast"; try{store.set("aiMode","fast");}catch(e){} edAiCut(); };
+  try{ const mm=store.get("aiMode",null); if(mm==="fast"||mm==="fine") AI.mode=mm; }catch(e){}
+  aiProbe();
+  $("edAutoCut").onclick=function(){
+    if(ED.idx<0) return;
+    edSetStat("商品を探しています…");
+    setTimeout(function(){
+      edPush();
+      const t0=Date.now();
+      const r=edAutoCutRun(0);
+      if(r){
+        edSetStat("背景を白くしました（商品として残したのは画面の "
+          +Math.round(r.kept/r.total*100)+"%・"+(Date.now()-t0)+"ミリ秒）。"
+          +"消えすぎ・残りすぎのときは「↩ 元に戻す」→ ほかの道具で仕上げてください。");
+      }else{
+        ED.hist.pop();
+        edSetStat("<b>商品をうまく見つけられませんでした。</b>"
+          +"背景と商品の色が近い写真は苦手です。「🎯 囲んで切り抜き」で囲んでください。");
+      }
+    },30);
+  };
+  $("edUndo").onclick=function(){
+    if(!ED.hist.length){ edSetStat("戻せる操作がありません。"); return; }
+    edRestore(ED.hist.pop(), function(){ edSetStat("ひとつ前に戻しました。"); });
+  };
+  $("edReset").onclick=function(){
+    if(!ED.orig) return;
+    edPush(); edRestore(ED.orig, function(){ edSetStat("最初の状態に戻しました。"); });
+  };
+  $("edApply").onclick=function(){
+    if(ED.idx<0) return;
+    const rec=PP_IMGS[ED.idx];
+    let url=null;
+    try{ url=ED.cv.toDataURL("image/png"); }catch(e){ alert("反映できませんでした"); return; }
+    const im=new Image();
+    im.onload=function(){
+      rec.src=url; rec.el=im; rec.w=im.naturalWidth; rec.h=im.naturalHeight; rec.ok=true; rec.tainted=false;
+      edClose(); ppRender(); status("写真を編集しました","ok");
+    };
+    im.src=url;
+  };
+  const down=function(e){
+    if(ED.idx<0) return;
+    e.preventDefault(); ED.drawing=true;
+    const p=edPos(e);
+    if(ED.tool==="pick"){
+      if(!ED.pickCount) edPickInit();
+      const n=edPickAdd(p.x,p.y,ED.pickTol||40);
+      edPickPreview();
+      edSetStat("選択中：画面の "+Math.round(n/(ED.cv.width*ED.cv.height)*100)+"% を追加（合計"+ED.pickCount+"回）。"
+        +"足りなければ続けてクリック → 最後に「背景を白く」を押してください。");
+      ED.drawing=false;
+      return;
+    }
+    if(ED.tool==="magic"){
+      edPush();
+      ED.magic=new Uint8Array(ED.cv.width*ED.cv.height);
+      edMagicPaint(p.x,p.y);
+    }
+    else if(ED.tool==="eraser"){ edPush(); edEraseAt(p.x,p.y); }
+    else if(ED.tool==="crop"){ ED.crop={x0:p.x,y0:p.y,x1:p.x,y1:p.y}; }
+    else if(ED.tool==="lasso"){ ED.lasso=[{x:p.x,y:p.y}]; }
+    else if(ED.tool==="wand"){
+      edPush();
+      const r=edWandAt(p.x,p.y,ED.tol);
+      const pc=Math.round(r.filled/r.total*100);
+      edSetStat(pc>=1? ("消しました（画面の "+pc+"%）。まだ残っていたら、続けて別の場所をクリックしてください。")
+                     : "ほとんど消えませんでした。<b>効き具合のつまみを右へ</b>動かしてから、もう一度クリックしてください。");
+      ED.drawing=false;
+    }
+  };
+  const move=function(e){
+    if(!ED.drawing||ED.idx<0) return;
+    e.preventDefault();
+    const p=edPos(e), s=ED.scale;
+    if(ED.tool==="magic"){
+      edMagicPaint(p.x,p.y);
+      ED.octx.fillStyle="rgba(249,115,22,.45)";
+      ED.octx.beginPath(); ED.octx.arc(p.x*s,p.y*s,ED.brush/2*s,0,Math.PI*2); ED.octx.fill();
+    }else if(ED.tool==="eraser"){
+      edEraseAt(p.x,p.y);
+      edClearOv();
+      ED.octx.strokeStyle="rgba(249,115,22,.9)"; ED.octx.lineWidth=1.5;
+      ED.octx.beginPath(); ED.octx.arc(p.x*s,p.y*s,ED.brush/2*s,0,Math.PI*2); ED.octx.stroke();
+    }else if(ED.tool==="crop"&&ED.crop){
+      ED.crop.x1=p.x; ED.crop.y1=p.y;
+      edClearOv();
+      const r=ED.crop;
+      const x=Math.min(r.x0,r.x1)*s, y=Math.min(r.y0,r.y1)*s;
+      const w=Math.abs(r.x1-r.x0)*s, hh=Math.abs(r.y1-r.y0)*s;
+      ED.octx.fillStyle="rgba(0,0,0,.35)"; ED.octx.fillRect(0,0,ED.ov.width,ED.ov.height);
+      ED.octx.clearRect(x,y,w,hh);
+      ED.octx.strokeStyle="#f97316"; ED.octx.lineWidth=2; ED.octx.strokeRect(x,y,w,hh);
+    }else if(ED.tool==="lasso"&&ED.lasso){
+      const last=ED.lasso[ED.lasso.length-1];
+      if(Math.abs(p.x-last.x)+Math.abs(p.y-last.y)>1.5) ED.lasso.push({x:p.x,y:p.y});
+      edClearOv();
+      ED.octx.save();
+      ED.octx.beginPath();
+      ED.octx.moveTo(ED.lasso[0].x*s,ED.lasso[0].y*s);
+      for(let i=1;i<ED.lasso.length;i++) ED.octx.lineTo(ED.lasso[i].x*s,ED.lasso[i].y*s);
+      ED.octx.closePath();
+      ED.octx.fillStyle="rgba(249,115,22,.18)"; ED.octx.fill();
+      ED.octx.strokeStyle="#f97316"; ED.octx.lineWidth=2; ED.octx.setLineDash([6,4]); ED.octx.stroke();
+      ED.octx.restore();
+    }
+  };
+  const up=function(){
+    if(!ED.drawing) return;
+    ED.drawing=false;
+    if(ED.tool==="magic"&&ED.magic){
+      edSetStat("背景を推測して埋めています…");
+      const t0=Date.now();
+      setTimeout(function(){
+        const r=edMagicRun();
+        edClearOv();
+        edSetStat(r? ("消しました（"+r.px.toLocaleString()+"画素・"+(Date.now()-t0)+"ミリ秒）。"
+                      +"不自然なところは、もう一度なぞるか「元に戻す」でやり直せます。")
+                   : "<b>なぞる範囲が小さすぎます。</b>もう少し大きくなぞってください。"); 
+      },30);
+      return;
+    }
+    if(ED.tool==="lasso"&&ED.lasso){
+      if(ED.lasso.length<8){ ED.lasso=null; edClearOv();
+        edSetStat("<b>短すぎます。</b>残したい物の周りを、ぐるっと囲むようになぞってください。"); return; }
+      edPush();
+      if(edApplyLasso()){
+        let msg="外側を白くしました。";
+        if($("edTrim")&&$("edTrim").checked && edAutoTrim()) msg+="余白も詰めました（"+ED.cv.width+"×"+ED.cv.height+"）。";
+        msg+="はみ出しは「🧽 消しゴム」で消せます。";
+        edSetStat(msg);
+      }
+    }
+  };
+  ["mousedown","touchstart"].forEach(ev=>cv.addEventListener(ev,down,{passive:false}));
+  ["mousemove","touchmove"].forEach(ev=>cv.addEventListener(ev,move,{passive:false}));
+  ["mouseup","touchend","touchcancel"].forEach(ev=>window.addEventListener(ev,up));
+  cv.addEventListener("mouseleave",function(){ if(ED.tool==="eraser") edClearOv(); });
+  window.addEventListener("resize",function(){ if(ED.idx>=0) edFit(); });
 }
 /* 複数ラベルの一括印刷（IP直接印刷：1リクエストで枚数分カットまで） */
 async function eposPrintMulti(jobs){
@@ -7736,7 +9000,7 @@ function wire(){
   }
   renderSiteButtons();
 }
-buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); kbdHints(); try{qInit();}catch(e){} try{qrvInit();}catch(e){} try{ppInit();}catch(e){} try{pdiagInit();}catch(e){} setTimeout(fitBar,50); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
+buildFontSel(); buildGenre(); buildKubun(); restore(); buildGenre(); setToday(); wire(); wireSettings(); renderHistory(); autoKubunForGenre(); draw(); setupClears(); ensureSurugaya(); buildSiteEditor(); applyIncomingLabel(); autoGrowNotes(); autoGrowPname(); accInit(); accSoloInit(); kbdInit(); kbdHints(); try{qInit();}catch(e){} try{qrvInit();}catch(e){} try{ppInit();}catch(e){} try{pdiagInit();}catch(e){} try{edInit();}catch(e){} setTimeout(fitBar,50); histUiInit(); backupInit(); try{renderPrevPrice();}catch(e){} setTimeout(function(){try{shareSync();}catch(e){}},2500);
 </script>
 <script>
 /* ===== 進化UI v5：操作レイヤー（検証済みエンジン・既存関数には触れない、追加のみ） ===== */
