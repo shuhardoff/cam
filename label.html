@@ -439,7 +439,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v15.2</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v15.7</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -678,8 +678,8 @@
     <div style="padding:14px 18px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <span id="edAiWrap" style="display:none">
-          <button class="acctgl" id="edAiBtn" type="button" style="background:#7c3aed;color:#fff;font-weight:800" title="AIが商品だけを判定して切り抜きます（店内で撮った写真でもきれいに抜けます）">🤖 AIで切り抜き</button>
-          <button class="acctgl" id="edAiFast" type="button" title="速さ優先。白い背景の写真ならこちらで十分です">⚡ 速い方で</button>
+          <button class="acctgl" id="edAiBtn" type="button" style="background:#7c3aed;color:#fff;font-weight:800" title="商品だけを判定して切り抜きます（店内で撮った写真でもきれいに抜けます）">✨ きれいに切り抜き</button>
+          <button class="acctgl" id="edAiFast" type="button" title="速さ優先。白い背景の写真ならこちらで十分です">⚡ 速く切り抜き</button>
         </span>
         <button class="acctgl" id="edToolPick" type="button" style="background:#0f766e;color:#fff;font-weight:800" title="商品をクリックすると、そこだけ残して背景が白くなります">🎯 商品をクリック</button>
         <button class="acctgl" id="edAutoCut" type="button" style="background:#f97316;color:#fff;font-weight:800" title="商品だけを残して、背景を自動で白くします">⚡ 自動で白抜き</button>
@@ -702,6 +702,7 @@
           <canvas id="edOv" style="position:absolute;left:0;top:0;pointer-events:none"></canvas>
         </div>
       </div>
+      <div id="edPg"></div>
       <div class="hint" id="edStat" style="margin-top:8px"></div>
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;align-items:center">
         <button class="ghostbtn" id="edCancel" type="button">やめる</button>
@@ -728,8 +729,9 @@
         <button class="ghostbtn" id="ppUrlAdd" type="button" style="flex:0 0 auto">追加</button>
       </div>
       <div id="ppList" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"></div>
+      <div id="ppPg"></div>
       <div id="ppAiBar" style="display:none;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px">
-        <button class="printbtn" id="ppAiAll" type="button" style="padding:10px 20px;background:#7c3aed">🤖 全部まとめてAI切り抜き</button>
+        <button class="printbtn" id="ppAiAll" type="button" style="padding:10px 20px;background:#7c3aed">✨ 全部まとめて切り抜き</button>
         <label class="acctgl"><input type="checkbox" id="ppAiTrim" checked> 切り抜いたら余白を詰める</label>
         <span class="hint" style="margin:0">1枚ずつ ✏ で手直しもできます</span>
       </div>
@@ -5679,6 +5681,8 @@ async function pdiagIsolate(){
 }
 function pdiagInit(){
   const b=$("pdiagBtn"); if(!b) return;
+  if($("ppPg")) $("ppPg").outerHTML=pgHtml("ppPg");
+  if($("edPg")) $("edPg").outerHTML=pgHtml("edPg");
   pdDevInit();
   b.onclick=function(){ pdiagRun(false); };
   const p2=$("pdiagPrint");
@@ -5901,7 +5905,7 @@ async function aiFetchModel(M,base,onProg){
   const bufs=[];
   let total=0;
   for(let i=0;i<M.parts.length;i++){
-    onProg&&onProg("AIモデルを読み込んでいます… "+(i+1)+"/"+M.parts.length);
+    onProg&&onProg("読み込んでいます… "+(i+1)+"/"+M.parts.length);
     const r=await fetch(base+M.parts[i]);
     if(!r.ok) throw new Error(M.parts[i]+" が見つかりません");
     const a=new Uint8Array(await r.arrayBuffer());
@@ -5930,7 +5934,7 @@ async function aiLoad(onProg){
   AI.ready=(async function(){
     const M=aiMode();
     AI.size=M.size;
-    onProg&&onProg("AIの準備をしています（初回のみ少し時間がかかります）…");
+    onProg&&onProg("はじめての準備をしています（初回だけ時間がかかります）…");
     const base=aiBase();
     const mod=await import(base+"ort.webgpu.bundle.min.mjs");
     const ort=mod.default||mod;
@@ -5938,12 +5942,12 @@ async function aiLoad(onProg){
     /* ★実行環境の本体(23MB)も分割して置く。
        GitHubの画面からは、まとめて上げると合計サイズで弾かれるため、
        すべて8MB未満に分けてある。取ってきてから結合して直接渡す。 */
-    onProg&&onProg("AIの準備をしています…");
+    onProg&&onProg("準備しています…");
     if(!AI.wasmBin){
       const wp=["ortwasm.bin.001","ortwasm.bin.002","ortwasm.bin.003"];
       const bufs=[]; let total=0;
       for(let i=0;i<wp.length;i++){
-        onProg&&onProg("AIの準備をしています… "+(i+1)+"/"+wp.length);
+        onProg&&onProg("準備しています… "+(i+1)+"/"+wp.length);
         const r=await fetch(base+wp[i]);
         if(!r.ok) throw new Error(wp[i]+" が見つかりません");
         const a=new Uint8Array(await r.arrayBuffer()); bufs.push(a); total+=a.length;
@@ -5952,8 +5956,12 @@ async function aiLoad(onProg){
       for(const a of bufs){ wb.set(a,off); off+=a.length; }
       AI.wasmBin=wb.buffer;
     }
-    ort.env.wasm.wasmBinary=AI.wasmBin;
+    ort.env.wasm.wasmBinary=AI.wasmBin.slice(0);
     ort.env.wasm.wasmPaths=base;
+    /* ★裏（別スレッド）で計算すると、待っている間も画面が固まらず進み具合が動く。
+       ただしCPUが1つしかないPCでは、裏に回すと取り合いになって3倍遅くなった
+       （実測 11.9秒 → 35.5秒）。CPUが2つ以上あるときだけ裏で走らせる。 */
+    ort.env.wasm.proxy = ((navigator.hardwareConcurrency||1) >= 2);
     /* 複数CPUは、GitHub Pages だと使えない設定になっている。使える環境なら使う。 */
     ort.env.wasm.numThreads = (self.crossOriginIsolated && navigator.hardwareConcurrency>1)
       ? Math.min(4, navigator.hardwareConcurrency) : 1;
@@ -5969,7 +5977,7 @@ async function aiLoad(onProg){
       const probeBuf=await aiFetchModel(M,base,onProg);
       for(const cand of ["webgpu","wasm"]){
         try{
-          const s0=await ort.InferenceSession.create(probeBuf,
+          const s0=await ort.InferenceSession.create(new Uint8Array(probeBuf),
             {executionProviders:[cand], graphOptimizationLevel:"all"});
           const t0=performance.now();
           await s0.run({[s0.inputNames[0]]: new ort.Tensor("float32",probe,[1,3,M.size,M.size])});
@@ -5983,14 +5991,17 @@ async function aiLoad(onProg){
     }
     if(!ep) ep="wasm";
     AI.ep=ep;
-    const buf=await aiFetchModel(M,base,onProg);
-    onProg&&onProg("AIの準備をしています…");
+    const buf0=await aiFetchModel(M,base,onProg);
+    /* ★裏で走らせる（proxy）と、渡したデータは使い切られて空になる。
+       同じものを二度使えないので、毎回コピーを渡す。 */
+    const buf=new Uint8Array(buf0);
+    onProg&&onProg("準備しています…");
     try{
       AI.sess=await ort.InferenceSession.create(buf,
         {executionProviders:[ep,"wasm"], graphOptimizationLevel:"all"});
     }catch(e){
       AI.ep="wasm";
-      AI.sess=await ort.InferenceSession.create(buf,
+      AI.sess=await ort.InferenceSession.create(new Uint8Array(buf0),
         {executionProviders:["wasm"], graphOptimizationLevel:"all"});
     }
     AI.loaded=AI.mode;
@@ -6074,7 +6085,11 @@ async function edAiCut(){
   AI.busy=true;
   const btns=[$("edAiBtn"),$("edAiFast")];
   btns.forEach(b=>{ if(b){ b.disabled=true; b.style.opacity=.6; } });
-  edSetStat("AI（"+aiMode().label+"）で判定しています… "+aiMode().note);
+  edSetStat("");
+  const first = !(AI.sess && AI.loaded===AI.mode);
+  pgStart("edPg","切り抜いています（"+aiMode().label+"）…",
+          pgSec(AI.mode)+(first?18000:0), 0, 100);
+  await pgTick();
   try{
     edPush();
     const t0=Date.now();
@@ -6125,12 +6140,15 @@ async function edAiCut(){
         trimmed="・余白を詰めて "+t.width+"×"+t.height; }
     }
     edClearOv();
-    edSetStat("AI（"+aiMode().label+"）で切り抜きました（残したのは画面の "+Math.round(kept/(W*H)*100)+"%・"
+    pgDone("edPg",true);
+    pgSaveSec(AI.mode, Date.now()-t0);
+    edSetStat((aiMode().label==="きれい"?"きれいに":"")+"切り抜きました（残したのは画面の "+Math.round(kept/(W*H)*100)+"%・"
       +((Date.now()-t0)/1000).toFixed(1)+"秒・"+(AI.ep==="webgpu"?"GPU":"CPU")+trimmed+"）。"
       +"細かいはみ出しは「🧽 消しゴム」、消えすぎは「↩ 元に戻す」で直せます。");
   }catch(e){
     ED.hist.pop();
-    edSetStat('<b style="color:#b91c1c">AIの読み込みに失敗しました。</b>'
+    pgDone("edPg",false);
+    edSetStat('<b style="color:#b91c1c">切り抜き機能の読み込みに失敗しました。</b>'
       +'label.html と同じ場所に <b>ort.webgpu.bundle.min.mjs / ortwasm.bin.001〜003 / silueta.onnx.001〜006</b> '
       +'の3つを置いてください。<br><span style="color:#64748b">'+(e&&e.message?String(e.message).slice(0,120):"")+'</span>');
   }finally{
@@ -6154,6 +6172,58 @@ function aiProbe(){
       }
     }).catch(function(){});
   }catch(e){}
+}
+/* ===== 進み具合の表示（v15.3） =====
+   切り抜きは数秒かかるので、動いていることと残り時間が分かるようにする。
+   推論は裏（別スレッド）で走らせるので、待っている間も画面が固まらない。
+   残り時間は、そのPCで前回かかった時間をもとに見積もる（PCごとに覚える）。 */
+function pgHtml(id){
+  return '<div id="'+id+'" style="display:none;margin-top:8px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;margin-bottom:4px">'
+      +'<span id="'+id+'_t" style="font-weight:800">準備しています…</span>'
+      +'<span id="'+id+'_r" style="color:#64748b"></span></div>'
+    +'<div style="height:10px;background:#e6ebef;border-radius:6px;overflow:hidden">'
+      +'<div id="'+id+'_b" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#f97316);'
+      +'transition:width .25s linear"></div></div></div>';
+}
+var PG={timer:null,t0:0,est:8000,base:0,span:100,id:null,last:0};
+function pgSec(mode){
+  let v=null; try{ v=store.get("aiSec_"+mode,null); }catch(e){}
+  return (typeof v==="number"&&v>500)?v:(mode==="fast"?2500:8000);
+}
+function pgSaveSec(mode,ms){ try{ store.set("aiSec_"+mode,ms); }catch(e){} }
+/* 画面を1回描き直させる（裏で走らせない場合、要所で進み具合を反映するため） */
+function pgTick(){ return new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); }
+function pgStart(id,label,estMs,base,span){
+  PG.id=id; PG.t0=Date.now(); PG.est=Math.max(800,estMs||8000);
+  PG.base=base||0; PG.span=(span===undefined?100:span); PG.last=PG.base;
+  const box=$(id); if(!box) return;
+  box.style.display="block";
+  $(id+"_t").textContent=label;
+  clearInterval(PG.timer);
+  PG.timer=setInterval(function(){
+    const el=Date.now()-PG.t0;
+    /* ★見積もりを超えたら、見積もり自体を伸ばす。
+       止まったように見えるより、残り時間が伸びる方が実態に合う。 */
+    if(el>PG.est*0.9) PG.est=el*1.35;
+    let r=el/PG.est; if(r>0.92) r=0.92;
+    let pct=PG.base+r*PG.span;
+    /* ★バーは絶対に戻さない。戻ると壊れているように見える。 */
+    if(pct<PG.last) pct=PG.last;
+    PG.last=pct;
+    const bar=$(id+"_b"); if(bar) bar.style.width=pct.toFixed(1)+"%";
+    const rest=Math.max(1,Math.round((PG.est-el)/1000));
+    const rt=$(id+"_r");
+    if(rt) rt.textContent="あと約 "+rest+" 秒";
+  },200);
+}
+function pgLabel(id,text){ const e=$(id+"_t"); if(e) e.textContent=text; }
+function pgSetBase(id,base,span){ PG.base=base; PG.span=span; PG.t0=Date.now(); }
+function pgDone(id,ok){
+  clearInterval(PG.timer); PG.timer=null;
+  const bar=$(id+"_b"); if(bar) bar.style.width="100%";
+  const rt=$(id+"_r"); if(rt) rt.textContent=ok?"完了":"";
+  setTimeout(function(){ const b=$(id); if(b) b.style.display="none"; },900);
 }
 /* ===== 実務向けの仕上げ（v15.1） =====
    ・写真が複数あるとき、1枚ずつ✏を押すのは手間なので、まとめて処理できるようにする。
@@ -6245,18 +6315,33 @@ async function ppAiAll(){
   const btn=$("ppAiAll"); if(btn){ btn.disabled=true; btn.style.opacity=.6; }
   const st=$("ppStat");
   let ok=0,ng=0;
+  const per=pgSec(AI.mode);
+  const first=!(AI.sess && AI.loaded===AI.mode);
+  const span=100/list.length;
+  pgStart("ppPg","1枚目 / "+list.length+"枚 を切り抜いています…", per*list.length+(first?18000:0), 0, 100);
+  const t0all=Date.now();
   for(let i=0;i<list.length;i++){
-    const prog=t=>{ if(st) st.innerHTML="<b>まとめてAI切り抜き "+(i+1)+"/"+list.length+"</b><br>"+t; };
-    prog("準備しています…");
+    pgLabel("ppPg",(i===0&&first)?("準備しています（初回だけ時間がかかります）…")
+                                 :((i+1)+"枚目 / "+list.length+"枚 を切り抜いています…"));
+    const prog=t=>{ if(st) st.innerHTML="<b>まとめて切り抜き "+(i+1)+"/"+list.length+"</b><br>"+t; };
+    await pgTick();
+    const t1=Date.now();
     try{
       const r=await aiCutRecord(list[i],prog);
       if(r.ok) ok++; else ng++;
     }catch(e){ ng++; }
+    if(i===0) pgSaveSec(AI.mode, Date.now()-t1);
     ppRender();
+    const done=i+1;
+    const avg=(Date.now()-t0all)/done;
+    PG.base=done*span; PG.span=span; PG.t0=Date.now(); PG.est=Math.max(800,avg); PG.last=done*span;
+    const bar=$("ppPg_b"); if(bar) bar.style.width=(done*span).toFixed(1)+"%";
+    const rt=$("ppPg_r"); if(rt) rt.textContent="あと約 "+Math.round(avg*(list.length-done)/1000)+" 秒";
   }
+  pgDone("ppPg",true);
   if(btn){ btn.disabled=false; btn.style.opacity=1; }
   ppRender();
-  if(st) st.innerHTML="<b>まとめてAI切り抜きが終わりました。</b>成功 "+ok+"枚"
+  if(st) st.innerHTML="<b>まとめて切り抜きが終わりました。</b>成功 "+ok+"枚"
     +(ng?("／できなかった "+ng+"枚（✏から手直ししてください）"):"")
     +"<br>やり直したい写真は ✏ を押して「↩ 元に戻す」で戻せます。";
 }
