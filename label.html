@@ -439,7 +439,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v15.7</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v15.8</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -756,6 +756,12 @@
             <button type="button" data-v="photo" class="on">写真用紙<span>フチなし・余白0</span></button>
             <button type="button" data-v="plain">普通紙<span>端が切れない</span></button>
           </div></div>
+        <div><div class="hint" style="margin:0 0 6px">写真の大きさ</div>
+          <div class="ppseg" id="ppScaleSeg">
+            <button type="button" data-v="1" class="on" style="min-width:96px">そのまま<span>用紙いっぱい</span></button>
+            <button type="button" data-v="2" style="min-width:84px">1/2<span>半分の大きさ</span></button>
+            <button type="button" data-v="4" style="min-width:84px">1/4<span>4分の1</span></button>
+          </div></div>
         <div><div class="hint" style="margin:0 0 6px">紙の向き</div>
           <div class="ppseg" id="ppSheetSeg">
             <button type="button" data-v="auto" class="on" style="min-width:96px">自動<span>写真に合わせる</span></button>
@@ -763,7 +769,7 @@
             <button type="button" data-v="land" style="min-width:80px">よこ<span>127 x 89</span></button>
           </div></div>
       </div>
-      <input type="hidden" id="ppPaper" value="l"><input type="hidden" id="ppMedia" value="photo"><input type="hidden" id="ppSheet" value="auto">
+      <input type="hidden" id="ppPaper" value="l"><input type="hidden" id="ppMedia" value="photo"><input type="hidden" id="ppSheet" value="auto"><input type="hidden" id="ppScale" value="1">
       <details class="ppmore">
         <summary>詳しい設定（向き・面付け・余白）— ふだんは触らなくて大丈夫です</summary>
         <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px">
@@ -5065,6 +5071,7 @@ function ppCfg(){
   return { paper:($("ppPaper")&&$("ppPaper").value)||"l",
            media:media,
            sheet:($("ppSheet")&&$("ppSheet").value)||"auto",
+           scale:parseInt(($("ppScale")&&$("ppScale").value)||"1",10),
            orient:($("ppOrient")&&$("ppOrient").value)||"auto",
            up:parseInt(($("ppUp")&&$("ppUp").value)||"1",10),
            margin:margin, marginRaw:raw,
@@ -5075,12 +5082,13 @@ function ppSegSet(id,v){
   [...box.children].forEach(b=>b.classList.toggle("on", b.dataset.v===v));
 }
 function ppCfgSave(){ try{ const c=ppCfg();
-  store.set("ppCfg",{paper:c.paper,media:c.media,sheet:c.sheet,orient:c.orient,up:c.up,margin:c.marginRaw,
+  store.set("ppCfg",{paper:c.paper,media:c.media,sheet:c.sheet,scale:c.scale,orient:c.orient,up:c.up,margin:c.marginRaw,
     auto:!!($("ppAuto")&&$("ppAuto").checked)}); }catch(e){} }
 function ppCfgLoad(){ var c=null; try{ c=store.get("ppCfg",null); }catch(e){} if(!c) return;
   if(c.paper&&$("ppPaper")){ $("ppPaper").value=c.paper; ppSegSet("ppPaperSeg",c.paper); }
   if(c.media&&$("ppMedia")){ $("ppMedia").value=c.media; ppSegSet("ppMediaSeg",c.media); }
   if(c.sheet&&$("ppSheet")){ $("ppSheet").value=c.sheet; ppSegSet("ppSheetSeg",c.sheet); }
+  if(c.scale&&$("ppScale")){ $("ppScale").value=String(c.scale); ppSegSet("ppScaleSeg",String(c.scale)); }
   if(c.orient&&$("ppOrient")) $("ppOrient").value=c.orient;
   if(c.up&&$("ppUp")) $("ppUp").value=String(c.up);
   if(typeof c.margin!=="undefined"&&$("ppMargin")) $("ppMargin").value=String(c.margin);
@@ -5140,8 +5148,14 @@ function ppSheetCanvas(items){
   const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
   const x=cv.getContext("2d");
   x.fillStyle="#fff"; x.fillRect(0,0,W,H);
+  /* ★1/2・1/4のときは、用紙の左上にその大きさの枠を作って中に収める。
+     プリンターに小さい紙は入らないので、L判に印刷して切り取ってもらう。 */
+  const sc=Math.max(1,c.scale||1);
+  let BW=W, BH=H;
+  if(sc===2){ if(H>=W) BH=Math.round(H/2); else BW=Math.round(W/2); }
+  else if(sc===4){ BW=Math.round(W/2); BH=Math.round(H/2); }
   const m=c.margin*k, gap=Math.max(1,c.margin)*k;
-  const cw=(W-2*m-gap*(g.c-1))/g.c, ch=(H-2*m-gap*(g.r-1))/g.r;
+  const cw=(BW-2*m-gap*(g.c-1))/g.c, ch=(BH-2*m-gap*(g.r-1))/g.r;
   const capPx=c.cap?4.2*k:0, capBox=c.cap?(capPx*1.35+1.4*k):0;
   for(let i=0;i<up;i++){
     const it=items[i]; if(!it||!it.el) continue;
@@ -5164,6 +5178,21 @@ function ppSheetCanvas(items){
       while(t.length>1 && x.measureText(t).width>cw) t=t.slice(0,-1);
       x.fillText(t, x0+cw/2, y0+ch-capBox+1.4*k);
     }
+  }
+  /* 切り取り線（1/2・1/4のときだけ） */
+  if(sc>1){
+    x.save();
+    x.strokeStyle="#b9c3cc"; x.lineWidth=Math.max(1,Math.round(k*0.25));
+    x.setLineDash([k*2,k*2]);
+    x.beginPath();
+    if(BW<W){ x.moveTo(BW+0.5,0); x.lineTo(BW+0.5,BH); }
+    if(BH<H){ x.moveTo(0,BH+0.5); x.lineTo(BW,BH+0.5); }
+    x.stroke();
+    x.restore();
+    x.fillStyle="#98a3ae"; x.textAlign="left"; x.textBaseline="top";
+    x.font=jpFont(2.4*k,"700");
+    x.fillText("ここで切り取り", Math.round(1.5*k), BH+Math.round(1.2*k));
+    x.textAlign="center";
   }
   return cv;
 }
@@ -5254,6 +5283,7 @@ function ppRender(){
     const rotN=PP_IMGS.filter(v=>v.ok&&ppWantRot(v)).length;
     st.innerHTML = b2.count
       ? '写真 <b>'+b2.count+'枚</b> ／ '+b2.S.name+' <b>'+(b2.S.land?"よこ":"たて")+'</b>（'+b2.S.w+'×'+b2.S.h+'mm）'
+        +(c2.scale>1?('／写真は <b>1/'+c2.scale+'</b> の大きさ（切り取り線つき）'):'')
         +' ／ '+(photo?"写真用紙":"普通紙")+' ／ 1枚に'+b2.up+'面 → <b>用紙'+b2.pages+'枚</b>'
         +'<br>上のプレビューがそのまま印刷されます。用紙がどれになっても、はみ出さず中央に入ります。'
         +(rotN?'<br>よこ長の写真 '+rotN+'枚を90°倒して大きく印刷します（紙はたてのまま）。':'')
@@ -5382,7 +5412,7 @@ function ppInit(){
   $("ppClear").onclick=function(){ if(!PP_IMGS.length||confirm("追加した写真をすべて消しますか？")){ PP_IMGS=[]; ppRender(); } };
   ["ppOrient","ppUp","ppMargin"].forEach(id=>{ const e=$(id); if(e) e.addEventListener("change",ppRender); });
   /* サイズ／材質は2択トグル（クリック1回で決まる＝速さ優先） */
-  [["ppPaperSeg","ppPaper"],["ppMediaSeg","ppMedia"],["ppSheetSeg","ppSheet"]].forEach(([seg,hid])=>{
+  [["ppPaperSeg","ppPaper"],["ppMediaSeg","ppMedia"],["ppSheetSeg","ppSheet"],["ppScaleSeg","ppScale"]].forEach(([seg,hid])=>{
     const box=$(seg); if(!box) return;
     box.addEventListener("click",e=>{
       const b=e.target.closest("button"); if(!b||!box.contains(b)) return;
