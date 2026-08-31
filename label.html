@@ -439,7 +439,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v15.11</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v15.12</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -1070,11 +1070,7 @@
       <div style="grid-column:1/-1">
         <div class="seclbl">（上級・任意）JANで自動入力するプロキシ</div>
         <input id="setProxy" placeholder="使う場合のみ：GASプロキシのURL（.../exec）" autocomplete="off">
-      </div>
-      <div>
-        <label>Google Maps APIキー（出張買取シートの地図・ストリートビュー用）</label>
-        <input id="setGmapKey" placeholder="任意：入れると地図と外観写真がシートに印刷されます" autocomplete="off">
-        <div class="hint" style="margin-top:4px">未入力でもシートは印刷できます（地図とストリートビューはQRコードになり、スマホで読むと開きます）。</div>
+
         <div class="hint" style="margin-top:4px">設定が複雑なため通常は不要です。上の「商品検索サイト」で十分です。使う場合は同梱「04_proxy_gas.js」の手順参照。</div>
       </div>
       <div>
@@ -7371,36 +7367,18 @@ function qShowList(){ $("qListView").style.display=""; $("qEditView").style.disp
   $("qTitle").textContent="📋 買取見積り（保存期間3ヶ月）"; qRenderList(); const f=$("qSearch"); if(f) f.focus(); }
 /* 出張買取の予定を一覧の先頭に大きく出す（前日・当日の忘れ防止） */
 /* ===== 出張買取シート（A4・1枚に集約して持ち出す） ===== */
-function gmapKey(){ return ($("setGmapKey")&&$("setGmapKey").value.trim())||""; }
 function qVisitSheet(q){
   const v=q.visit||{}, mk=qDeptMark(v.dept);
   const esc=x=>String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;");
   const store=($("setStore")&&$("setStore").value)||"";
   const addr=String(q.addr||"").trim();
-  const key=gmapKey();
   const mapUrl=addr?("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(addr)):"";
-  const svUrl =addr?("https://www.google.com/maps/@?api=1&map_action=pano&viewpoint="+encodeURIComponent(addr)):"";
   const qrOf=u=>"https://api.qrserver.com/v1/create-qr-code/?size=170x170&margin=0&data="+encodeURIComponent(u);
   let visual="";
   if(addr){
-    if(key){
-      const mapImg="https://maps.googleapis.com/maps/api/staticmap?center="+encodeURIComponent(addr)
-        +"&zoom=17&size=420x260&scale=2&maptype=roadmap&markers=color:red%7C"+encodeURIComponent(addr)
-        +"&language=ja&key="+encodeURIComponent(key);
-      const svImg="https://maps.googleapis.com/maps/api/streetview?size=420x260&location="+encodeURIComponent(addr)
-        +"&fov=80&pitch=5&source=outdoor&key="+encodeURIComponent(key);
-      visual='<div class="vis">'
-        +'<div class="vbox"><h2>地図</h2><img src="'+mapImg+'" class="vimg"></div>'
-        +'<div class="vbox"><h2>建物の外観（ストリートビュー）</h2><img src="'+svImg+'" class="vimg"></div>'
-        +'<div class="vqr"><img src="'+qrOf(mapUrl)+'"><div class="s">ナビを開く</div></div>'
-        +'</div>';
-    } else {
-      visual='<div class="vis">'
-        +'<div class="vqr b"><img src="'+qrOf(mapUrl)+'"><div class="s">地図・ナビを開く</div></div>'
-        +'<div class="vqr b"><img src="'+qrOf(svUrl)+'"><div class="s">建物の外観を見る<br>（ストリートビュー）</div></div>'
-        +'<div class="vnote">※ ⚙設定に Google Maps APIキー を入れると、ここに地図と外観写真が印刷されます。</div>'
-        +'</div>';
-    }
+    visual='<div class="vis">'
+      +'<div class="vqr"><img src="'+qrOf(mapUrl)+'"><div class="s">読み取ると地図・ナビが開きます</div></div>'
+      +'</div>';
   }
   let rows="", sellT=0, buyT=0;
   (q.items||[]).forEach((it,i)=>{
@@ -9437,8 +9415,8 @@ function importSettings(file){
   }catch(e){ ioMsg("読み込みに失敗しました。正しい設定ファイル（.json）を選んでください。"); } };
   r.readAsText(file);
 }
-function persist(){store.set("genre",$("genre").value);store.set("cfg",{w:$("setW").value,dpi:$("setDpi").value,fs:$("setFs").value,qr:$("setQr").value,store:$("setStore").value,ip:$("printerIp").value,orient:orient(),code:codeType(),scale:($("setScale")&&$("setScale").value),shift:($("setShiftX")&&$("setShiftX").value),shiftY:($("setShiftY")&&$("setShiftY").value),proxy:($("setProxy")&&$("setProxy").value),gmapKey:($("setGmapKey")&&$("setGmapKey").value),sites:($("setSites")&&$("setSites").value),dispFont:($("dispFontSel")&&$("dispFontSel").value),dispBold:($("dispBold")?$("dispBold").checked:true),dispSize:($("dispSize")&&$("dispSize").value),layout:($("setLayout")&&$("setLayout").value),headSeek:($("setHeadSeek")&&$("setHeadSeek").checked?1:0),simpleLen:($("setSimpleLen")&&$("setSimpleLen").value)});}
-function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setGmapKey"))$("setGmapKey").value=c.gmapKey||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);if($("setLayout"))$("setLayout").value=(c.layout==="simple")?"simple":((c.layout==="cond")?"cond":"std");if($("setHeadSeek"))$("setHeadSeek").checked=!!c.headSeek;if($("setSimpleLen"))$("setSimpleLen").value=c.simpleLen||"21";}
+function persist(){store.set("genre",$("genre").value);store.set("cfg",{w:$("setW").value,dpi:$("setDpi").value,fs:$("setFs").value,qr:$("setQr").value,store:$("setStore").value,ip:$("printerIp").value,orient:orient(),code:codeType(),scale:($("setScale")&&$("setScale").value),shift:($("setShiftX")&&$("setShiftX").value),shiftY:($("setShiftY")&&$("setShiftY").value),proxy:($("setProxy")&&$("setProxy").value),sites:($("setSites")&&$("setSites").value),dispFont:($("dispFontSel")&&$("dispFontSel").value),dispBold:($("dispBold")?$("dispBold").checked:true),dispSize:($("dispSize")&&$("dispSize").value),layout:($("setLayout")&&$("setLayout").value),headSeek:($("setHeadSeek")&&$("setHeadSeek").checked?1:0),simpleLen:($("setSimpleLen")&&$("setSimpleLen").value)});}
+function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);if($("setLayout"))$("setLayout").value=(c.layout==="simple")?"simple":((c.layout==="cond")?"cond":"std");if($("setHeadSeek"))$("setHeadSeek").checked=!!c.headSeek;if($("setSimpleLen"))$("setSimpleLen").value=c.simpleLen||"21";}
 function histGet(){return store.get("histLines",[]);}
 function curGenreKey(){ return brandGenrePrefix()+String(($("genre")&&$("genre").value)||""); }
 function histAdd(line){
@@ -9560,7 +9538,6 @@ function wire(){
   if($("setSites")){ if(!$("setSites").value.trim()) $("setSites").value=defaultSitesText(); $("setSites").addEventListener("input",()=>{persist();renderSiteButtons();}); }
   try{ if(store.get("sitesVer",0)<4 && $("setSites")){ $("setSites").value=defaultSitesText(); store.set("sitesVer",4); persist(); } }catch(e){}
   if($("setProxy")) $("setProxy").addEventListener("input",()=>{persist();renderSiteButtons();});
-  if($("setGmapKey")) $("setGmapKey").addEventListener("input",()=>{persist();});
   if($("dispFontSel")) $("dispFontSel").addEventListener("change",()=>{draw();});
   if($("dispBold")) $("dispBold").addEventListener("change",()=>{draw();});
   if($("dispSize")) $("dispSize").addEventListener("change",()=>{ draw(); });
