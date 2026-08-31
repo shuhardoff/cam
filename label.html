@@ -439,7 +439,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v15.10</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v15.11</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -1070,6 +1070,11 @@
       <div style="grid-column:1/-1">
         <div class="seclbl">（上級・任意）JANで自動入力するプロキシ</div>
         <input id="setProxy" placeholder="使う場合のみ：GASプロキシのURL（.../exec）" autocomplete="off">
+      </div>
+      <div>
+        <label>Google Maps APIキー（出張買取シートの地図・ストリートビュー用）</label>
+        <input id="setGmapKey" placeholder="任意：入れると地図と外観写真がシートに印刷されます" autocomplete="off">
+        <div class="hint" style="margin-top:4px">未入力でもシートは印刷できます（地図とストリートビューはQRコードになり、スマホで読むと開きます）。</div>
         <div class="hint" style="margin-top:4px">設定が複雑なため通常は不要です。上の「商品検索サイト」で十分です。使う場合は同梱「04_proxy_gas.js」の手順参照。</div>
       </div>
       <div>
@@ -7366,12 +7371,37 @@ function qShowList(){ $("qListView").style.display=""; $("qEditView").style.disp
   $("qTitle").textContent="📋 買取見積り（保存期間3ヶ月）"; qRenderList(); const f=$("qSearch"); if(f) f.focus(); }
 /* 出張買取の予定を一覧の先頭に大きく出す（前日・当日の忘れ防止） */
 /* ===== 出張買取シート（A4・1枚に集約して持ち出す） ===== */
+function gmapKey(){ return ($("setGmapKey")&&$("setGmapKey").value.trim())||""; }
 function qVisitSheet(q){
   const v=q.visit||{}, mk=qDeptMark(v.dept);
   const esc=x=>String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;");
   const store=($("setStore")&&$("setStore").value)||"";
-  const mapUrl=q.addr?("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q.addr)):"";
-  const qr=mapUrl?("https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=0&data="+encodeURIComponent(mapUrl)):"";
+  const addr=String(q.addr||"").trim();
+  const key=gmapKey();
+  const mapUrl=addr?("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(addr)):"";
+  const svUrl =addr?("https://www.google.com/maps/@?api=1&map_action=pano&viewpoint="+encodeURIComponent(addr)):"";
+  const qrOf=u=>"https://api.qrserver.com/v1/create-qr-code/?size=170x170&margin=0&data="+encodeURIComponent(u);
+  let visual="";
+  if(addr){
+    if(key){
+      const mapImg="https://maps.googleapis.com/maps/api/staticmap?center="+encodeURIComponent(addr)
+        +"&zoom=17&size=420x260&scale=2&maptype=roadmap&markers=color:red%7C"+encodeURIComponent(addr)
+        +"&language=ja&key="+encodeURIComponent(key);
+      const svImg="https://maps.googleapis.com/maps/api/streetview?size=420x260&location="+encodeURIComponent(addr)
+        +"&fov=80&pitch=5&source=outdoor&key="+encodeURIComponent(key);
+      visual='<div class="vis">'
+        +'<div class="vbox"><h2>地図</h2><img src="'+mapImg+'" class="vimg"></div>'
+        +'<div class="vbox"><h2>建物の外観（ストリートビュー）</h2><img src="'+svImg+'" class="vimg"></div>'
+        +'<div class="vqr"><img src="'+qrOf(mapUrl)+'"><div class="s">ナビを開く</div></div>'
+        +'</div>';
+    } else {
+      visual='<div class="vis">'
+        +'<div class="vqr b"><img src="'+qrOf(mapUrl)+'"><div class="s">地図・ナビを開く</div></div>'
+        +'<div class="vqr b"><img src="'+qrOf(svUrl)+'"><div class="s">建物の外観を見る<br>（ストリートビュー）</div></div>'
+        +'<div class="vnote">※ ⚙設定に Google Maps APIキー を入れると、ここに地図と外観写真が印刷されます。</div>'
+        +'</div>';
+    }
+  }
   let rows="", sellT=0, buyT=0;
   (q.items||[]).forEach((it,i)=>{
     sellT+=num(it.sell)||0; buyT+=num(it.buyMax)||0;
@@ -7382,59 +7412,57 @@ function qVisitSheet(q){
       +'<td class="c">'+esc(it.genre||"")+'</td>'
       +'<td class="r">'+(it.sell?("¥"+comma(it.sell)):"—")+'</td>'
       +'<td class="r b">'+(it.buyMax?("¥"+comma(it.buyMax)):"—")+'</td>'
-      +'<td class="r"></td><td class="c"></td></tr>';
+      +'<td></td></tr>';
   });
-  for(let i=(q.items||[]).length;i<10;i++){
-    rows+='<tr><td class="c">'+(i+1)+'</td><td></td><td></td><td></td><td></td><td></td><td class="c"></td></tr>';
+  for(let i=(q.items||[]).length;i<8;i++){
+    rows+='<tr><td class="c">'+(i+1)+'</td><td></td><td></td><td></td><td></td><td></td></tr>';
   }
   const h='<html><head><meta charset="utf-8"><title>出張買取シート</title><style>'
    +'@page{size:A4 portrait;margin:8mm}'
    +'body{font-family:"Yu Gothic","Noto Sans JP",sans-serif;color:#111;margin:6mm;font-size:11px}'
    +'h1{font-size:19px;margin:0 0 6px;letter-spacing:.12em;border-bottom:3px solid #111;padding-bottom:6px}'
    +'.dept{display:inline-block;background:'+mk.bg+';color:#fff;border-radius:6px;padding:3px 12px;font-size:13px;font-weight:900;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
-   +'.top{display:flex;gap:10px;align-items:flex-start;margin-top:8px}'
-   +'.box{border:1.5px solid #333;border-radius:8px;padding:8px 10px}'
-   +'.box h2{font-size:11px;margin:0 0 4px;color:#555;letter-spacing:.08em}'
+   +'.box{border:1.5px solid #333;border-radius:8px;padding:8px 10px;margin-top:8px}'
+   +'.box h2,.vbox h2{font-size:10px;margin:0 0 4px;color:#555;letter-spacing:.08em}'
    +'.big{font-size:16px;font-weight:900}'
    +'.mid{font-size:13.5px;font-weight:800}'
-   +'.s{font-size:10px;color:#555;margin-top:2px}'
+   +'.s{font-size:10px;color:#555;margin-top:2px;line-height:1.5}'
+   +'.vis{display:flex;gap:8px;align-items:flex-start;margin-top:8px}'
+   +'.vbox{flex:1 1 0;border:1.5px solid #333;border-radius:8px;padding:6px 7px;text-align:center}'
+   +'.vimg{width:100%;height:38mm;object-fit:cover;border-radius:5px;background:#eee}'
+   +'.vqr{flex:0 0 auto;border:1.5px solid #333;border-radius:8px;padding:6px 8px;text-align:center}'
+   +'.vqr.b{flex:1 1 0}'
+   +'.vqr img{width:24mm;height:24mm}'
+   +'.vnote{flex:1 1 0;font-size:10px;color:#666;line-height:1.7;align-self:center}'
    +'table{width:100%;border-collapse:collapse;margin-top:8px;font-size:10.5px}'
    +'th{background:#eee;border:1px solid #333;padding:4px 3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
    +'td{border:1px solid #777;padding:4px 5px;vertical-align:top;height:22px}'
    +'td.c{text-align:center}td.r{text-align:right}td.b{font-weight:900}'
-   +'.chk{margin-top:8px;border:1.5px solid #333;border-radius:8px;padding:7px 10px;font-size:10.5px;line-height:1.9}'
-   +'.memo{margin-top:8px;border:1.5px solid #333;border-radius:8px;height:26mm;padding:6px 10px}'
+   +'.memo{margin-top:8px;border:1.5px solid #333;border-radius:8px;height:30mm;padding:6px 10px}'
    +'.foot{margin-top:6px;display:flex;justify-content:space-between;font-size:10px;color:#555}'
    +'</style></head><body>'
    +'<h1>出張買取シート　<span class="dept">'+esc(mk.label)+'</span></h1>'
-   +'<div class="top">'
-   +'<div class="box" style="flex:1 1 auto">'
+   +'<div class="box">'
    +'<h2>訪問予定</h2>'
    +'<div class="big">'+esc(qFmtYmd(v.date)||"日付未定")+'　'+esc(v.time||"")+'</div>'
    +'<div class="mid" style="margin-top:4px">'+esc(q.name||"（名前なし）")+' 様　'+esc(q.tel||"")+'</div>'
-   +'<div style="margin-top:3px">'+esc(q.addr||"（住所未入力）")+'</div>'
-   +'<div class="s">担当 '+esc(v.staff||"—")+'　／　量の目安 '+esc(v.qty||"—")+'</div>'
-   +'<div class="s">駐車・搬出 '+esc(v.park||"—")+'</div>'
+   +'<div style="margin-top:3px">'+esc(addr||"（住所未入力）")+'</div>'
+   +'<div class="s">担当 '+esc(v.staff||"—")+'　／　量の目安 '+esc(v.qty||"—")+'　／　駐車・搬出 '+esc(v.park||"—")+'</div>'
    +(v.note?('<div style="margin-top:4px"><b>連絡事項</b> '+esc(v.note)+'</div>'):"")
    +(q.note?('<div class="s">📝 '+esc(q.note)+'</div>'):"")
    +'</div>'
-   +(qr?('<div class="box" style="flex:0 0 auto;text-align:center"><h2>地図</h2><img src="'+qr+'" style="width:26mm;height:26mm"><div class="s">読み取ると<br>ナビが開きます</div></div>'):"")
-   +'</div>'
+   +visual
    +'<table><thead><tr>'
    +'<th style="width:7mm">No</th><th>商品</th><th style="width:22mm">ジャンル</th>'
    +'<th style="width:20mm">販売相場</th><th style="width:20mm">提示上限</th>'
-   +'<th style="width:22mm">実買取額</th><th style="width:10mm">✓</th></tr></thead><tbody>'
+   +'<th style="width:38mm">現地メモ</th></tr></thead><tbody>'
    +rows
    +'</tbody></table>'
    +'<div style="display:flex;justify-content:flex-end;gap:18px;margin-top:5px;font-size:12px;font-weight:900">'
-   +'<span>販売相場計 ¥'+comma(sellT)+'</span><span>提示上限計 ¥'+comma(buyT)+'</span>'
-   +'<span>実買取合計 ¥＿＿＿＿＿＿</span></div>'
-   +'<div class="chk"><b>持ち物チェック</b>　'
-   +'□ 現金　□ 買取票・複写伝票　□ 身分証コピー用具　□ 台車　□ 緩衝材・毛布　□ 段ボール　'
-   +'□ 養生テープ　□ 軍手　□ 工具（六角・ドライバー）　□ タブレット／スマホ　□ モバイルバッテリー　'
-   +'□ 名刺　□ 電卓　□ ラベル（保管場所用）</div>'
+   +'<span>販売相場計 ¥'+comma(sellT)+'</span><span>提示上限計 ¥'+comma(buyT)+'</span></div>'
    +'<div class="memo"><b>現地メモ</b>（追加品・状態・次回連絡など）</div>'
-   +'<div class="foot"><span>'+esc(store)+'</span><span>出力 '+qFmtT(Date.now())+'　見積作成 '+qFmtT(q.t)+'</span></div>'
+   +'<div class="foot"><span>'+esc(store)+'　※本シートは出張時の補助資料です。買取金額は本伝票に記載してください。</span>'
+   +'<span>出力 '+qFmtT(Date.now())+'</span></div>'
    +'</body></html>';
   const w=window.open("","hssvisit");
   if(!w){ alert("印刷ウィンドウを開けませんでした。ポップアップを許可してください。"); return; }
@@ -7442,10 +7470,9 @@ function qVisitSheet(q){
   const go=()=>{ try{ w.focus(); w.print(); }catch(e){} };
   const t0=Date.now();
   const wait=()=>{ const im=[].slice.call(w.document.images||[]);
-    if(im.filter(x=>!x.complete).length && Date.now()-t0<3500){ setTimeout(wait,200); return; } go(); };
+    if(im.filter(x=>!x.complete).length && Date.now()-t0<5000){ setTimeout(wait,200); return; } go(); };
   setTimeout(wait,350);
 }
-
 function qRenderVisitBoard(list, box){
   try{
     const vs=(list||[]).filter(q=>q&&q.visit&&q.visit.on&&q.visit.date)
@@ -9410,8 +9437,8 @@ function importSettings(file){
   }catch(e){ ioMsg("読み込みに失敗しました。正しい設定ファイル（.json）を選んでください。"); } };
   r.readAsText(file);
 }
-function persist(){store.set("genre",$("genre").value);store.set("cfg",{w:$("setW").value,dpi:$("setDpi").value,fs:$("setFs").value,qr:$("setQr").value,store:$("setStore").value,ip:$("printerIp").value,orient:orient(),code:codeType(),scale:($("setScale")&&$("setScale").value),shift:($("setShiftX")&&$("setShiftX").value),shiftY:($("setShiftY")&&$("setShiftY").value),proxy:($("setProxy")&&$("setProxy").value),sites:($("setSites")&&$("setSites").value),dispFont:($("dispFontSel")&&$("dispFontSel").value),dispBold:($("dispBold")?$("dispBold").checked:true),dispSize:($("dispSize")&&$("dispSize").value),layout:($("setLayout")&&$("setLayout").value),headSeek:($("setHeadSeek")&&$("setHeadSeek").checked?1:0),simpleLen:($("setSimpleLen")&&$("setSimpleLen").value)});}
-function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);if($("setLayout"))$("setLayout").value=(c.layout==="simple")?"simple":((c.layout==="cond")?"cond":"std");if($("setHeadSeek"))$("setHeadSeek").checked=!!c.headSeek;if($("setSimpleLen"))$("setSimpleLen").value=c.simpleLen||"21";}
+function persist(){store.set("genre",$("genre").value);store.set("cfg",{w:$("setW").value,dpi:$("setDpi").value,fs:$("setFs").value,qr:$("setQr").value,store:$("setStore").value,ip:$("printerIp").value,orient:orient(),code:codeType(),scale:($("setScale")&&$("setScale").value),shift:($("setShiftX")&&$("setShiftX").value),shiftY:($("setShiftY")&&$("setShiftY").value),proxy:($("setProxy")&&$("setProxy").value),gmapKey:($("setGmapKey")&&$("setGmapKey").value),sites:($("setSites")&&$("setSites").value),dispFont:($("dispFontSel")&&$("dispFontSel").value),dispBold:($("dispBold")?$("dispBold").checked:true),dispSize:($("dispSize")&&$("dispSize").value),layout:($("setLayout")&&$("setLayout").value),headSeek:($("setHeadSeek")&&$("setHeadSeek").checked?1:0),simpleLen:($("setSimpleLen")&&$("setSimpleLen").value)});}
+function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setGmapKey"))$("setGmapKey").value=c.gmapKey||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);if($("setLayout"))$("setLayout").value=(c.layout==="simple")?"simple":((c.layout==="cond")?"cond":"std");if($("setHeadSeek"))$("setHeadSeek").checked=!!c.headSeek;if($("setSimpleLen"))$("setSimpleLen").value=c.simpleLen||"21";}
 function histGet(){return store.get("histLines",[]);}
 function curGenreKey(){ return brandGenrePrefix()+String(($("genre")&&$("genre").value)||""); }
 function histAdd(line){
@@ -9533,6 +9560,7 @@ function wire(){
   if($("setSites")){ if(!$("setSites").value.trim()) $("setSites").value=defaultSitesText(); $("setSites").addEventListener("input",()=>{persist();renderSiteButtons();}); }
   try{ if(store.get("sitesVer",0)<4 && $("setSites")){ $("setSites").value=defaultSitesText(); store.set("sitesVer",4); persist(); } }catch(e){}
   if($("setProxy")) $("setProxy").addEventListener("input",()=>{persist();renderSiteButtons();});
+  if($("setGmapKey")) $("setGmapKey").addEventListener("input",()=>{persist();});
   if($("dispFontSel")) $("dispFontSel").addEventListener("change",()=>{draw();});
   if($("dispBold")) $("dispBold").addEventListener("change",()=>{draw();});
   if($("dispSize")) $("dispSize").addEventListener("change",()=>{ draw(); });
