@@ -60,7 +60,7 @@
   .gear{margin-left:10px;border:1.5px solid var(--line);background:#fff;border-radius:11px;padding:8px 14px;font-weight:800;font-size:12.5px;color:var(--ink);cursor:pointer;transition:.15s}
   .resetbtn{margin-left:14px;border:1.5px solid #f1c4c4;background:#fff5f5;color:#c0392b;border-radius:12px;padding:10px 18px;font-weight:800;font-size:13.5px;cursor:pointer;transition:.15s}
   .resetbtn:hover{background:#fdecec;border-color:#e09a9a}
-  .softbtn{margin-left:14px;border:1.5px solid var(--line);background:#f4f7fc;color:var(--sub);border-radius:12px;padding:10px 18px;font-weight:800;font-size:13.5px;cursor:pointer;transition:.15s}
+  .softbtn{margin-left:14px;border:1.5px solid var(--line);background:#f4f7fc;color:var(--sub);border-radius:12px;padding:10px 18px;font-weight:800;font-size:13.5px;cursor:pointer;transition:.15s;white-space:nowrap;flex:0 0 auto}
   .softbtn:hover{background:#eef3fb;border-color:#c9d6ea;color:var(--ink)}
   .clrx{position:absolute;right:8px;width:22px;height:22px;border:0;border-radius:7px;background:#eef2f8;color:#67748a;font-size:15px;line-height:22px;text-align:center;cursor:pointer;padding:0;display:none;z-index:3}
   .clrx:hover{background:#dde6f3;color:var(--a2)}
@@ -125,7 +125,7 @@
   .bar-actions>*{flex:0 0 auto}
   .hsep{width:1px;height:26px;background:var(--line);flex:0 0 auto;margin:0 2px}
   .lswitch{display:inline-flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
-  .lswitch .lswtxt{font-size:12px;font-weight:800;color:var(--sub)}
+  .lswitch .lswtxt{font-size:12px;font-weight:800;color:var(--sub);white-space:nowrap}
   .lswitch input{display:none}
   .lswslider{width:40px;height:21px;border-radius:12px;background:#c9d3e8;position:relative;transition:background .18s ease;flex:0 0 auto}
   .lswslider::after{content:"";position:absolute;left:2.5px;top:2.5px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(10,30,80,.35);transition:transform .18s ease}
@@ -174,7 +174,11 @@
   .card+.card{margin-top:16px}
   .colA .card:nth-child(2){animation-delay:.08s}
   .rail .card{animation-delay:.06s}
-  .ttl{display:flex;align-items:center;gap:10px;padding:16px 18px 0}
+  .ttl{display:flex;align-items:center;gap:10px;padding:16px 18px 0;flex-wrap:wrap}
+  .ttl h2{white-space:nowrap}
+  .condtools{margin-left:auto;display:flex;align-items:center;gap:8px;flex:0 0 auto;flex-wrap:nowrap}
+  .condtools .softbtn{margin-left:0}
+  .softbtn.mini{padding:7px 12px;font-size:12.5px;border-radius:10px}
   .ttl .n{width:26px;height:26px;border-radius:9px;background:var(--grad);color:#fff;font-size:13px;font-weight:900;
     display:grid;place-items:center;box-shadow:0 6px 16px rgba(11,91,214,.30)}
   .ttl h2{font-family:var(--jp-display);font-size:15.5px;margin:0;font-weight:800;letter-spacing:.015em}
@@ -439,7 +443,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v15.12</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v15.18</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -545,7 +549,7 @@
         </div>
       </section>
       <section class="card" id="cardCond">
-        <div class="ttl"><span class="n">3</span><h2>コンディション <span style="font-weight:600;color:var(--sub);font-size:12px">（任意）</span></h2><button class="softbtn" id="resetCondBtn" style="margin-left:auto">リセット</button></div>
+        <div class="ttl"><span class="n">3</span><h2>コンディション <span style="font-weight:600;color:var(--sub);font-size:12px">（任意）</span></h2><div class="condtools"><label class="lswitch" id="autoTidyWrap" title="ON＝入力を終えたときと、向き・サイズを変えたときに、印刷して読みやすい形へ自動で整えます"><span class="lswtxt">自動整形</span><input type="checkbox" id="autoTidy" checked><span class="lswslider"></span></label><button class="softbtn mini" id="tidyCondBtn" title="全角英数を半角に、余分な空白を整理し、印刷1行に収まる長さで区切ります">✨ 整える</button><button class="softbtn mini" id="resetCondBtn">リセット</button></div></div>
         <div class="bd">
           <div class="f full">
             <div class="condhead"><label style="margin:0">本文（1行＝1コメント）</label><div id="condCap" class="hint" style="margin:0;text-align:right"></div></div>
@@ -3961,6 +3965,67 @@ function syncPrintSet(){
 function autoGrowNotes(){ var t=$("notes"); if(!t)return; if(!t.value){ t.style.height="98px"; return; } t.style.height="auto"; t.style.height=Math.max(98,t.scrollHeight+4)+"px"; }
 function autoGrowPname(){ var t=$("pname"); if(!t||t.tagName!=="TEXTAREA")return; if(!t.value){ t.style.height="49px"; return; } t.style.height="auto"; t.style.height=Math.max(49,t.scrollHeight+2)+"px"; }
 /* コンディションの印字可能行数の案内（縦は無制限／横はサイズ別） */
+/* コンディション本文を読みやすく整える（1行＝1コメント） */
+function tidyCondText(t){
+  var s=String(t||"");
+  s=s.replace(/[\uff01-\uff5e]/g,function(c){ return String.fromCharCode(c.charCodeAt(0)-0xFEE0); });
+  s=s.replace(/\u3000/g," ");
+  var out=[];
+  s.split(/\n/).forEach(function(ln){
+    ln=ln.replace(/\s+/g," ").trim();
+    if(!ln) return;
+    var parts=ln.split("\u3002");
+    for(var i=0;i<parts.length;i++){
+      var p=parts[i].replace(/\s+/g," ").trim();
+      if(!p) continue;
+      if(i<parts.length-1) p+="\u3002";
+      out.push(p);
+    }
+  });
+  var res=[], prev="";
+  out.forEach(function(x){ if(x!==prev) res.push(x); prev=x; });
+  /* 印刷したときに読みやすい区切りに直す（縦横・文字サイズに追従）
+     文の途中では切らない。「。」「、」の切れ目だけで区切り、入るところまで1行にまとめる */
+  try{
+    var M=window.__condM;
+    if(M && M.w>0){
+      var fits=function(x){ try{ ctx.font=M.f; return ctx.measureText(x).width<=M.w; }catch(e){ return true; } };
+      var pieces=[];
+      res.forEach(function(ln){
+        var a=ln.split("\u3002");
+        for(var i=0;i<a.length;i++){
+          var x=a[i].trim(); if(!x) continue;
+          if(i<a.length-1) x+="\u3002";
+          if(fits(x)){ pieces.push(x); continue; }
+          var wide=false;
+          try{ ctx.font=M.f; wide=(ctx.measureText(x).width > M.w*1.7); }catch(e){}
+          if(!wide && !M.land){ pieces.push(x); continue; }   /* 少しはみ出す程度なら文のまま（縦は自動で折り返す） */
+          var b=x.split("\u3001");                       /* とても長い時だけ読点で切る */
+          for(var j=0;j<b.length;j++){
+            var y=b[j].trim(); if(!y) continue;
+            if(j<b.length-1) y+="\u3001";
+            pieces.push(y);
+          }
+        }
+      });
+      var flow=[], cur="";
+      pieces.forEach(function(x){
+        if(!cur){ cur=x; return; }
+        if(fits(cur+x)){ cur+=x; return; }
+        flow.push(cur); cur=x;
+      });
+      if(cur) flow.push(cur);
+      /* 横向きは印字できる行数に上限があるので、超えたらまとめ直す */
+      if(M.land && M.cap && flow.length>M.cap){
+        var merged=[], per=Math.ceil(flow.length/M.cap);
+        for(var k=0;k<flow.length;k+=per){ merged.push(flow.slice(k,k+per).join("")); }
+        flow=merged;
+      }
+      if(flow.length) res=flow;
+    }
+  }catch(e){}
+  return res.join("\n");
+}
 function updateCondCap(){
   var e=$("condCap"); if(!e) return;
   var o=($("setOrient")&&$("setOrient").value)||"portrait";
@@ -4044,7 +4109,120 @@ var PNAME_SCALE=1;
 function applyPnameScale(){ var s=$("dispSize"); PNAME_SCALE=s?(parseFloat(s.value)||1):1; }
 function monoFont(px,w){return `${w||""} ${Math.round(px)}px "SFMono-Regular",Consolas,"Roboto Mono",monospace`;}
 function brandFont(px){return `900 ${Math.round(px)}px "Arial Black","Impact","Haettenschweiler",Arial,sans-serif`;}
-function wrap(text,font,maxw){ctx.font=font;const out=[];let line="";for(const ch of String(text)){const t=line+ch;if(ctx.measureText(t).width>maxw&&line){out.push(line);line=ch;}else line=t;}if(line)out.push(line);return out.length?out:[""];}
+/* ===== 日本語の行分けエンジン =====
+   ・単語（英数字・カタカナ・数字＋単位・括弧の中）は途中で切らない
+   ・「。、・／」空白のうしろなど、切りのいい場所を優先する
+   ・行頭に「。、）」、行末に「（」が来ないようにする
+   ・最後に1〜2文字だけ残る「ぶら下がり」を直す                                   */
+var KIN_HEAD="、。，．・：；！？）］｝」』〉》】〕”’,.!?):;]}\u3001\u3002\uff09\uff3d\uff5d\u300d\u300f\u3009\u300b\u3011\u3015ーぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ々ゝゞ";
+var KIN_TAIL="（［｛「『〈《【〔“‘([{\uff08\uff3b\uff5b\u300c\u300e\u3008\u300a\u3010\u3014";
+var UNIT_RE=/^(インチ|センチ|ミリ|世代|cm|mm|km|kg|mg|ml|mL|GB|TB|MB|Hz|kHz|MHz|GHz|W|V|A|g|L|型|個|枚|本|台|色|年|月|日|人|巻|点|片|面|口|回|倍|階|時|分|秒|%|％)/;
+function chClass(c){
+  if(/[0-9A-Za-z.\-_+#/％%]/.test(c)) return "a";      /* 英数字・記号 */
+  if(/[\u30a1-\u30f6\u30fc]/.test(c)) return "k";      /* カタカナ（・は区切りなので含めない） */
+  if(/[\u3041-\u3096]/.test(c)) return "h";             /* ひらがな */
+  if(/[\u4e00-\u9fff\u3005]/.test(c)) return "j";       /* 漢字 */
+  return "o";
+}
+/* 途中で切ってはいけない「かたまり」に分ける */
+function wrapTokens(text){
+  var s=String(text||""), out=[], i=0;
+  while(i<s.length){
+    var c=s.charAt(i);
+    /* 括弧はできるだけ中身ごと1かたまり */
+    if(KIN_TAIL.indexOf(c)>=0){
+      var close={"(":")","（":"）","「":"」","『":"』","【":"】","［":"］","[":"]","{":"}","｛":"｝","〈":"〉","《":"》","〔":"〕"}[c];
+      var e=close?s.indexOf(close,i+1):-1;
+      if(e>0 && e-i<=18){ out.push(s.slice(i,e+1)); i=e+1; continue; }
+    }
+    var cl=chClass(c);
+    if(cl==="a"||cl==="k"){                       /* 英数字の並び・カタカナ語はまとめる */
+      var j=i+1;
+      while(j<s.length && chClass(s.charAt(j))===cl) j++;
+      var tok=s.slice(i,j);
+      /* 数字のうしろに単位が続くならくっつける（12.9インチ / 33cm） */
+      if(cl==="a" && /[0-9]$/.test(tok)){
+        var m=UNIT_RE.exec(s.slice(j));
+        if(m){ tok+=m[0]; j+=m[0].length; }
+      }
+      out.push(tok); i=j; continue;
+    }
+    out.push(c); i++;
+  }
+  return out;
+}
+/* 切れ目としての好ましさ（大きいほど良い） */
+function brkScore(prev, next){
+  if(!prev) return 0;
+  var p=prev.charAt(prev.length-1), n=next?next.charAt(0):"";
+  if("。！？".indexOf(p)>=0) return 100;
+  if("、".indexOf(p)>=0) return 90;
+  if("・／/".indexOf(p)>=0) return 80;
+  if(p===" ") return 75;
+  if("）」』】］)]}".indexOf(p)>=0) return 70;
+  if(n && KIN_TAIL.indexOf(n)>=0) return 60;      /* 「（」の前で切る */
+  var cp=chClass(p), cn=n?chClass(n):"o";
+  if(cp==="j" && cn==="h") return 5;              /* 漢字→ひらがな は送り仮名なので切らない */
+  if(cp==="h" && cn==="h") return 8;
+  if(cp==="j" && cn==="j") return 12;
+  if(cp==="h" && cn==="j") return 35;
+  if((cp==="a"||cp==="k") !== (cn==="a"||cn==="k")) return 45;   /* 英数カナ ↔ 和文 の境目 */
+  if(cp!==cn && cp!=="o" && cn!=="o") return 30;
+  return 10;
+}
+function wrap(text,font,maxw){
+  ctx.font=font;
+  var toks=wrapTokens(text);
+  var out=[], line="", marks=[];   /* marks: この行の中の切れ目候補 [位置, 好ましさ] */
+  var push=function(t){ var x=String(t).replace(/^[\s\u3000]+/,"").replace(/[\s\u3000]+$/,""); if(x) out.push(x); };
+  for(var i=0;i<toks.length;i++){
+    var t=toks[i];
+    if(line && ctx.measureText(line+t).width>maxw){
+      /* 行頭に来てはいけない1文字は、はみ出しても前の行に付ける */
+      if(t.length===1 && KIN_HEAD.indexOf(t)>=0){ line+=t; continue; }
+      /* 半分以上埋まる切れ目のうち、いちばん好ましい所で切る */
+      var best=-1, bestSc=-1;
+      var cand=marks.concat([[line.length, brkScore(line,t)]]);   /* いま切る位置も候補に入れる */
+      for(var m=cand.length-1;m>=0;m--){
+        var pos=cand[m][0], sc=cand[m][1];
+        var w=ctx.measureText(line.slice(0,pos)).width;
+        var floor=(sc>=75)?0.35:0.5;            /* 句読点など強い切れ目は少し短くても使う */
+        if(w<maxw*floor) break;
+        if(sc>bestSc){ bestSc=sc; best=pos; }
+        if(sc>=80) break;                       /* 十分に良い切れ目なら即決 */
+      }
+      if(best>0 && best<line.length){
+        push(line.slice(0,best));
+        line=line.slice(best).replace(/^[\s\u3000]+/,"")+t;
+        marks=[];
+      } else {
+        push(line); line=t.replace(/^[\s\u3000]+/,""); marks=[];
+      }
+      /* 1かたまりで入りきらない時はやむを得ず文字単位で割る */
+      while(ctx.measureText(line).width>maxw && line.length>1){
+        var k=line.length-1;
+        while(k>1 && ctx.measureText(line.slice(0,k)).width>maxw) k--;
+        push(line.slice(0,k)); line=line.slice(k);
+      }
+      continue;
+    }
+    if(line) marks.push([line.length, brkScore(line, t)]);
+    line+=t;
+  }
+  if(line) push(line);
+  /* 最後の行が1〜2文字だけ残る「ぶら下がり」を直す */
+  if(out.length>=2){
+    var last=out[out.length-1], prev=out[out.length-2];
+    if(last.length<=2 && prev.length>=4){
+      var mv=Math.min(4-last.length, prev.length-3);
+      if(mv>0){
+        var np=prev.slice(0,prev.length-mv), nl=prev.slice(prev.length-mv)+last;
+        if(ctx.measureText(nl).width<=maxw && np.trim()){ out[out.length-2]=np; out[out.length-1]=nl; }
+      }
+    }
+  }
+  return out.length?out:[""];
+}
 
 function orient(){return ($("setOrient")&&$("setOrient").value)||"portrait";}
 function codeType(){return ($("setCode")&&$("setCode").value)||"qr";}
@@ -4142,6 +4320,7 @@ function paint(measureOnly){
     if(!measureOnly){ dashed(mx,y,W8-mx,y,mm(0.7)); }
     y+=Math.round(mm(1.1));
     const fpx=mm(2.5)*FS;
+    window.__condM={f:jpFont(fpx,"900"), w:cw};   // 「整える」で使う（縦横・サイズに追従）
     for(const ln of condLines){
       const ws=wrap(ln,jpFont(fpx,"900"),cw);   // コメントは固定の標準ゴシック（書体セレクタは品名のみ）
       for(const w of ws){ if(!measureOnly){ ctx.textBaseline="top"; ctx.font=jpFont(fpx,"900"); ctx.fillStyle=dark; ctx.fillText(w,mx,y); } y+=Math.round(mm(3.3)*FS); }
@@ -4281,6 +4460,7 @@ function paintLandscape(measureOnly){
   const fullW=Math.max(Math.round(lm(14)), W0-mx-mx);                       // 上段：ほぼ全幅
   const narrowW=Math.max(Math.round(lm(12)), (W0-mx-priceBlockW-gap)-mx);   // 価格の段：価格を避けた幅
   let drawRows=0, fC=fm(3.0)*FS, lineH=Math.max(1,Math.round(fC*1.28));
+  window.__condM={f:jpFont(fC,"900"), w:fullW, land:true, cap:condCapNum()};   // 「整える」で使う
   if(rows>0 && availHc>=lineHfloor){
     lineH=Math.min(lineH, Math.floor(availHc/rows));        // 全行入るよう行高を詰める
     if(lineH<lineHfloor) lineH=lineHfloor;
@@ -9530,6 +9710,37 @@ function wire(){
   $("printBtn").onclick=doPrint; if($("calBtn"))$("calBtn").onclick=calibrate;
   $("resetAllBtn").onclick=resetAll;
   $("resetCondBtn").onclick=resetCond;
+  function runTidy(quiet){
+    var ta=$("notes"); if(!ta) return;
+    var before=ta.value, after=tidyCondText(before);
+    if(after===before){ if(!quiet){ try{ status("すでに整っています","ok"); }catch(e){} } return; }
+    ta.value=after;
+    try{ ta.dispatchEvent(new Event("input",{bubbles:true})); }catch(e){}
+    if(!quiet){ try{ status("コンディションを整えました","ok"); }catch(e){} }
+  }
+  var __autoTidyT=null;
+  function autoTidySoon(){
+    if(!$("autoTidy")||!$("autoTidy").checked) return;
+    clearTimeout(__autoTidyT);
+    __autoTidyT=setTimeout(function(){ runTidy(true); },400);
+  }
+  if($("notes")) $("notes").addEventListener("blur",function(){ autoTidySoon(); });
+  ["setOrient","setScale","setFs","setW","setLayout"].forEach(function(id){
+    if($(id)) $(id).addEventListener("change",function(){ setTimeout(autoTidySoon,250); });
+  });
+  if($("autoTidy")) $("autoTidy").addEventListener("change",function(){
+    try{ store.set("autoTidy",$("autoTidy").checked?1:0); }catch(e){}
+    if($("autoTidy").checked) runTidy(true);
+  });
+  try{ if($("autoTidy")) $("autoTidy").checked=(store.get("autoTidy",1)!=0); }catch(e){}
+  if($("tidyCondBtn")) $("tidyCondBtn").onclick=function(){
+    var ta=$("notes"); if(!ta) return;
+    var before=ta.value, after=tidyCondText(before);
+    if(after===before){ try{ status("すでに整っています","ok"); }catch(e){} return; }
+    ta.value=after;
+    try{ ta.dispatchEvent(new Event("input",{bubbles:true})); }catch(e){}
+    try{ status("コンディションを整えました","ok"); }catch(e){}
+  };
   $("autoDate").addEventListener("change",draw);
   $("printerIp").addEventListener("input",persist);
   if($("setShiftX")) $("setShiftX").addEventListener("input",persist);
