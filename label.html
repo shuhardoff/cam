@@ -443,7 +443,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v15.19</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v15.20</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -5380,7 +5380,10 @@ function ppSheetCanvas(items){
      プリンターに小さい紙は入らないので、L判に印刷して切り取ってもらう。 */
   const sc=Math.max(1,c.scale||1);
   let BW=W, BH=H;   /* 用紙全体を使い、面ごとに1枚ずつ置く */
-  const m=c.margin*k, gap=(sc>1?Math.max(2.5,c.margin):Math.max(1,c.margin))*k;
+  /* 面付けするときは、紙のふちに写真が触れないよう必ず余白を取る
+     （プリンターはふち近くを印刷できず、下の段が見切れるため） */
+  const mMm = (up>1) ? Math.max(4, c.margin) : c.margin;
+  const m=mMm*k, gap=(up>1?Math.max(3, c.margin):Math.max(1,c.margin))*k;
   const cw=(BW-2*m-gap*(g.c-1))/g.c, ch=(BH-2*m-gap*(g.r-1))/g.r;
   const capPx=c.cap?4.2*k:0, capBox=c.cap?(capPx*1.35+1.4*k):0;
   for(let i=0;i<up;i++){
@@ -5417,7 +5420,7 @@ function ppSheetCanvas(items){
     x.restore();
     x.fillStyle="#98a3ae"; x.textAlign="left"; x.textBaseline="top";
     x.font=jpFont(2.4*k,"700");
-    x.fillText("点線で切り取り", Math.round(1.5*k), Math.round(1.2*k));
+    x.fillText("点線で切り取り", Math.round(1.2*k), Math.round(0.6*k));
     x.textAlign="center";
   }
   return cv;
