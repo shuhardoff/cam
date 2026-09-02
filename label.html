@@ -443,7 +443,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v15.18</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v15.19</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -5339,6 +5339,12 @@ function ppPaperSize(){
   }
   return { w: land?P.h:P.w, h: land?P.w:P.h, name:P.name, land:land };
 }
+/* 1枚の紙に何枚並べるか。1/2なら2枚、1/4なら4枚を自動で並べる（紙のむだを防ぐ） */
+function ppCells(c){
+  var sc=Math.max(1, c.scale||1);
+  var up=Math.max(1, c.up||1);
+  return Math.max(sc, up);
+}
 function ppGrid(up,land){
   if(up>=4) return {c:2,r:2};
   if(up===2) return land?{c:2,r:1}:{c:1,r:2};
@@ -5364,7 +5370,7 @@ function ppWantRot(rec){
 }
 /* 1ページ分をcanvasに描く */
 function ppSheetCanvas(items){
-  const c=ppCfg(), S=ppPaperSize(), up=Math.max(1,c.up), g=ppGrid(up,S.land);
+  const c=ppCfg(), S=ppPaperSize(), up=ppCells(c), g=ppGrid(up,S.land);
   const k=ppDpi(S)/25.4;
   const W=Math.round(S.w*k), H=Math.round(S.h*k);
   const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
@@ -5373,10 +5379,8 @@ function ppSheetCanvas(items){
   /* ★1/2・1/4のときは、用紙の左上にその大きさの枠を作って中に収める。
      プリンターに小さい紙は入らないので、L判に印刷して切り取ってもらう。 */
   const sc=Math.max(1,c.scale||1);
-  let BW=W, BH=H;
-  if(sc===2){ if(H>=W) BH=Math.round(H/2); else BW=Math.round(W/2); }
-  else if(sc===4){ BW=Math.round(W/2); BH=Math.round(H/2); }
-  const m=c.margin*k, gap=Math.max(1,c.margin)*k;
+  let BW=W, BH=H;   /* 用紙全体を使い、面ごとに1枚ずつ置く */
+  const m=c.margin*k, gap=(sc>1?Math.max(2.5,c.margin):Math.max(1,c.margin))*k;
   const cw=(BW-2*m-gap*(g.c-1))/g.c, ch=(BH-2*m-gap*(g.r-1))/g.r;
   const capPx=c.cap?4.2*k:0, capBox=c.cap?(capPx*1.35+1.4*k):0;
   for(let i=0;i<up;i++){
@@ -5407,19 +5411,19 @@ function ppSheetCanvas(items){
     x.strokeStyle="#b9c3cc"; x.lineWidth=Math.max(1,Math.round(k*0.25));
     x.setLineDash([k*2,k*2]);
     x.beginPath();
-    if(BW<W){ x.moveTo(BW+0.5,0); x.lineTo(BW+0.5,BH); }
-    if(BH<H){ x.moveTo(0,BH+0.5); x.lineTo(BW,BH+0.5); }
+    for(let gi=1; gi<g.c; gi++){ const px=Math.round(W*gi/g.c)+0.5; x.moveTo(px,0); x.lineTo(px,H); }
+    for(let gj=1; gj<g.r; gj++){ const py=Math.round(H*gj/g.r)+0.5; x.moveTo(0,py); x.lineTo(W,py); }
     x.stroke();
     x.restore();
     x.fillStyle="#98a3ae"; x.textAlign="left"; x.textBaseline="top";
     x.font=jpFont(2.4*k,"700");
-    x.fillText("ここで切り取り", Math.round(1.5*k), BH+Math.round(1.2*k));
+    x.fillText("点線で切り取り", Math.round(1.5*k), Math.round(1.2*k));
     x.textAlign="center";
   }
   return cv;
 }
 function ppBuild(){
-  const c=ppCfg(), S=ppPaperSize(), up=Math.max(1,c.up);
+  const c=ppCfg(), S=ppPaperSize(), up=ppCells(c);
   const imgs=PP_IMGS.filter(v=>v.ok&&v.el);
   const groups=[]; for(let i=0;i<imgs.length;i+=up) groups.push(imgs.slice(i,i+up));
   if(!groups.length) groups.push([]);
@@ -5506,7 +5510,7 @@ function ppRender(){
     st.innerHTML = b2.count
       ? '写真 <b>'+b2.count+'枚</b> ／ '+b2.S.name+' <b>'+(b2.S.land?"よこ":"たて")+'</b>（'+b2.S.w+'×'+b2.S.h+'mm）'
         +(c2.scale>1?('／写真は <b>1/'+c2.scale+'</b> の大きさ（切り取り線つき）'):'')
-        +' ／ '+(photo?"写真用紙":"普通紙")+' ／ 1枚に'+b2.up+'面 → <b>用紙'+b2.pages+'枚</b>'
+        +' ／ '+(photo?"写真用紙":"普通紙")+' ／ 用紙1枚に写真'+b2.up+'枚 → <b>用紙'+b2.pages+'枚</b>'
         +'<br>上のプレビューがそのまま印刷されます。用紙がどれになっても、はみ出さず中央に入ります。'
         +(rotN?'<br>よこ長の写真 '+rotN+'枚を90°倒して大きく印刷します（紙はたてのまま）。':'')
         +(b2.tainted?'<br><b style="color:#b91c1c">'+b2.tainted+'ページ分はURLで追加した画像のため印刷できません。</b>'
