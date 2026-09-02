@@ -5,23 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>勤務予定表</title>
 <style>
-body{margin:0;background:#EDEFEA;font-family:"Hiragino Kaku Gothic ProN","Meiryo",system-ui,sans-serif;color:#1A1A1A}
-.hd{padding:12px 14px 8px;text-align:center}
-.hd b{font-size:16px}
-.hd span{display:block;font-size:12.5px;color:#5C625A;margin-top:4px}
-.wrap{padding:0 8px 24px}
-img{width:100%;height:auto;display:block;border:1px solid #8E958A;background:#fff}
-.msg{padding:24px 20px;font-size:15px;line-height:1.9;color:#3A403A;background:#fff;border:1px solid #C9CEC5;border-radius:3px;margin:6px}
-.msg b{color:#134E7C}
-.pick{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:4px 8px 10px}
+body{margin:0;background:#fff;font-family:"Hiragino Kaku Gothic ProN","Meiryo",system-ui,sans-serif;color:#1A1A1A}
+.tip{padding:10px 12px;text-align:center;font-size:14px;font-weight:700;color:#134E7C;background:#E8F0F7}
+img{width:100%;height:auto;display:block}
+.msg{padding:26px 20px;font-size:15px;line-height:1.9;color:#3A403A}
+.pick{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:8px}
 .pick button{border:1px solid #8E958A;background:#fff;border-radius:14px;padding:5px 12px;font-size:13px}
 .pick button[aria-pressed="true"]{background:#134E7C;border-color:#134E7C;color:#fff}
 </style>
 </head>
 <body>
-<div class="hd"><b id="ttl">勤務予定表</b><span id="sub"></span></div>
+<div class="tip" id="tip">画像を長押しして「"写真"に追加」</div>
 <div class="pick" id="pick" hidden></div>
-<div class="wrap"><img id="img" alt="勤務予定表" hidden><div class="msg" id="msg" hidden></div></div>
+<img id="img" alt="勤務予定表" hidden>
+<div class="msg" id="msg" hidden></div>
 <script>
 /* =========================================================
    シフト自動編成エンジン（DOM 非依存 / テスト可能）
@@ -604,92 +601,75 @@ function drawSheet(p){
 }
 
 function payload(){
-  var h=location.hash||'',q=location.search||'';
-  var m=h.match(/[#&\/]?v=([^&]+)/);
-  if(!m)m=q.match(/[?&]v=([^&]+)/);
+  var q=location.search||'',h=location.hash||'';
+  var m=q.match(/[?&]v=([^&]+)/);
+  if(!m)m=h.match(/[#&\/]?v=([^&]+)/);
   return m?m[1]:null;
 }
-/* このパソコンで作ったシフトが同じアドレスに保存されていれば、それを読む */
-var STORE=null;
+var MAP={'':' ','当番':'D','〇':'O','◎':'A','有休':'P'};
 function loadStore(){
   try{
     var raw=window.localStorage.getItem('shift-manager:v1');
     if(!raw)return null;
-    var db=JSON.parse(raw);
-    var st=(db&&db.stores)?db.stores[db.cur]:db;
+    var db=JSON.parse(raw),st=(db&&db.stores)?db.stores[db.cur]:db;
     if(!st||!st.staff||!st.months)return null;
     var keys=Object.keys(st.months).filter(function(k){
       var m=st.months[k];return m&&m.result&&m.result.cells&&m.result.cells.length===st.staff.length;});
     if(!keys.length)return null;
-    keys.sort();
-    return {st:st,keys:keys};
+    keys.sort();return {st:st,keys:keys};
   }catch(e){return null;}
 }
-var MAP={'':' ','当番':'D','〇':'O','◎':'A','有休':'P'};
 function packFrom(st,key){
   var parts=key.split('-'),y=+parts[0],m=+parts[1];
   var days=E.buildDays(y,m),res=st.months[key].result,times=[];
-  var short=function(p){return p.short||String(p.name||'').replace(/[（(].*$/,'').split(/[\s　]/)[0].slice(0,2);};
+  var sh=function(p){return p.short||String(p.name||'').replace(/[（(].*$/,'').split(/[\s　]/)[0].slice(0,2);};
   var cells=st.staff.map(function(p,si){
     return days.map(function(day,d){
       var c=(res.cells[si]||[])[d]||'';
       if(MAP[c]!=null)return MAP[c];
       var i=times.indexOf(c);if(i<0){times.push(c);i=times.length-1;}
-      return String.fromCharCode(49+i);
-    }).join('');
-  });
+      return String.fromCharCode(49+i);}).join('');});
   var e={},dd=st.months[key].days||{};
   days.forEach(function(day,d){
     var info=dd[day.key];
     var t=info?((info.h||[]).concat(info.note?[info.note]:[]).join('・')):'';
-    if(t&&t!==day.holidayName)e[d]=t;
-  });
+    if(t&&t!==day.holidayName)e[d]=t;});
   return {s:(st.meta&&st.meta.store)||'',y:y,m:m,
-    n:st.staff.map(function(p){return p.name;}),
-    k:st.staff.map(short),
+    n:st.staff.map(function(p){return p.name;}),k:st.staff.map(sh),
     g:st.staff.map(function(p){return p.section||'hard';}),
     c:cells,t:times,
-    a:days.map(function(day,d){var v=res.morning[d];return (v>=0&&v!=null)?String(v):'-';}).join(''),
-    e:e};
+    a:days.map(function(day,d){var v=res.morning[d];return (v>=0&&v!=null)?String(v):'-';}).join(''),e:e};
 }
 function show(p){
-  $('#ttl').textContent=p.s+'　'+p.y+'年'+p.m+'月';
-  $('#sub').textContent='画像を長押しすると写真に保存できます';
+  document.title=p.s+' '+p.y+'年'+p.m+'月';
   $('#msg').hidden=true;
   var img=$('#img');img.src=drawSheet(p).toDataURL('image/png');img.hidden=false;
 }
-function fail(html){
-  $('#img').hidden=true;$('#sub').textContent='';
-  $('#msg').hidden=false;$('#msg').innerHTML=html;
+function fail(t){
+  $('#img').hidden=true;$('#tip').hidden=true;
+  $('#msg').hidden=false;$('#msg').innerHTML=t;
 }
 try{
   var pay=payload();
-  if(pay){
-    show(JSON.parse(unb64(decodeURIComponent(pay))));
-  }else{
-    STORE=loadStore();
-    if(STORE){
-      var keys=STORE.keys.slice(-6);
+  if(pay){ show(JSON.parse(unb64(decodeURIComponent(pay)))); }
+  else{
+    var S=loadStore();
+    if(S){
+      var keys=S.keys.slice(-6);
       $('#pick').hidden=false;
-      $('#pick').innerHTML=keys.map(function(k){
-        var p=k.split('-');return '<button data-k="'+k+'">'+(+p[1])+'月</button>';}).join('');
-      var draw=function(k){
-        show(packFrom(STORE.st,k));
+      $('#pick').innerHTML=keys.map(function(k){var p=k.split('-');
+        return '<button data-k="'+k+'">'+(+p[1])+'月</button>';}).join('');
+      var draw=function(k){show(packFrom(S.st,k));
         [].forEach.call(document.querySelectorAll('#pick button'),function(b){
-          b.setAttribute('aria-pressed',b.dataset.k===k);});
-      };
+          b.setAttribute('aria-pressed',b.dataset.k===k);});};
       $('#pick').addEventListener('click',function(ev){
         var b=ev.target.closest('button[data-k]');if(b)draw(b.dataset.k);});
       draw(keys[keys.length-1]);
     }else{
-      fail('このページは、<b>QRコードを読み取ったときに勤務表を表示する</b>ためのページです。<br><br>'+
-        'パソコンの本体（シフト自動作成）で「QRコード」を押し、出てきたQRをスマホのカメラで読み取ってください。<br><br>'+
-        'いまは勤務表のデータが渡されていないため、何も表示できません。');
+      fail('勤務表のデータが渡されていません。<br>パソコンの「QRコード」から読み取ってください。');
     }
   }
-}catch(e){
-  fail('勤務表を読み取れませんでした。<br>もう一度、パソコンの「QRコード」から読み取ってください。');
-}
+}catch(e){ fail('勤務表を読み取れませんでした。<br>もう一度QRコードを読み取ってください。'); }
 })();
 </script>
 </body>

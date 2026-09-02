@@ -362,8 +362,8 @@ body.printing .sumbox{display:none}
     </div>
     <div class="fld">
       <label>QRの読み取り先（view.html のURL）</label>
-      <input type="text" id="qrBase" placeholder="https://ユーザー名.github.io/リポジトリ名/view.html">
-      <p class="hint" style="margin:5px 0 0">view.html を一度だけ置いて、そのURLをここに入れてください。空欄ならいま開いているページを使います。</p>
+      <input type="text" id="qrBase" placeholder="（空欄なら同じ場所の view.html を使います）">
+      <p class="hint" style="margin:5px 0 0">ふつうは空欄のままで構いません。view.html を別の場所に置いたときだけ、そのURLを入れてください。</p>
     </div>
     <div class="fld"><button class="btn wide" id="btnQROpen">このパソコンで表示を確認する</button></div>
     <p class="hint" id="qrVer"></p>
@@ -2392,12 +2392,14 @@ function b64(str){return btoa(unescape(encodeURIComponent(str))).replace(/\+/g,'
 function unb64(str){return decodeURIComponent(escape(atob(str.replace(/-/g,'+').replace(/_/g,'/')))); }
 function qrBase(){
   const u=(DB.viewerURL||'').trim();
-  if(u)return u.split('#')[0];
-  return location.href.split('#')[0].split('?')[0];
+  if(u)return u.split('#')[0].split('?')[0];
+  const here=location.href.split('#')[0].split('?')[0];
+  if(/view\.html$/i.test(here))return here;
+  return here.replace(/[^\/]*$/,'')+'view.html';   // 同じ場所の view.html
 }
 function qrURL(){
   const p=packMonth();if(!p)return null;
-  return qrBase()+'#v='+b64(JSON.stringify(p));
+  return qrBase()+'?v='+b64(JSON.stringify(p));
 }
 /* 勤務表をそのまま画像（canvas）に描く */
 function drawSheet(p){
@@ -2480,12 +2482,12 @@ $('#btnQR').addEventListener('click',async()=>{
   const url=qrURL();
   $('#qrBox').innerHTML='<span class="hint">作成中…</span>';
   $('#qrNote').textContent=qrBase().indexOf('file:')===0
-    ? '読み取り先がパソコン内のファイルになっています。下の欄に view.html のURL（https://…）を入れてください。'
-    : 'スマホのカメラで読み取ると勤務表の画像が出ます。長押しで写真に保存できます。';
+    ? '読み取り先がパソコン内のファイルです。下の「読み取り先」に view.html のURL（https://…）を入れてください。'
+    : '読み取ると勤務表が出ます。長押しして「写真に追加」';
   $('#qrTitle').textContent=S.meta.year+'年'+S.meta.month+'月を スマホに送る';
   $('#qrBase').value=DB.viewerURL||'';
   $('#qrUrl').value=url;
-  $('#qrDetail').hidden=!!(DB.viewerURL||'').trim();
+  $('#qrDetail').hidden=true;
   $('#qrVer').innerHTML='このファイルのバージョン：<b>'+esc(APP_VER)+'</b><br>'+
     'QRを読んで「まだ作っていません」と出るときは、置いてあるファイルが古い版です。'+
     'いま使っているこのファイルを同じ名前で上げ直してから、もう一度QRを作ってください。';
@@ -2502,8 +2504,8 @@ $('#qrBase').addEventListener('change',e=>{
   const u=qrURL();
   if(u){$('#qrUrl').value=u;M_qr(u);}
   $('#qrNote').textContent=qrBase().indexOf('file:')===0
-    ? '読み取り先がパソコン内のファイルになっています。上の欄に view.html のURL（https://…）を入れてください。'
-    : 'スマホのカメラで読み取ると勤務表の画像が出ます。長押しで写真に保存できます。';
+    ? '読み取り先がパソコン内のファイルです。上の「読み取り先」に view.html のURL（https://…）を入れてください。'
+    : '読み取ると勤務表が出ます。長押しして「写真に追加」';
   toast(DB.viewerURL?'読み取り先を設定しました':'いま開いているページを使います');
 });
 $('#btnQROpen').addEventListener('click',()=>{const u=qrURL();if(u)window.open(u,'_blank');});
