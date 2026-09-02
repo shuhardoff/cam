@@ -161,6 +161,16 @@ tfoot tr.cond td{font-size:calc(11px*var(--z));line-height:1.2;white-space:norma
 .drawer{position:fixed;top:0;right:0;bottom:0;width:min(410px,100%);background:#fff;z-index:85;
   box-shadow:0 8px 28px rgba(0,0,0,.22);transform:translateX(100%);transition:transform .18s;overflow:auto;padding:18px 20px 40px}
 .drawer.on{transform:none}
+#qDrawer{top:50%;left:50%;right:auto;bottom:auto;width:min(430px,94vw);max-height:92vh;
+  transform:translate(-50%,-46%);border-radius:4px;padding:18px 20px 22px}
+#qDrawer.on{transform:translate(-50%,-50%)}
+#qDrawer h2{text-align:center}
+#qDrawer .sub{text-align:center}
+#qrBox canvas,#qrBox img{width:300px!important;height:300px!important}
+.qbtns{display:flex;gap:8px;margin-top:14px}
+.qbtns .btn{flex:1;padding:9px 4px;font-size:12.5px}
+.qmore{display:block;width:100%;text-align:center;font-size:12px;color:var(--ink2);
+  padding:10px 0 0;text-decoration:underline;cursor:pointer}
 @media (prefers-reduced-motion:reduce){.drawer,.scrim{transition:none}}
 .drawer h2{margin:0 0 3px;font-size:16px}
 .drawer .sub{color:var(--ink2);font-size:12px;margin:0 0 16px}
@@ -335,23 +345,29 @@ body.printing .sumbox{display:none}
 
 <aside class="drawer" id="qDrawer" aria-hidden="true">
   <button class="close" data-close>×</button>
-  <h2>スマホで見る・写真で保存</h2>
-  <p class="sub">スマホのカメラで読み取ると、この月の勤務表が表示されます。そのまま画面を撮れば写真として残せます。</p>
-  <div id="qrBox" style="display:grid;place-items:center;padding:10px 0;min-height:220px"></div>
-  <p class="hint" id="qrNote"></p>
-  <div class="fld" style="margin-top:10px">
-    <label>読み取り用のリンク</label>
-    <input type="text" id="qrUrl" readonly onclick="this.select()">
+  <h2 id="qrTitle">スマホに送る</h2>
+  <p class="sub" id="qrSub">スマホのカメラで読み取ってください</p>
+  <div id="qrBox" style="display:grid;place-items:center;min-height:300px"></div>
+  <p class="hint" id="qrNote" style="text-align:center"></p>
+  <div class="qbtns">
+    <button class="btn" id="btnPng">画像で保存</button>
+    <button class="btn" id="btnCopyImg">画像をコピー</button>
+    <button class="btn" id="btnCopyLink">リンクをコピー</button>
   </div>
-  <p class="hint" id="qrVer"></p>
-  <div class="fld">
-    <label>QRの読み取り先（view.html のURL）</label>
-    <input type="text" id="qrBase" placeholder="https://ユーザー名.github.io/リポジトリ名/view.html">
-    <p class="hint" style="margin:5px 0 0">view.html を一度だけ置いて、そのURLをここに入れてください。以後この本体を更新してもQRは動きます。空欄ならいま開いているページを使います。</p>
+  <a class="qmore" id="qrMore">読み取り先やリンクを確認する</a>
+  <div id="qrDetail" hidden style="margin-top:12px">
+    <div class="fld">
+      <label>読み取り用のリンク</label>
+      <input type="text" id="qrUrl" readonly onclick="this.select()">
+    </div>
+    <div class="fld">
+      <label>QRの読み取り先（view.html のURL）</label>
+      <input type="text" id="qrBase" placeholder="https://ユーザー名.github.io/リポジトリ名/view.html">
+      <p class="hint" style="margin:5px 0 0">view.html を一度だけ置いて、そのURLをここに入れてください。空欄ならいま開いているページを使います。</p>
+    </div>
+    <div class="fld"><button class="btn wide" id="btnQROpen">このパソコンで表示を確認する</button></div>
+    <p class="hint" id="qrVer"></p>
   </div>
-  <div class="fld" style="margin-top:12px"><button class="btn wide" id="btnPng">この月の勤務表を画像（PNG）で保存</button></div>
-  <div class="fld"><button class="btn wide" id="btnCopyLink">読み取り用のリンクをコピー</button></div>
-  <div class="fld"><button class="btn wide" id="btnQROpen">このパソコンで表示を確認する</button></div>
 </aside>
 
 <aside class="drawer" id="sDrawer" aria-hidden="true">
@@ -2466,8 +2482,10 @@ $('#btnQR').addEventListener('click',async()=>{
   $('#qrNote').textContent=qrBase().indexOf('file:')===0
     ? '読み取り先がパソコン内のファイルになっています。下の欄に view.html のURL（https://…）を入れてください。'
     : 'スマホのカメラで読み取ると勤務表の画像が出ます。長押しで写真に保存できます。';
+  $('#qrTitle').textContent=S.meta.year+'年'+S.meta.month+'月を スマホに送る';
   $('#qrBase').value=DB.viewerURL||'';
   $('#qrUrl').value=url;
+  $('#qrDetail').hidden=!!(DB.viewerURL||'').trim();
   $('#qrVer').innerHTML='このファイルのバージョン：<b>'+esc(APP_VER)+'</b><br>'+
     'QRを読んで「まだ作っていません」と出るときは、置いてあるファイルが古い版です。'+
     'いま使っているこのファイルを同じ名前で上げ直してから、もう一度QRを作ってください。';
@@ -2494,6 +2512,16 @@ $('#btnPng').addEventListener('click',()=>{
   const cv=drawSheet(p);
   if(cv.toBlob)cv.toBlob(b=>{download(b,sheetFileName());toast('画像を保存しました');});
   else{const a=document.createElement('a');a.href=cv.toDataURL('image/png');a.download=sheetFileName();a.click();}
+});
+$('#qrMore').addEventListener('click',()=>{const el=$('#qrDetail');el.hidden=!el.hidden;});
+$('#btnCopyImg').addEventListener('click',async()=>{
+  const p=packMonth();if(!p)return;
+  try{
+    const cv=drawSheet(p);
+    const blob=await new Promise(r=>cv.toBlob(r));
+    await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+    toast('画像をコピーしました。LINEやメールに貼り付けられます');
+  }catch(e){toast('この画面では画像をコピーできません。「画像で保存」をお使いください');}
 });
 $('#btnCopyLink').addEventListener('click',async()=>{
   const u=qrURL();if(!u)return;
