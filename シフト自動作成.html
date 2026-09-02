@@ -339,7 +339,9 @@ body.printing .sumbox{display:none}
   <p class="sub">スマホのカメラで読み取ると、この月の勤務表が表示されます。そのまま画面を撮れば写真として残せます。</p>
   <div id="qrBox" style="display:grid;place-items:center;padding:10px 0;min-height:220px"></div>
   <p class="hint" id="qrNote"></p>
-  <div class="fld" style="margin-top:12px"><button class="btn wide" id="btnQROpen">このパソコンで表示を確認する</button></div>
+  <div class="fld" style="margin-top:12px"><button class="btn wide" id="btnPng">この月の勤務表を画像（PNG）で保存</button></div>
+  <div class="fld"><button class="btn wide" id="btnCopyLink">読み取り用のリンクをコピー</button></div>
+  <div class="fld"><button class="btn wide" id="btnQROpen">このパソコンで表示を確認する</button></div>
 </aside>
 
 <aside class="drawer" id="sDrawer" aria-hidden="true">
@@ -2351,7 +2353,7 @@ function packMonth(){
   });
   return {
     s:S.meta.store,y:S.meta.year,m:S.meta.month,
-    n:S.staff.map(st=>st.name),k:S.staff.map(st=>shortName(st)),c:cells,t:times,
+    n:S.staff.map(st=>st.name),k:S.staff.map(st=>shortName(st)),g:S.staff.map(st=>secOf(st)),c:cells,t:times,
     a:VIEW.days.map((day,d)=>VIEW.morning[d]>=0?String(VIEW.morning[d]):'-').join(''),
     e:e
   };
@@ -2363,6 +2365,76 @@ function qrURL(){
   const base=location.href.split('#')[0];
   return base+'#v='+b64(JSON.stringify(p));
 }
+/* 勤務表をそのまま画像（canvas）に描く */
+function drawSheet(p){
+  const dowN=['日','月','火','水','木','金','土'];
+  const days=E.buildDays(p.y,p.m);
+  const memos=p.e||{},hasMemo=Object.keys(memos).length>0;
+  const sn=p.k||p.n;
+  const dec=ch=>{
+    if(ch===' ')return '';if(ch==='D')return '当番';if(ch==='O')return '〇';
+    if(ch==='A')return '◎';if(ch==='P')return '有休';
+    const i=ch.charCodeAt(0)-49;return (p.t&&p.t[i])||'';
+  };
+  const wDay=38,wDow=34,wMemo=hasMemo?150:0,wWho=86,wAsa=54,rh=28,head=34,title=34;
+  const W=wDay+wDow+wMemo+wWho*p.n.length+wAsa;
+  const H=title+head+rh*days.length+6;
+  const cv=document.createElement('canvas');
+  const R=Math.min(2,(window.devicePixelRatio||1)*2);
+  cv.width=W*R;cv.height=H*R;
+  const g=cv.getContext('2d');g.scale(R,R);
+  g.fillStyle='#fff';g.fillRect(0,0,W,H);
+  const F='"Meiryo","Yu Gothic","Hiragino Kaku Gothic ProN",sans-serif';
+  const txt=(t,x,y,align,color,size,bold)=>{
+    g.fillStyle=color||'#1A1A1A';g.font=(bold?'bold ':'')+(size||13)+'px '+F;
+    g.textAlign=align||'center';g.textBaseline='middle';g.fillText(t,x,y);
+  };
+  txt(p.s+'　'+p.y+'年'+p.m+'月　勤務予定表',W/2,title/2,'center','#1A1A1A',16,true);
+  // 見出し
+  const cols=[{w:wDay,t:'日'},{w:wDow,t:'曜日'}];
+  if(hasMemo)cols.push({w:wMemo,t:'行事・備考'});
+  p.n.forEach((n,i)=>cols.push({w:wWho,t:n,sec:(p.g||[])[i]||'hard'}));
+  cols.push({w:wAsa,t:'朝礼当番'});
+  let x=0;
+  cols.forEach(c=>{
+    const isName=c.sec!==undefined;
+    g.fillStyle=isName?(c.sec==='hobby'?'#B23B2E':c.sec==='off'?'#2F6B33':'#0070C0'):'#EFF1EC';
+    g.fillRect(x,title,c.w,head);
+    txt(c.t,x+c.w/2,title+head/2,'center',isName?'#fff':'#5C625A',isName?13:12,true);
+    x+=c.w;
+  });
+  // 明細
+  days.forEach((day,d)=>{
+    const y=title+head+rh*d;
+    const bg=day.isSun||day.isHoliday?'#FCE4E4':day.isSat?'#DDEBF7':'#fff';
+    g.fillStyle=bg;g.fillRect(0,y,W,rh);
+    let cx=0;
+    const dcol=day.isSun||day.isHoliday?'#B23B2E':day.isSat?'#1F6FB2':'#1A1A1A';
+    txt(String(day.d),cx+wDay/2,y+rh/2,'center',dcol,14,true);cx+=wDay;
+    txt(dowN[day.dow],cx+wDow/2,y+rh/2,'center',dcol,13,true);cx+=wDow;
+    if(hasMemo){
+      g.save();g.beginPath();g.rect(cx,y,wMemo,rh);g.clip();
+      txt(memos[d]||day.holidayName||'',cx+4,y+rh/2,'left','#1A1A1A',11);g.restore();cx+=wMemo;
+    }
+    p.n.forEach((n,si)=>{
+      const c=dec((p.c[si]||'')[d]||' ');
+      if(c==='〇'||c==='◎'||c==='有休'){g.fillStyle='#EDEEEA';g.fillRect(cx,y,wWho,rh);}
+      const size=(c==='◎')?19:(c==='〇')?17:(c.indexOf('～')>=0?11:13);
+      txt(c,cx+wWho/2,y+rh/2,'center','#1A1A1A',size,c==='当番'||c==='◎');
+      cx+=wWho;
+    });
+    const ai=(p.a||'')[d];
+    txt((ai&&ai!=='-')?(sn[+ai]||''):'',cx+wAsa/2,y+rh/2,'center','#5C625A',12);
+  });
+  // 罫線
+  g.strokeStyle='#BFC5BB';g.lineWidth=1;
+  let gx=0;cols.forEach(c=>{gx+=c.w;g.beginPath();g.moveTo(gx-0.5,title);g.lineTo(gx-0.5,H-6);g.stroke();});
+  g.beginPath();g.moveTo(0,title+0.5);g.lineTo(W,title+0.5);g.stroke();
+  for(let d=0;d<=days.length;d++){const y=title+head+rh*d+0.5;g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}
+  g.strokeStyle='#8E958A';g.strokeRect(0.5,title+0.5,W-1,H-title-6.5);
+  return cv;
+}
+function sheetFileName(){return S.meta.store+'_'+S.meta.year+'年'+S.meta.month+'月_勤務表.png';}
 function loadQRLib(){
   if(window.QRCode)return Promise.resolve(window.QRCode);
   return new Promise((ok,ng)=>{const sc=document.createElement('script');
@@ -2386,10 +2458,30 @@ $('#btnQR').addEventListener('click',async()=>{
   }
 });
 $('#btnQROpen').addEventListener('click',()=>{const u=qrURL();if(u)window.open(u,'_blank');});
+$('#btnPng').addEventListener('click',()=>{
+  const p=packMonth();if(!p){toast('先にシフトを作ってください');return;}
+  const cv=drawSheet(p);
+  if(cv.toBlob)cv.toBlob(b=>{download(b,sheetFileName());toast('画像を保存しました');});
+  else{const a=document.createElement('a');a.href=cv.toDataURL('image/png');a.download=sheetFileName();a.click();}
+});
+$('#btnCopyLink').addEventListener('click',async()=>{
+  const u=qrURL();if(!u)return;
+  try{await navigator.clipboard.writeText(u);toast('リンクをコピーしました（LINEなどに貼れます）');}
+  catch(e){window.prompt('このリンクをコピーしてください',u);}
+});
 
 /* ===== 閲覧モード（QRから開いたとき） ===== */
 function renderViewer(p){
   document.body.classList.add('viewer');
+  try{
+    const cv=drawSheet(p);
+    $('#sheet').innerHTML='<div class="vhead">'+esc(p.s)+'　'+p.y+'年'+p.m+'月　勤務予定表<br>'+
+      '<span style="font-weight:400;font-size:12px">画像を長押しすると保存できます</span></div>'+
+      '<img id="vimg" style="width:100%;height:auto;display:block" alt="勤務予定表">';
+    $('#vimg').src=cv.toDataURL('image/png');
+    document.documentElement.style.setProperty('--z',1);
+    return;
+  }catch(e){}
   const dowN=['日','月','火','水','木','金','土'];
   const days=E.buildDays(p.y,p.m);
   const dec=ch=>{
