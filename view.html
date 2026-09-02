@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>勤務予定表</title>
+<style>
+body{margin:0;background:#EDEFEA;font-family:"Hiragino Kaku Gothic ProN","Meiryo",system-ui,sans-serif;color:#1A1A1A}
+.hd{padding:12px 14px 8px;text-align:center}
+.hd b{font-size:16px}
+.hd span{display:block;font-size:12.5px;color:#5C625A;margin-top:4px}
+.wrap{padding:0 8px 24px}
+img{width:100%;height:auto;display:block;border:1px solid #8E958A;background:#fff}
+.msg{padding:28px 22px;font-size:15px;line-height:1.9;color:#5C625A}
+</style>
+</head>
+<body>
+<div class="hd"><b id="ttl">勤務予定表</b><span id="sub">画像を長押しすると写真に保存できます</span></div>
+<div class="wrap"><img id="img" alt="勤務予定表" hidden><div class="msg" id="msg" hidden></div></div>
+<script>
+/* =========================================================
+   シフト自動編成エンジン（DOM 非依存 / テスト可能）
+   ========================================================= */
+(function (root) {
+  'use strict';
+
+  /* ---------- 日付ユーティリティ ---------- */
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
+  const DOW = ['日', '月', '火', '水', '木', '金', '土'];
+
+  function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+
+  function nthMonday(y, m, nth) {
+    const first = new Date(y, m - 1, 1).getDay();      // 0=日
+    const offset = (8 - first) % 7;                    // 最初の月曜までの日数
+    return 1 + offset + (nth - 1) * 7;
+  }
+
+  function shunbun(y) {
+    if (y < 1980 || y > 2099) return 20;
+    return Math.floor(20.8431 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+  }
+  function shubun(y) {
+    if (y < 1980 || y > 2099) return 23;
+    return Math.floor(23.2488 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+  }
+
+  /* 内閣府の定義に沿った祝日＋振替休日＋国民の休日を計算で求める */
+  function holidaysOfYear(y) {
+    const base = new Map();
+    const put = (m, d, name) => base.set(ymd(y, m, d), name);
+
+    put(1, 1, '元日');
+    put(1, nthMonday(y, 1, 2), '成人の日');
+    put(2, 11, '建国記念の日');
+    if (y >= 2020) put(2, 23, '天皇誕生日');
+    else if (y >= 1989) put(12, 23, '天皇誕生日');
+    put(3, shunbun(y), '春分の日');
+    put(4, 29, y >= 2007 ? '昭和の日' : 'みどりの日');
+    put(5, 3, '憲法記念日');
+    put(5, 4, y >= 2007 ? 'みどりの日' : '国民の休日');
+    put(5, 5, 'こどもの日');
+    put(7, y >= 2003 ? nthMonday(y, 7, 3) : 20, '海の日');
+    if (y >= 2016) put(8, 11, '山の日');
+    put(9, nthMonday(y, 9, 3), '敬老の日');
+    put(9, shubun(y), '秋分の日');
+    put(10, y >= 2000 ? nthMonday(y, 10, 2) : 10, y >= 2020 ? 'スポーツの日' : '体育の日');
+    put(11, 3, '文化の日');
+    put(11, 23, '勤労感謝の日');
+
+    const out = new Map(base);
+
+    // 振替休日：日曜と重なったら直後の平日へ
+    for (const [key, name] of base) {
+      const [yy, mm, dd] = key.split('-').map(Number);
+      const dt = new Date(yy, mm - 1, dd);
+      if (dt.getDay() !== 0) continue;
+      const nxt = new Date(dt);
+      do { nxt.setDate(nxt.getDate() + 1); }
+      while (out.has(ymd(nxt.getFullYear(), nxt.getMonth() + 1, nxt.getDate())));
+      out.set(ymd(nxt.getFullYear(), nxt.getMonth() + 1, nxt.getDate()), '振替休日');
+    }
+
+    // 国民の休日：祝日に挟まれた平日
+    for (const [key] of base) {
+      const [yy, mm, dd] = key.split('-').map(Number);
+      const a = new Date(yy, mm - 1, dd + 1);
+      const b = new Date(yy, mm - 1, dd + 2);
+      const ka = ymd(a.getFullYear(), a.getMonth() + 1, a.getDate());
+      const kb = ymd(b.getFullYear(), b.getMonth() + 1, b.getDate());
+      if (!out.has(ka) && base.has(kb) && a.getDay() !== 0) out.set(ka, '休日');
+    }
+    return out;
+  }
+
+  /* 月の日リストを組み立てる（前後年の祝日も見る） */
+  function buildDays(year, month) {
+    const hol = new Map([...holidaysOfYear(year - 1), ...holidaysOfYear(year), ...holidaysOfYear(year + 1)]);
+    const n = daysInMonth(year, month);
+    const days = [];
+    for (let d = 1; d <= n; d++) {
+      const key = ymd(year, month, d);
+      const dow = new Date(year, month - 1, d).getDay();
+      const name = hol.get(key) || '';
+      days.push({
+        key, d, dow, dowLabel: DOW[dow],
+        isSat: dow === 6, isSun: dow === 0,
+        isHoliday: !!name, holidayName: name,
+        isBusy: dow === 0 || dow === 6 || !!name   // 土日祝＝繁忙日
+      });
+    }
+    return days;
+  }
+
+  /* ---------- 乱数（seed 固定で再現できる） ---------- */
+  function makeRandom(seed) {
+    let s = seed >>> 0 || 1;
+    return function () {
+      s ^= s << 13; s >>>= 0;
+      s ^= s >> 17;
+      s ^= s << 5; s >>>= 0;
+      return s / 4294967296;
+    };
+  }
+
+  /* ---------- 必要人数 ---------- */
+  function requiredFor(day, rules) {
+    if (day.isHoliday) return rules.minHoliday;
+    if (day.isSun) return rules.minSun;
+    if (day.isSat) return rules.minSat;
+    return rules.minWeekday;
+  }
+
+  /* ---------- コスト計算 ---------- */
+  /* off[s][d] = true なら休み */
+  function evaluate(off, ctx) {
+    const { days, staff, rules, locks, support } = ctx;
+    const S = staff.length, D = days.length;
+    let cost = 0;
+    const detail = { short: [], noCloser: [], noMorning: [], overrun: [] };
+
+    // 日ごとの充足
+    for (let d = 0; d < D; d++) {
+      let total = 0, closer = 0, morning = 0, full = 0;
+      const sec = { hard: 0, hobby: 0, off: 0 };
+      for (let s = 0; s < S; s++) {
+        if (off[s][d]) continue;
+        total++;
+        const k = staff[s].section;
+        sec[(k === 'hobby' || k === 'off') ? k : 'hard']++;
+        if (staff[s].canClose) closer++;
+        if (staff[s].canMorning) morning++;
+        if (locks[s][d] !== 'eve' && locks[s][d] !== 'early') full++;
+      }
+      const sup = support[d] || {};
+      ['hard', 'hobby', 'off'].forEach((k) => { const v = sup[k] || 0; sec[k] += v; total += v; });
+
+      const need = (ctx.needs && ctx.needs[d] != null) ? ctx.needs[d] : requiredFor(days[d], rules);
+      if (total < need) { cost += rules.wShort * (need - total) ** 2; detail.short.push(d); }
+      if (rules.maxPerDay && total > rules.maxPerDay) cost += rules.wOver * (total - rules.maxPerDay);
+      const mins = { hard: rules.minHard, hobby: rules.minHobby, off: rules.minOff };
+      ['hard', 'hobby', 'off'].forEach((k) => {
+        const m = Number(mins[k]) || 0;
+        if (staff.some((st) => (st.section || 'hard') === k) && sec[k] < m)
+          cost += rules.wSection * (m - sec[k]) ** 2;
+      });
+      if (closer === 0) { cost += rules.wCloser; detail.noCloser.push(d); }
+      if (morning === 0) { cost += rules.wMorning; detail.noMorning.push(d); }
+    }
+
+    // 人ごとの並び・希望
+    const busyOff = [];
+    for (let s = 0; s < S; s++) {
+      const st = staff[s];
+      let runWork = (ctx.carry && ctx.carry[s]) ? ctx.carry[s] : 0, runOff = 0, bOff = 0;
+      for (let d = 0; d < D; d++) {
+        if (off[s][d]) {
+          runOff++; runWork = 0;
+          if (days[d].isBusy) bOff++;
+          if (runOff > rules.maxConsecutiveOff) cost += rules.wRunOff * (runOff - rules.maxConsecutiveOff);
+        } else {
+          runWork++; runOff = 0;
+          const soft = rules.softConsecutive || 5;
+          if (runWork > soft) cost += rules.wRunSoft * (runWork - soft);
+          if (runWork > rules.maxConsecutive) {
+            cost += rules.wRun * (runWork - rules.maxConsecutive) ** 2;
+            detail.overrun.push([s, d]);
+          }
+        }
+        // 単独出勤（休→出→休）は避ける
+        if (d > 0 && d < D - 1 && !off[s][d] && off[s][d - 1] && off[s][d + 1]) cost += rules.wIsolated;
+        // 希望曜日休み
+        if (st.preferOffDow && st.preferOffDow.length && st.preferOffDow.includes(days[d].dow) && !off[s][d]) {
+          cost += rules.wDowPref;
+        }
+        // 祝日の休み希望
+        if (st.holidayOff && days[d].isHoliday && !off[s][d]) cost += rules.wHolidayPref;
+      }
+      busyOff.push(bOff);
+    }
+
+    // 土日祝の休みの配り方（weekendWork が高い人ほど土日祝に休まない）
+    for (let s = 0; s < S; s++) {
+      const rate = (staff[s].weekendWork == null ? 50 : staff[s].weekendWork) / 100;
+      cost += rules.wWeekendWork * rate * rate * busyOff[s];
+    }
+    const wts = staff.map((st) => (100 - (st.weekendWork == null ? 50 : st.weekendWork)) / 100 + 0.05);
+    const wsum = wts.reduce((a, b) => a + b, 0) || 1;
+    const totalBusy = busyOff.reduce((a, b) => a + b, 0);
+    for (let s = 0; s < S; s++) {
+      const expect = totalBusy * wts[s] / wsum;
+      cost += rules.wFair * (busyOff[s] - expect) ** 2;
+    }
+
+    return { cost, detail, busyOff };
+  }
+
+  /* ---------- 初期解 ---------- */
+  function seedSolution(ctx, rand) {
+    const { days, staff, locks, offNeed, freeIdx } = ctx;
+    const S = staff.length, D = days.length;
+    const off = [];
+    for (let s = 0; s < S; s++) {
+      const row = new Array(D).fill(false);
+      for (let d = 0; d < D; d++) if (locks[s][d] === 'off') row[d] = true;
+      // 希望を加味したスコア順に、間隔を空けながら選ぶ
+      const cand = freeIdx[s].map((d) => {
+        let sc = rand() * 2;
+        const st = staff[s];
+        if (st.preferOffDow && st.preferOffDow.includes(days[d].dow)) sc += 6;
+        if (st.holidayOff && days[d].isHoliday) sc += 5;
+        if (days[d].isBusy) sc -= 1.5 * ((st.weekendWork == null ? 50 : st.weekendWork) / 50);
+        return { d, sc };
+      }).sort((a, b) => b.sc - a.sc);
+      let placed = 0;
+      const want = offNeed[s];
+      for (const c of cand) {
+        if (placed >= want) break;
+        if (row[c.d - 1] || row[c.d + 1]) continue;  // まずは連休を作らず散らす
+        row[c.d] = true; placed++;
+      }
+      for (const c of cand) {
+        if (placed >= want) break;
+        if (!row[c.d]) { row[c.d] = true; placed++; }
+      }
+      off.push(row);
+    }
+    return off;
+  }
+
+  /* ---------- 焼きなまし ---------- */
+  function anneal(ctx, off, rand, iterations) {
+    const { staff, freeIdx } = ctx;
+    const S = staff.length;
+    let cur = evaluate(off, ctx).cost;
+    let best = cur;
+    let bestOff = off.map((r) => r.slice());
+    const movable = [];
+    for (let s = 0; s < S; s++) if (freeIdx[s].length > 1) movable.push(s);
+    if (!movable.length) return { off: bestOff, cost: best };
+
+    for (let i = 0; i < iterations; i++) {
+      const t = Math.max(0.01, 3 * (1 - i / iterations));
+      const s = movable[(rand() * movable.length) | 0];
+      const free = freeIdx[s];
+      const offDays = free.filter((d) => off[s][d]);
+      const workDays = free.filter((d) => !off[s][d]);
+      if (!offDays.length || !workDays.length) continue;
+      const a = offDays[(rand() * offDays.length) | 0];
+      const b = workDays[(rand() * workDays.length) | 0];
+      off[s][a] = false; off[s][b] = true;
+      const next = evaluate(off, ctx).cost;
+      const diff = next - cur;
+      if (diff <= 0 || rand() < Math.exp(-diff / t)) {
+        cur = next;
+        if (cur < best) { best = cur; bestOff = off.map((r) => r.slice()); }
+      } else {
+        off[s][a] = true; off[s][b] = false;        // 元に戻す
+      }
+    }
+    return { off: bestOff, cost: best };
+  }
+
+  /* ---------- 当番の割り振り ---------- */
+  function shareOf(st, kind, day) {
+    const can = kind === 'close' ? st.canClose : st.canMorning;
+    if (!can) return 0;
+    const raw = kind === 'close' ? st.closingShare : st.morningShare;
+    let base = raw == null ? 100 : raw;
+    if (day.isBusy) {
+      const b = kind === 'close' ? st.busyDuty
+              : (st.busyMorning == null ? st.busyDuty : st.busyMorning);
+      if (b != null) base = base * b / 100;
+    }
+    return Math.max(0, base);
+  }
+  function assignDuties(off, ctx, rand) {
+    const { days, staff, locks } = ctx;
+    const S = staff.length, D = days.length;
+    const closing = new Array(D).fill(-1);
+    const morning = new Array(D).fill(-1);
+    const cCount = new Array(S).fill(0);
+    const mCount = new Array(S).fill(0);
+    const lastC = new Array(S).fill(-99);
+    const lastM = new Array(S).fill(-99);
+
+    // 「何日に1回」の目安（割合が大きい人ほど間隔が短い）
+    const idealGap = { close: [], morning: [] };
+    ['close', 'morning'].forEach((kind) => {
+      let total = 0;
+      const base = staff.map((st) => {
+        const can = kind === 'close' ? st.canClose : st.canMorning;
+        if (!can) return 0;
+        const v = kind === 'close' ? st.closingShare : st.morningShare;
+        const sh = Math.max(0, v == null ? 100 : v);
+        total += sh; return sh;
+      });
+      idealGap[kind] = base.map((sh) => (sh > 0 ? total / sh : 0));
+    });
+    // 回数・割合・間隔を見て選ぶ
+    const pick = (pool, kind, day, count, last) => {
+      let best = -1, bestScore = Infinity;
+      for (const s of pool) {
+        const sh = shareOf(staff[s], kind, day);
+        if (sh <= 0) continue;
+        const gap = day.i - last[s];
+        let score = (count[s] + 1) / sh;
+        const ideal = idealGap[kind][s] || 1;
+        if (gap < ideal) score *= 1 + Math.min(1, (ideal - gap) / ideal) * 0.8;
+        if (gap < 2) score *= 6;                     // 連日の当番はなるべく避ける
+        score += rand() * 1e-3;
+        if (score < bestScore) { bestScore = score; best = s; }
+      }
+      return best;
+    };
+
+    for (let d = 0; d < D; d++) {
+      const day = Object.assign({ i: d }, days[d]);
+      const working = [];
+      for (let s = 0; s < S; s++) {
+        if (off[s][d]) continue;
+        if (locks[s][d] === 'eve' || locks[s][d] === 'early') continue;  // 半日は当番から外す
+        working.push(s);
+      }
+      const c = pick(working, 'close', day, cCount, lastC);
+      if (c >= 0) { closing[d] = c; cCount[c]++; lastC[c] = d; }
+
+      let pool = working.filter((s) => s !== closing[d]);
+      let m = pick(pool, 'morning', day, mCount, lastM);
+      if (m < 0) m = pick(working, 'morning', day, mCount, lastM);
+      if (m >= 0) { morning[d] = m; mCount[m]++; lastM[m] = d; }
+    }
+    return { closing, morning, cCount, mCount };
+  }
+
+  /* ---------- 入口 ---------- */
+  /*
+    cfg = {
+      year, month,
+      staff: [{id,code,name,rank,section:'hard'|'hobby',canClose,canMorning,
+               offTarget, preferOffDow:[5], holidayOff, note}],
+      requests: { staffId: { 'YYYY-MM-DD': 'off'|'work'|'paid'|'eve'|'early' } },
+      support:  { 'YYYY-MM-DD': {hard:0, hobby:0} },
+      rules: {...},
+      seed
+    }
+  */
+  function generate(cfg) {
+    const days = cfg.days || buildDays(cfg.year, cfg.month);
+    const staff = cfg.staff;
+    const rules = Object.assign({}, DEFAULT_RULES, cfg.rules || {});
+    const S = staff.length, D = days.length;
+    const rand = makeRandom(cfg.seed || 20260901);
+    const warnings = [];
+
+    // ロック（希望休・有休・固定出勤・時間指定）を展開
+    const locks = [];
+    for (let s = 0; s < S; s++) {
+      const row = new Array(D).fill(null);
+      const req = (cfg.requests || {})[staff[s].id] || {};
+      for (let d = 0; d < D; d++) {
+        const v = req[days[d].key];
+        if (v === 'off' || v === 'paid' || v === 'shift_off') row[d] = 'off';
+        else if (v === 'work') row[d] = 'work';
+        else if (v === 'eve' || v === 'early') row[d] = v;
+      }
+      locks.push(row);
+    }
+
+    const support = days.map((dd) => (cfg.support || {})[dd.key] || { hard: 0, hobby: 0 });
+
+    const freeIdx = [], offNeed = [];
+    for (let s = 0; s < S; s++) {
+      const free = [];
+      let fixedOff = 0;
+      for (let d = 0; d < D; d++) {
+        const L = locks[s][d];
+        if (L === 'off') fixedOff++;
+        else if (L === null) free.push(d);
+        // 'work' / 'eve' / 'early' は必ず出勤なので、休みの候補から外す
+      }
+      const target = Math.max(0, Math.min(D, staff[s].offTarget));
+      let need = target - fixedOff;
+      if (need < 0) {
+        warnings.push(`${staff[s].name}：希望休・有休が${fixedOff}日で目標休日数${target}日を超えています（希望どおり${fixedOff}日休みで組みました）`);
+        need = 0;
+      }
+      if (need > free.length) {
+        warnings.push(`${staff[s].name}：固定出勤が多く、目標休日数${target}日を確保できません`);
+        need = free.length;
+      }
+      freeIdx.push(free); offNeed.push(need);
+    }
+
+    const ctx = { days, staff, rules, locks, support, freeIdx, offNeed,
+                  needs: cfg.needs || null, carry: cfg.carry || null };
+
+    let bestOff = null, bestCost = Infinity;
+    const restarts = cfg.restarts || 4;
+    const iters = cfg.iterations || 12000;
+    for (let r = 0; r < restarts; r++) {
+      const seeded = seedSolution(ctx, rand);
+      const res = anneal(ctx, seeded, rand, iters);
+      if (res.cost < bestCost) { bestCost = res.cost; bestOff = res.off; }
+    }
+
+    const duties = assignDuties(bestOff, ctx, rand);
+    const ev = evaluate(bestOff, ctx);
+
+    // セル記号に変換
+    const cells = [];
+    for (let s = 0; s < S; s++) {
+      const row = [];
+      const req = (cfg.requests || {})[staff[s].id] || {};
+      for (let d = 0; d < D; d++) {
+        const r = req[days[d].key];
+        if (bestOff[s][d]) row.push(r === 'paid' ? '有休' : (r === 'off' ? '◎' : '〇'));
+        else if (r === 'work' && duties.closing[d] === s) row.push('当番');
+        else if (r === 'eve') row.push('16:00～');
+        else if (r === 'early') row.push('～15:00');
+        else if (duties.closing[d] === s) row.push('当番');
+        else row.push('');
+      }
+      cells.push(row);
+    }
+
+    // 集計
+    const perDay = days.map((day, d) => {
+      let full = 0, half = 0;
+      const sec = { hard: 0, hobby: 0, off: 0 };
+      for (let s = 0; s < S; s++) {
+        const c = cells[s][d];
+        if (c === '〇' || c === '◎' || c === '有休') continue;
+        if (typeof c === 'string' && c.indexOf('～') >= 0) half++; else full++;
+        const k = staff[s].section;
+        sec[(k === 'hobby' || k === 'off') ? k : 'hard']++;
+      }
+      ['hard', 'hobby', 'off'].forEach((k) => { const v = (support[d] || {})[k] || 0; sec[k] += v; full += v; });
+      return { full, half, sec, hard: sec.hard, hobby: sec.hobby,
+               need: (cfg.needs && cfg.needs[d] != null) ? cfg.needs[d] : requiredFor(day, rules) };
+    });
+
+    const perStaff = staff.map((st, s) => {
+      let offDays = 0, workDays = 0, busyOff = 0, maxRun = 0, run = 0;
+      for (let d = 0; d < D; d++) {
+        const c = cells[s][d];
+        if (c === '〇' || c === '◎' || c === '有休') {
+          offDays++; run = 0;
+          if (days[d].isBusy) busyOff++;
+        } else { workDays++; run++; maxRun = Math.max(maxRun, run); }
+      }
+      return {
+        id: st.id, name: st.name, offDays, workDays, busyOff, maxRun,
+        closing: duties.cCount[s], morning: duties.mCount[s],
+        target: st.offTarget
+      };
+    });
+
+    // 警告
+    perDay.forEach((p, d) => {
+      if (p.full + p.half * 0.5 < p.need) {
+        warnings.push(`${days[d].d}日(${days[d].dowLabel})：出勤${p.full}名（必要${p.need}名）`);
+      }
+    });
+    ev.detail.noCloser.forEach((d) => warnings.push(`${days[d].d}日：レジ締め当番ができる人が出勤していません`));
+    perStaff.forEach((p) => {
+      if (p.maxRun > rules.maxConsecutive) warnings.push(`${p.name}：最大${p.maxRun}連勤（上限${rules.maxConsecutive}日）`);
+      if (p.offDays !== p.target) warnings.push(`${p.name}：休日${p.offDays}日（目標${p.target}日）`);
+    });
+
+    // 需給チェック（そもそも組めるか）
+    let demand = 0, supply = 0;
+    days.forEach((day, d) => {
+      demand += (cfg.needs && cfg.needs[d] != null) ? cfg.needs[d] : requiredFor(day, rules);
+      supply += support[d].hard + support[d].hobby;
+    });
+    staff.forEach((st) => { supply += D - Math.min(D, st.offTarget); });
+    const feasibility = { demand, supply, gap: supply - demand };
+
+    return {
+      days, cells, perDay, perStaff, feasibility,
+      closing: duties.closing, morning: duties.morning,
+      cost: bestCost, warnings: [...new Set(warnings)]
+    };
+  }
+
+  const DEFAULT_RULES = {
+    minWeekday: 4, minSat: 5, minSun: 5, minHoliday: 5,
+    minHard: 2, minHobby: 2, minOff: 2, maxPerDay: 6,
+    maxConsecutive: 6, maxConsecutiveOff: 1, softConsecutive: 5,
+    wShort: 120, wSection: 130, wCloser: 90, wMorning: 30, wOver: 6,
+    wRun: 25, wRunSoft: 7, wRunOff: 22, wIsolated: 6,
+    wDowPref: 14, wHolidayPref: 12, wFair: 7, wWeekendWork: 16
+  };
+
+  const api = { holidaysOfYear, buildDays, generate, DEFAULT_RULES, daysInMonth, ymd, DOW, makeRandom };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  root.ShiftEngine = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function(){
+'use strict';
+var E=window.ShiftEngine;
+var $=function(s){return document.querySelector(s);};
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function clsOf(){return '';}
+function unb64(str){return decodeURIComponent(escape(atob(str.replace(/-/g,'+').replace(/_/g,'/'))));}
+function drawSheet(p){
+  const dowN=['日','月','火','水','木','金','土'];
+  const days=E.buildDays(p.y,p.m);
+  const memos=p.e||{},hasMemo=Object.keys(memos).length>0;
+  const sn=p.k||p.n;
+  const dec=ch=>{
+    if(ch===' ')return '';if(ch==='D')return '当番';if(ch==='O')return '〇';
+    if(ch==='A')return '◎';if(ch==='P')return '有休';
+    const i=ch.charCodeAt(0)-49;return (p.t&&p.t[i])||'';
+  };
+  const wDay=38,wDow=34,wMemo=hasMemo?150:0,wWho=86,wAsa=54,rh=28,head=34,title=34;
+  const W=wDay+wDow+wMemo+wWho*p.n.length+wAsa;
+  const H=title+head+rh*days.length+6;
+  const cv=document.createElement('canvas');
+  const R=Math.min(2,(window.devicePixelRatio||1)*2);
+  cv.width=W*R;cv.height=H*R;
+  const g=cv.getContext('2d');g.scale(R,R);
+  g.fillStyle='#fff';g.fillRect(0,0,W,H);
+  const F='"Meiryo","Yu Gothic","Hiragino Kaku Gothic ProN",sans-serif';
+  const txt=(t,x,y,align,color,size,bold)=>{
+    g.fillStyle=color||'#1A1A1A';g.font=(bold?'bold ':'')+(size||13)+'px '+F;
+    g.textAlign=align||'center';g.textBaseline='middle';g.fillText(t,x,y);
+  };
+  txt(p.s+'　'+p.y+'年'+p.m+'月　勤務予定表',W/2,title/2,'center','#1A1A1A',16,true);
+  // 見出し
+  const cols=[{w:wDay,t:'日'},{w:wDow,t:'曜日'}];
+  if(hasMemo)cols.push({w:wMemo,t:'行事・備考'});
+  p.n.forEach((n,i)=>cols.push({w:wWho,t:n,sec:(p.g||[])[i]||'hard'}));
+  cols.push({w:wAsa,t:'朝礼当番'});
+  let x=0;
+  cols.forEach(c=>{
+    const isName=c.sec!==undefined;
+    g.fillStyle=isName?(c.sec==='hobby'?'#B23B2E':c.sec==='off'?'#2F6B33':'#0070C0'):'#EFF1EC';
+    g.fillRect(x,title,c.w,head);
+    txt(c.t,x+c.w/2,title+head/2,'center',isName?'#fff':'#5C625A',isName?13:12,true);
+    x+=c.w;
+  });
+  // 明細
+  days.forEach((day,d)=>{
+    const y=title+head+rh*d;
+    const bg=day.isSun||day.isHoliday?'#FCE4E4':day.isSat?'#DDEBF7':'#fff';
+    g.fillStyle=bg;g.fillRect(0,y,W,rh);
+    let cx=0;
+    const dcol=day.isSun||day.isHoliday?'#B23B2E':day.isSat?'#1F6FB2':'#1A1A1A';
+    txt(String(day.d),cx+wDay/2,y+rh/2,'center',dcol,14,true);cx+=wDay;
+    txt(dowN[day.dow],cx+wDow/2,y+rh/2,'center',dcol,13,true);cx+=wDow;
+    if(hasMemo){
+      g.save();g.beginPath();g.rect(cx,y,wMemo,rh);g.clip();
+      txt(memos[d]||day.holidayName||'',cx+4,y+rh/2,'left','#1A1A1A',11);g.restore();cx+=wMemo;
+    }
+    p.n.forEach((n,si)=>{
+      const c=dec((p.c[si]||'')[d]||' ');
+      if(c==='〇'||c==='◎'||c==='有休'){g.fillStyle='#EDEEEA';g.fillRect(cx,y,wWho,rh);}
+      const size=(c==='◎')?19:(c==='〇')?17:(c.indexOf('～')>=0?11:13);
+      txt(c,cx+wWho/2,y+rh/2,'center','#1A1A1A',size,c==='当番'||c==='◎');
+      cx+=wWho;
+    });
+    const ai=(p.a||'')[d];
+    txt((ai&&ai!=='-')?(sn[+ai]||''):'',cx+wAsa/2,y+rh/2,'center','#5C625A',12);
+  });
+  // 罫線
+  g.strokeStyle='#BFC5BB';g.lineWidth=1;
+  let gx=0;cols.forEach(c=>{gx+=c.w;g.beginPath();g.moveTo(gx-0.5,title);g.lineTo(gx-0.5,H-6);g.stroke();});
+  g.beginPath();g.moveTo(0,title+0.5);g.lineTo(W,title+0.5);g.stroke();
+  for(let d=0;d<=days.length;d++){const y=title+head+rh*d+0.5;g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}
+  g.strokeStyle='#8E958A';g.strokeRect(0.5,title+0.5,W-1,H-title-6.5);
+  return cv;
+}
+
+function payload(){
+  var h=location.hash||'',q=location.search||'';
+  var m=h.match(/[#&\/]?v=([^&]+)/);
+  if(!m)m=q.match(/[?&]v=([^&]+)/);
+  return m?m[1]:null;
+}
+function fail(t){$('#img').hidden=true;$('#msg').hidden=false;$('#msg').textContent=t;$('#sub').textContent='';}
+try{
+  var p=payload();
+  if(!p){fail('勤務表のデータがありません。パソコンの「QRコード」から読み取ってください。');}
+  else{
+    var data=JSON.parse(unb64(decodeURIComponent(p)));
+    $('#ttl').textContent=data.s+'　'+data.y+'年'+data.m+'月';
+    var cv=drawSheet(data);
+    var img=$('#img');img.src=cv.toDataURL('image/png');img.hidden=false;
+  }
+}catch(e){ fail('勤務表を読み取れませんでした。もう一度QRコードを読み取ってください。'); }
+})();
+</script>
+</body>
+</html>

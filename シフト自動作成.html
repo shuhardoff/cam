@@ -339,6 +339,16 @@ body.printing .sumbox{display:none}
   <p class="sub">スマホのカメラで読み取ると、この月の勤務表が表示されます。そのまま画面を撮れば写真として残せます。</p>
   <div id="qrBox" style="display:grid;place-items:center;padding:10px 0;min-height:220px"></div>
   <p class="hint" id="qrNote"></p>
+  <div class="fld" style="margin-top:10px">
+    <label>読み取り用のリンク</label>
+    <input type="text" id="qrUrl" readonly onclick="this.select()">
+  </div>
+  <p class="hint" id="qrVer"></p>
+  <div class="fld">
+    <label>QRの読み取り先（view.html のURL）</label>
+    <input type="text" id="qrBase" placeholder="https://ユーザー名.github.io/リポジトリ名/view.html">
+    <p class="hint" style="margin:5px 0 0">view.html を一度だけ置いて、そのURLをここに入れてください。以後この本体を更新してもQRは動きます。空欄ならいま開いているページを使います。</p>
+  </div>
   <div class="fld" style="margin-top:12px"><button class="btn wide" id="btnPng">この月の勤務表を画像（PNG）で保存</button></div>
   <div class="fld"><button class="btn wide" id="btnCopyLink">読み取り用のリンクをコピー</button></div>
   <div class="fld"><button class="btn wide" id="btnQROpen">このパソコンで表示を確認する</button></div>
@@ -411,6 +421,7 @@ body.printing .sumbox{display:none}
   <hr>
   <div class="fld"><button class="btn wide" id="btnExport">設定をファイルに保存</button></div>
   <div class="fld"><button class="btn wide" id="btnImport">設定を読み込む</button><input type="file" id="fileImport" accept="application/json" hidden></div>
+  <p class="hint" id="appVer" style="margin-bottom:4px"></p>
   <p class="hint" id="storeState"></p>
   <p class="hint" id="usage" style="margin-top:6px"></p>
   <p class="hint" style="margin:4px 0 0">容量がいっぱいになったときは、古い月から自動で削除して保存を続けます（いま開いている月は消えません）。手動で減らしたいときは下のボタンです。</p>
@@ -931,6 +942,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
+const APP_VER='v13（QR画像対応）';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 部門の定義（キー・表示名・最低人数の設定名） */
 const SECS=[{k:'hard',n:'ハード',f:'ハードオフ',r:'minHard'},
@@ -2048,6 +2060,7 @@ $('#btnSettings').addEventListener('click',()=>{
   $('#r_monthEndDays').value=Math.max(1,Number(S.rules.monthEndDays)||1);
   renderSecPick();renderHelpers();renderEvents();renderStaffList();
   updateUsage();
+  const vEl=$('#appVer');if(vEl)vEl.textContent='バージョン '+APP_VER;
   $('#storeState').textContent=
     store.mode==='claude'?'この画面に自動保存しています（入力するたび保存）。'
    :store.mode==='browser'?'このパソコンのブラウザに自動保存しています（入力するたび保存）。別のパソコンで使うときは「設定をファイルに保存」で持ち出してください。'
@@ -2302,6 +2315,7 @@ function adoptData(saved){
   }else{
     const id=newId();DB={v:2,cur:id,stores:{}};DB.stores[id]=defaultState();
   }
+  if(saved&&saved.viewerURL)DB.viewerURL=saved.viewerURL;
   S=DB.stores[DB.cur];
   migrate();month();
 }
@@ -2360,10 +2374,14 @@ function packMonth(){
 }
 function b64(str){return btoa(unescape(encodeURIComponent(str))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function unb64(str){return decodeURIComponent(escape(atob(str.replace(/-/g,'+').replace(/_/g,'/')))); }
+function qrBase(){
+  const u=(DB.viewerURL||'').trim();
+  if(u)return u.split('#')[0];
+  return location.href.split('#')[0].split('?')[0];
+}
 function qrURL(){
   const p=packMonth();if(!p)return null;
-  const base=location.href.split('#')[0];
-  return base+'#v='+b64(JSON.stringify(p));
+  return qrBase()+'#v='+b64(JSON.stringify(p));
 }
 /* 勤務表をそのまま画像（canvas）に描く */
 function drawSheet(p){
@@ -2445,17 +2463,30 @@ $('#btnQR').addEventListener('click',async()=>{
   if(!VIEW){toast('先にシフトを作ってください');return;}
   const url=qrURL();
   $('#qrBox').innerHTML='<span class="hint">作成中…</span>';
-  $('#qrNote').textContent=(location.protocol==='file:')
-    ? 'いまはパソコン内のファイルを開いているため、このQRは他の端末では開けません。GitHub Pagesなどに置いて https:// で開くと、スタッフのスマホから読めます。'
-    : 'スタッフに読み取ってもらってください。データはURLの中に入っているので、通信で送られることはありません。';
+  $('#qrNote').textContent=qrBase().indexOf('file:')===0
+    ? '読み取り先がパソコン内のファイルになっています。下の欄に view.html のURL（https://…）を入れてください。'
+    : 'スマホのカメラで読み取ると勤務表の画像が出ます。長押しで写真に保存できます。';
+  $('#qrBase').value=DB.viewerURL||'';
+  $('#qrUrl').value=url;
+  $('#qrVer').innerHTML='このファイルのバージョン：<b>'+esc(APP_VER)+'</b><br>'+
+    'QRを読んで「まだ作っていません」と出るときは、置いてあるファイルが古い版です。'+
+    'いま使っているこのファイルを同じ名前で上げ直してから、もう一度QRを作ってください。';
   openDrawer($('#qDrawer'));
-  try{
-    const QR=await loadQRLib();
-    $('#qrBox').innerHTML='';
-    new QR($('#qrBox'),{text:url,width:230,height:230,correctLevel:QR.CorrectLevel.L});
-  }catch(e){
-    $('#qrBox').innerHTML='<span class="hint">QRコードを作れませんでした（インターネットに接続していないときは作れません）。</span>';
-  }
+  M_qr(url);
+});
+function M_qr(url){
+  $('#qrBox').innerHTML='';
+  loadQRLib().then(QR=>{new QR($('#qrBox'),{text:url,width:250,height:250,correctLevel:QR.CorrectLevel.L});})
+    .catch(()=>{$('#qrBox').innerHTML='<span class="hint">QRコードを作れませんでした（インターネットに接続していないときは作れません）。</span>';});
+}
+$('#qrBase').addEventListener('change',e=>{
+  DB.viewerURL=e.target.value.trim();persist();
+  const u=qrURL();
+  if(u){$('#qrUrl').value=u;M_qr(u);}
+  $('#qrNote').textContent=qrBase().indexOf('file:')===0
+    ? '読み取り先がパソコン内のファイルになっています。上の欄に view.html のURL（https://…）を入れてください。'
+    : 'スマホのカメラで読み取ると勤務表の画像が出ます。長押しで写真に保存できます。';
+  toast(DB.viewerURL?'読み取り先を設定しました':'いま開いているページを使います');
 });
 $('#btnQROpen').addEventListener('click',()=>{const u=qrURL();if(u)window.open(u,'_blank');});
 $('#btnPng').addEventListener('click',()=>{
@@ -2511,11 +2542,22 @@ function renderViewer(p){
   $('#sheet').innerHTML=h;
   document.documentElement.style.setProperty('--z',1);
 }
+function viewPayload(){
+  const h=location.hash||'',q=location.search||'';
+  let m=h.match(/[#&/]?v=([^&]+)/);
+  if(!m)m=q.match(/[?&]v=([^&]+)/);
+  return m?m[1]:null;
+}
 (async function init(){
-  const hash=location.hash||'';
-  if(hash.indexOf('#v=')===0){
-    try{ renderViewer(JSON.parse(unb64(hash.slice(3)))); return; }
-    catch(e){ document.body.innerHTML='<p style="padding:20px">この勤務表は読み取れませんでした。</p>'; return; }
+  const pay=viewPayload();
+  if(pay){
+    try{ renderViewer(JSON.parse(unb64(decodeURIComponent(pay)))); return; }
+    catch(e){
+      document.body.innerHTML='<p style="padding:24px;font-size:15px;line-height:1.8">'+
+        'この勤務表を読み取れませんでした。<br>置いてあるファイルが古い版のことがあります。'+
+        'パソコンで使っているファイルを上げ直してから、もう一度お試しください。</p>';
+      return;
+    }
   }
   showSave(store.ok?'自動保存':'保存できません',store.ok?'':'ng');
   adoptData(await store.load());
