@@ -606,7 +606,6 @@ function drawSheet(p){
     txt(half==null?'':String(half),cx+wNum/2,y+rh/2,'center','#5C625A',13);cx+=wNum;
     p.n.forEach((n,si)=>{
       const c=dec((p.c[si]||'')[d]||' ');
-      if(c==='〇'||c==='◎'||c==='有休'){g.fillStyle='#EDEEEA';g.fillRect(cx,y,wWho,rh);}
       const size=(c==='◎')?19:(c==='〇')?17:(c.indexOf('～')>=0?11:13);
       txt(c,cx+wWho/2,y+rh/2,'center','#1A1A1A',size,c==='当番'||c==='◎');
       cx+=wWho;

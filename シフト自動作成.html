@@ -3297,7 +3297,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v20';
+const APP_VER='v22';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 部門の定義（キー・表示名・最低人数の設定名） */
 const SECS=[{k:'hard',n:'ハード',f:'ハードオフ',r:'minHard'},
@@ -4822,7 +4822,6 @@ function drawSheet(p){
     txt(half==null?'':String(half),cx+wNum/2,y+rh/2,'center','#5C625A',13);cx+=wNum;
     p.n.forEach((n,si)=>{
       const c=dec((p.c[si]||'')[d]||' ');
-      if(c==='〇'||c==='◎'||c==='有休'){g.fillStyle='#EDEEEA';g.fillRect(cx,y,wWho,rh);}
       const size=(c==='◎')?19:(c==='〇')?17:(c.indexOf('～')>=0?11:13);
       txt(c,cx+wWho/2,y+rh/2,'center','#1A1A1A',size,c==='当番'||c==='◎');
       cx+=wWho;
