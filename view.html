@@ -97,6 +97,15 @@ img{width:100%;height:auto;display:block}
     return out;
   }
 
+  /* 世間が休みで来店が増えやすい期間（GW・年末年始・お盆） */
+  function peakOf(m, d) {
+    if (m === 12 && d >= 29) return '年末年始';
+    if (m === 1 && d <= 3) return '年末年始';
+    if ((m === 4 && d >= 29) || (m === 5 && d <= 5)) return 'ゴールデンウィーク';
+    if (m === 8 && d >= 13 && d <= 16) return 'お盆';
+    return '';
+  }
+
   /* 月の日リストを組み立てる（前後年の祝日も見る） */
   function buildDays(year, month) {
     const hol = new Map([...holidaysOfYear(year - 1), ...holidaysOfYear(year), ...holidaysOfYear(year + 1)]);
@@ -106,11 +115,13 @@ img{width:100%;height:auto;display:block}
       const key = ymd(year, month, d);
       const dow = new Date(year, month - 1, d).getDay();
       const name = hol.get(key) || '';
+      const peak = peakOf(month, d);
       days.push({
         key, d, dow, dowLabel: DOW[dow],
         isSat: dow === 6, isSun: dow === 0,
         isHoliday: !!name, holidayName: name,
-        isBusy: dow === 0 || dow === 6 || !!name   // 土日祝＝繁忙日
+        isPeak: !!peak, peakName: peak,
+        isBusy: dow === 0 || dow === 6 || !!name || !!peak   // 土日祝・長期休暇＝繁忙日
       });
     }
     return days;
@@ -129,7 +140,7 @@ img{width:100%;height:auto;display:block}
 
   /* ---------- 必要人数 ---------- */
   function requiredFor(day, rules) {
-    if (day.isHoliday) return rules.minHoliday;
+    if (day.isHoliday || day.isPeak) return rules.minHoliday;
     if (day.isSun) return rules.minSun;
     if (day.isSat) return rules.minSat;
     return rules.minWeekday;
@@ -162,7 +173,11 @@ img{width:100%;height:auto;display:block}
       const need = (ctx.needs && ctx.needs[d] != null) ? ctx.needs[d] : requiredFor(days[d], rules);
       if (total < need) { cost += rules.wShort * (need - total) ** 2; detail.short.push(d); }
       if (rules.maxPerDay && total > rules.maxPerDay) cost += rules.wOver * (total - rules.maxPerDay);
-      const mins = { hard: rules.minHard, hobby: rules.minHobby, off: rules.minOff };
+      const busy = days[d].isBusy;
+      const pick = (w, b) => (busy && rules[b] != null) ? rules[b] : rules[w];
+      const mins = { hard: pick('minHard', 'minHardBusy'),
+                     hobby: pick('minHobby', 'minHobbyBusy'),
+                     off: pick('minOff', 'minOffBusy') };
       ['hard', 'hobby', 'off'].forEach((k) => {
         const m = Number(mins[k]) || 0;
         if (staff.some((st) => (st.section || 'hard') === k) && sec[k] < m)
@@ -517,11 +532,10 @@ img{width:100%;height:auto;display:block}
     wDowPref: 14, wHolidayPref: 12, wFair: 7, wWeekendWork: 16
   };
 
-  const api = { holidaysOfYear, buildDays, generate, DEFAULT_RULES, daysInMonth, ymd, DOW, makeRandom };
+  const api = { holidaysOfYear, buildDays, generate, DEFAULT_RULES, daysInMonth, ymd, DOW, makeRandom, peakOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.ShiftEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);
-
 </script>
 <script>
 (function(){
@@ -590,14 +604,15 @@ function drawSheet(p){
   /* 明細 */
   days.forEach((day,d)=>{
     const y=top+head+rh*d;
-    const bg=day.isSun||day.isHoliday?'#FCE4E4':day.isSat?'#DDEBF7':'#fff';
+    const bg=day.isPeak?'#EDE4F3':day.isSun||day.isHoliday?'#FCE4E4':day.isSat?'#DDEBF7':'#fff';
     g.fillStyle=bg;g.fillRect(0,y,W,rh);
     let cx=0;
-    const dcol=day.isSun||day.isHoliday?'#B23B2E':day.isSat?'#1F6FB2':'#1A1A1A';
+    const dcol=day.isPeak?'#5D3D80':day.isSun||day.isHoliday?'#B23B2E':day.isSat?'#1F6FB2':'#1A1A1A';
     txt(String(day.d),cx+wDay/2,y+rh/2,'center',dcol,14,true);cx+=wDay;
     txt(dowN[day.dow],cx+wDow/2,y+rh/2,'center',dcol,13,true);cx+=wDow;
     g.save();g.beginPath();g.rect(cx,y,wMemo,rh);g.clip();
-    txt(memos[d]||day.holidayName||'',cx+5,y+rh/2,'left','#1A1A1A',11);g.restore();cx+=wMemo;
+    txt(memos[d]||day.holidayName||day.peakName||'',cx+5,y+rh/2,'left',day.isPeak?'#5D3D80':'#1A1A1A',11);
+    g.restore();cx+=wMemo;
     const full=numAt(p.f,d),half=numAt(p.hf,d),need=numAt(p.nd,d);
     if(full!=null&&need!=null&&full<need){g.fillStyle='#B23B2E';g.fillRect(cx,y,wNum,rh);
       txt(String(full),cx+wNum/2,y+rh/2,'center','#fff',13,true);}

@@ -99,6 +99,9 @@ td.day,td.dow{position:sticky;z-index:15;background:#fff;font-weight:700}
 td.day{left:0} td.dow{left:calc(42px*var(--z));color:var(--ink2)}
 thead th.day{left:0} thead th.dow{left:calc(42px*var(--z))}
 tr.sat td{background:var(--sat)} tr.sun td{background:var(--sun)}
+tr.peak td{background:#EDE4F3}
+tr.peak td.day,tr.peak td.dow{color:#5D3D80}
+tr.peak td.memo{color:#5D3D80}
 tr.sat td.dow{color:var(--blue)} tr.sun td.dow{color:var(--red)}
 td.memo{text-align:left;padding:0 6px;font-size:calc(12px*var(--z));color:var(--ink);cursor:text;
   white-space:nowrap;text-overflow:ellipsis}
@@ -533,6 +536,15 @@ body.printing .sumbox{display:none}
     return out;
   }
 
+  /* 世間が休みで来店が増えやすい期間（GW・年末年始・お盆） */
+  function peakOf(m, d) {
+    if (m === 12 && d >= 29) return '年末年始';
+    if (m === 1 && d <= 3) return '年末年始';
+    if ((m === 4 && d >= 29) || (m === 5 && d <= 5)) return 'ゴールデンウィーク';
+    if (m === 8 && d >= 13 && d <= 16) return 'お盆';
+    return '';
+  }
+
   /* 月の日リストを組み立てる（前後年の祝日も見る） */
   function buildDays(year, month) {
     const hol = new Map([...holidaysOfYear(year - 1), ...holidaysOfYear(year), ...holidaysOfYear(year + 1)]);
@@ -542,11 +554,13 @@ body.printing .sumbox{display:none}
       const key = ymd(year, month, d);
       const dow = new Date(year, month - 1, d).getDay();
       const name = hol.get(key) || '';
+      const peak = peakOf(month, d);
       days.push({
         key, d, dow, dowLabel: DOW[dow],
         isSat: dow === 6, isSun: dow === 0,
         isHoliday: !!name, holidayName: name,
-        isBusy: dow === 0 || dow === 6 || !!name   // 土日祝＝繁忙日
+        isPeak: !!peak, peakName: peak,
+        isBusy: dow === 0 || dow === 6 || !!name || !!peak   // 土日祝・長期休暇＝繁忙日
       });
     }
     return days;
@@ -565,7 +579,7 @@ body.printing .sumbox{display:none}
 
   /* ---------- 必要人数 ---------- */
   function requiredFor(day, rules) {
-    if (day.isHoliday) return rules.minHoliday;
+    if (day.isHoliday || day.isPeak) return rules.minHoliday;
     if (day.isSun) return rules.minSun;
     if (day.isSat) return rules.minSat;
     return rules.minWeekday;
@@ -957,7 +971,7 @@ body.printing .sumbox{display:none}
     wDowPref: 14, wHolidayPref: 12, wFair: 7, wWeekendWork: 16
   };
 
-  const api = { holidaysOfYear, buildDays, generate, DEFAULT_RULES, daysInMonth, ymd, DOW, makeRandom };
+  const api = { holidaysOfYear, buildDays, generate, DEFAULT_RULES, daysInMonth, ymd, DOW, makeRandom, peakOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.ShiftEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -3306,7 +3320,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v23';
+const APP_VER='v24';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 部門の定義（キー・表示名・最低人数の設定名） */
 const SECS=[{k:'hard',n:'ハード',f:'ハードオフ',r:'minHard',rb:'minHardBusy'},
@@ -3520,7 +3534,8 @@ function memoText(key,day){
   const parts=d.h.slice();
   if(d.note)parts.push(d.note);
   if(parts.length)return parts.join('・');
-  return day&&day.holidayName?day.holidayName:'';
+  if(day&&day.holidayName)return day.holidayName;
+  return (day&&day.peakName)?day.peakName:'';
 }
 function supportOf(key){
   const d=dayInfo(key),r={};SECS.forEach(x=>r[x.k]=0);
@@ -3584,7 +3599,7 @@ function needOf(day){
   const v=dayInfo(day.key).need;
   if(v!=null&&v!=='')return Math.max(0,Number(v)||0);
   const r=S.rules;
-  return day.isHoliday?r.minHoliday:day.isSun?r.minSun:day.isSat?r.minSat:r.minWeekday;
+  return (day.isHoliday||day.isPeak)?r.minHoliday:day.isSun?r.minSun:day.isSat?r.minSat:r.minWeekday;
 }
 function buildCfg(seed,scope){
   const mo=month();
@@ -3905,7 +3920,7 @@ function renderSheet(){
      '</tr></thead><tbody>';
   v.days.forEach((day,d)=>{
     const p=v.perDay[d],mt=memoText(day.key,day);
-    h+='<tr class="'+(day.isSun||day.isHoliday?'sun':day.isSat?'sat':'')+'">'+
+    h+='<tr class="'+(day.isPeak?'peak':day.isSun||day.isHoliday?'sun':day.isSat?'sat':'')+'">'+
        '<td class="day">'+day.d+'</td><td class="dow">'+day.dowLabel+'</td>'+
        '<td class="memo" data-memo="'+day.key+'" title="クリックで応援・行事を入れる">'+(mt?esc(mt):'<span class="ph">＋</span>')+'</td>'+
        '<td class="n'+(p.full<p.need?' short':p.full===p.need?' exact':'')+(dayInfo(day.key).need!=null?' fixed':'')+
@@ -4616,7 +4631,8 @@ async function writeXlsx(ExcelJS){
   const wb=new ExcelJS.Workbook();wb.creator=S.meta.company;
   const ws=wb.addWorksheet('月',{pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:1,
     horizontalCentered:true,margins:{left:.3,right:.3,top:.35,bottom:.3,header:.2,footer:.2}}});
-  const C0=6,LAST=C0+n+2;
+  const SEC=activeSecs(),NS=SEC.length;
+  const C0=6,LAST=C0+n+NS;
   const thin={style:'thin',color:{argb:'FFB7BDB3'}},border={top:thin,left:thin,bottom:thin,right:thin};
   const set=(r,c,val,o)=>{const cell=ws.getRow(r).getCell(c);cell.value=val;
     cell.alignment={horizontal:(o&&o.h)||'center',vertical:'middle',wrapText:!!(o&&o.wrap)};
@@ -4631,12 +4647,15 @@ async function writeXlsx(ExcelJS){
   ['日','曜日','イベント・備考','フル','ハーフ'].forEach((l,i)=>{ws.mergeCells(4,i+1,5,i+1);set(4,i+1,l,{font:{bold:true},fill:'FFEFF1EC',wrap:true});});
   S.staff.forEach((st,i)=>{set(4,C0+i,st.code||'',{font:{bold:true},fill:'FFEFF1EC'});
     set(5,C0+i,st.name,{font:{bold:true,color:{argb:'FFFFFFFF'}},fill:'FF0070C0'});});
-  ['朝礼当番','ハード出勤','ホビー出勤'].forEach((l,i)=>{ws.mergeCells(4,C0+n+i,5,C0+n+i);set(4,C0+n+i,l,{font:{bold:true},fill:'FFEFF1EC',wrap:true});});
+  ['朝礼当番'].concat(SEC.map(x=>x.n+'出勤')).forEach((l,i)=>{ws.mergeCells(4,C0+n+i,5,C0+n+i);
+    set(4,C0+n+i,l,{font:{bold:true},fill:'FFEFF1EC',wrap:true});});
   const R0=6;
   v.days.forEach((day,d)=>{
     const r=R0+d;ws.getRow(r).height=16;
-    const bg=day.isHoliday||day.isSun?'FFFCE4E4':day.isSat?'FFDDEBF7':null;
-    const df=day.isHoliday||day.isSun?{color:{argb:'FFB23B2E'},bold:true}:day.isSat?{color:{argb:'FF1F6FB2'},bold:true}:{bold:true};
+    const bg=day.isPeak?'FFEDE4F3':day.isHoliday||day.isSun?'FFFCE4E4':day.isSat?'FFDDEBF7':null;
+    const df=day.isPeak?{color:{argb:'FF5D3D80'},bold:true}
+            :day.isHoliday||day.isSun?{color:{argb:'FFB23B2E'},bold:true}
+            :day.isSat?{color:{argb:'FF1F6FB2'},bold:true}:{bold:true};
     set(r,1,day.d,{fill:bg,font:df});set(r,2,day.dowLabel,{fill:bg,font:df});
     set(r,3,memoText(day.key,day),{h:'left',fill:bg});
     const p=v.perDay[d];
@@ -4651,7 +4670,7 @@ async function writeXlsx(ExcelJS){
     set(r,C0+n,v.morning[d]>=0?shortName(S.staff[v.morning[d]]):'',{fill:bg});
     const shortF={bold:true,color:{argb:'FFFFFFFF'}};
     SEC.forEach((x,i)=>{
-      const need=Number(S.rules[x.r])||0,cnt=p.sec[x.k]||0;
+      const need=secNeed(x,day),cnt=p.sec[x.k]||0;
       set(r,C0+n+1+i,cnt,cnt<need?{fill:'FFB23B2E',font:shortF}:{fill:bg});
     });
   });
@@ -4662,12 +4681,12 @@ async function writeXlsx(ExcelJS){
   .forEach((f,i)=>{const r=F0+i;ws.mergeCells(r,1,r,5);
     set(r,1,f[0],{h:'right',font:{bold:true},fill:'FFF7F8F5'});
     S.staff.forEach((st,s)=>set(r,C0+s,f[1](st,s),{fill:'FFF7F8F5',h:f[0]==='条件'?'left':'center'}));
-    for(let c=C0+n;c<=C0+n+2;c++)set(r,c,'',{fill:'FFF7F8F5'});});
+    for(let c=C0+n;c<=C0+n+NS;c++)set(r,c,'',{fill:'FFF7F8F5'});});
   ws.getColumn(1).width=4.5;ws.getColumn(2).width=4.5;ws.getColumn(3).width=24;
   ws.getColumn(4).width=5;ws.getColumn(5).width=5;
   for(let i=0;i<n;i++)ws.getColumn(C0+i).width=11;
-  ws.getColumn(C0+n).width=7;ws.getColumn(C0+n+1).width=7;ws.getColumn(C0+n+2).width=7;
-  const lastCol=ws.getColumn(C0+n+2).letter,lastRow=F0+6;
+  for(let i=0;i<=NS;i++)ws.getColumn(C0+n+i).width=8;
+  const lastCol=ws.getColumn(C0+n+NS).letter,lastRow=F0+6;
   ws.pageSetup.printArea='A$1:'+lastCol+'$'+lastRow;
   const hs=wb.addWorksheet('祝日リスト');
   hs.columns=[{header:'名称',width:16},{header:'日付',width:14}];
@@ -4835,14 +4854,15 @@ function drawSheet(p){
   /* 明細 */
   days.forEach((day,d)=>{
     const y=top+head+rh*d;
-    const bg=day.isSun||day.isHoliday?'#FCE4E4':day.isSat?'#DDEBF7':'#fff';
+    const bg=day.isPeak?'#EDE4F3':day.isSun||day.isHoliday?'#FCE4E4':day.isSat?'#DDEBF7':'#fff';
     g.fillStyle=bg;g.fillRect(0,y,W,rh);
     let cx=0;
-    const dcol=day.isSun||day.isHoliday?'#B23B2E':day.isSat?'#1F6FB2':'#1A1A1A';
+    const dcol=day.isPeak?'#5D3D80':day.isSun||day.isHoliday?'#B23B2E':day.isSat?'#1F6FB2':'#1A1A1A';
     txt(String(day.d),cx+wDay/2,y+rh/2,'center',dcol,14,true);cx+=wDay;
     txt(dowN[day.dow],cx+wDow/2,y+rh/2,'center',dcol,13,true);cx+=wDow;
     g.save();g.beginPath();g.rect(cx,y,wMemo,rh);g.clip();
-    txt(memos[d]||day.holidayName||'',cx+5,y+rh/2,'left','#1A1A1A',11);g.restore();cx+=wMemo;
+    txt(memos[d]||day.holidayName||day.peakName||'',cx+5,y+rh/2,'left',day.isPeak?'#5D3D80':'#1A1A1A',11);
+    g.restore();cx+=wMemo;
     const full=numAt(p.f,d),half=numAt(p.hf,d),need=numAt(p.nd,d);
     if(full!=null&&need!=null&&full<need){g.fillStyle='#B23B2E';g.fillRect(cx,y,wNum,rh);
       txt(String(full),cx+wNum/2,y+rh/2,'center','#fff',13,true);}
