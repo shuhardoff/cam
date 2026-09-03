@@ -93,7 +93,8 @@ table.gr thead th.wh.s-hobby:hover .nm{background:#8E2E22}
 table.gr thead th.wh.s-off:hover .nm{background:#245227}
 table.gr thead th.day,table.gr thead th.dow{z-index:45}
 col.cDay{width:calc(42px*var(--z))} col.cDow{width:calc(40px*var(--z))} col.cMemo{width:calc(210px*var(--z))}
-col.cNum{width:calc(44px*var(--z))} col.cWho{width:calc(94px*var(--z))} col.cAsa{width:calc(56px*var(--z))}
+col.cNum{width:calc(44px*var(--z))} col.cWho{width:calc(94px*var(--z))} col.cAsa{width:calc(64px*var(--z))}
+col.cSec{width:calc(66px*var(--z))}
 td.day,td.dow{position:sticky;z-index:15;background:#fff;font-weight:700}
 td.day{left:0} td.dow{left:calc(42px*var(--z));color:var(--ink2)}
 thead th.day{left:0} thead th.dow{left:calc(42px*var(--z))}
@@ -121,7 +122,8 @@ tbody tr:hover td{box-shadow:inset 0 1px 0 #7FA8C6,inset 0 -1px 0 #7FA8C6}
 tbody tr:hover td.cell:hover{box-shadow:inset 0 0 0 2px var(--navy)}
 td.colhi{box-shadow:inset 1px 0 0 #7FA8C6,inset -1px 0 0 #7FA8C6}
 td.n.short{color:#fff;font-weight:700;background:var(--red)}
-.req{font-weight:400;font-size:calc(9.5px*var(--z));color:var(--ink2)}
+.req{display:block;font-weight:400;font-size:calc(9.5px*var(--z));color:var(--ink2);line-height:1.1}
+.hl{display:block;line-height:1.15}
 body.rich td.n.exact{background:#FFF2CC}
 td.n.fixed{box-shadow:inset 0 0 0 2px var(--navy)}
 td.cell.runhi{background:#FFF3CD;box-shadow:inset 0 0 0 2px #C8A400}
@@ -389,9 +391,12 @@ body.printing .sumbox{display:none}
     <div class="fld"><label>土曜</label><input type="number" id="r_minSat" min="0" max="12"></div>
     <div class="fld"><label>日曜</label><input type="number" id="r_minSun" min="0" max="12"></div>
     <div class="fld"><label>祝日</label><input type="number" id="r_minHoliday" min="0" max="12"></div>
-    <div class="fld"><label>ハード側 最低</label><input type="number" id="r_minHard" min="0" max="12"></div>
-    <div class="fld"><label>ホビー側 最低</label><input type="number" id="r_minHobby" min="0" max="12"></div>
-    <div class="fld"><label>オフハウス側 最低</label><input type="number" id="r_minOff" min="0" max="12"></div>
+    <div class="fld"><label>ハード側 平日</label><input type="number" id="r_minHard" min="0" max="12"></div>
+    <div class="fld"><label>ハード側 土日祝</label><input type="number" id="r_minHardBusy" min="0" max="12"></div>
+    <div class="fld"><label>ホビー側 平日</label><input type="number" id="r_minHobby" min="0" max="12"></div>
+    <div class="fld"><label>ホビー側 土日祝</label><input type="number" id="r_minHobbyBusy" min="0" max="12"></div>
+    <div class="fld"><label>オフハウス側 平日</label><input type="number" id="r_minOff" min="0" max="12"></div>
+    <div class="fld"><label>オフハウス側 土日祝</label><input type="number" id="r_minOffBusy" min="0" max="12"></div>
     <div class="fld"><label>1日に出す人数の上限</label><input type="number" id="r_maxPerDay" min="1" max="12"></div>
     <div class="fld"><label>連勤の上限</label><input type="number" id="r_maxConsecutive" min="1" max="14"></div>
     <div class="fld"><label>できれば連勤は</label><input type="number" id="r_softConsecutive" min="1" max="14"></div>
@@ -593,7 +598,11 @@ body.printing .sumbox{display:none}
       const need = (ctx.needs && ctx.needs[d] != null) ? ctx.needs[d] : requiredFor(days[d], rules);
       if (total < need) { cost += rules.wShort * (need - total) ** 2; detail.short.push(d); }
       if (rules.maxPerDay && total > rules.maxPerDay) cost += rules.wOver * (total - rules.maxPerDay);
-      const mins = { hard: rules.minHard, hobby: rules.minHobby, off: rules.minOff };
+      const busy = days[d].isBusy;
+      const pick = (w, b) => (busy && rules[b] != null) ? rules[b] : rules[w];
+      const mins = { hard: pick('minHard', 'minHardBusy'),
+                     hobby: pick('minHobby', 'minHobbyBusy'),
+                     off: pick('minOff', 'minOffBusy') };
       ['hard', 'hobby', 'off'].forEach((k) => {
         const m = Number(mins[k]) || 0;
         if (staff.some((st) => (st.section || 'hard') === k) && sec[k] < m)
@@ -3297,12 +3306,22 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v22';
+const APP_VER='v23';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 部門の定義（キー・表示名・最低人数の設定名） */
-const SECS=[{k:'hard',n:'ハード',f:'ハードオフ',r:'minHard'},
-            {k:'hobby',n:'ホビー',f:'ホビーオフ',r:'minHobby'},
-            {k:'off',n:'オフハウス',f:'オフハウス',r:'minOff'}];
+const SECS=[{k:'hard',n:'ハード',f:'ハードオフ',r:'minHard',rb:'minHardBusy'},
+            {k:'hobby',n:'ホビー',f:'ホビーオフ',r:'minHobby',rb:'minHobbyBusy'},
+            {k:'off',n:'オフハウス',f:'オフハウス',r:'minOff',rb:'minOffBusy'}];
+/* その日の部門ごとの最低人数（土日祝は別に持てる） */
+function secNeed(x,day){
+  const b=Number(S.rules[x.rb]);
+  if(day&&day.isBusy&&!isNaN(b))return b;
+  return Number(S.rules[x.r])||0;
+}
+function secNeedLabel(x){
+  const w=Number(S.rules[x.r])||0,b=Number(S.rules[x.rb]);
+  return (isNaN(b)||b===w)?(w+'名以上'):('平日'+w+'・土日祝'+b);
+}
 const secOf=st=>{const v=(st&&st.section)||'hard';return SECS.some(x=>x.k===v)?v:'hard';};
 const secName=k=>{const x=SECS.find(y=>y.k===k);return x?x.n:'';};
 /* 実際に人がいる部門だけ列に出す */
@@ -3339,7 +3358,7 @@ function defaultState(){
   const n=new Date();let y=n.getFullYear(),m=n.getMonth()+2;if(m>12){m=1;y++;}
   const S0={
     meta:{company:'株式会社アービング',dept:'105',store:'ハードオフ周南秋月店',year:y,month:m,zoom:1,fit:true,secs:['hard','hobby']},
-    rules:{minWeekday:4,minSat:5,minSun:5,minHoliday:5,minHard:2,minHobby:2,minOff:2,maxPerDay:6,maxConsecutive:6,softConsecutive:5,maxConsecutiveOff:1},
+    rules:{minWeekday:4,minSat:5,minSun:5,minHoliday:5,minHard:2,minHobby:2,minOff:2,minHardBusy:2,minHobbyBusy:2,minOffBusy:2,maxPerDay:6,maxConsecutive:6,softConsecutive:5,maxConsecutiveOff:1},
     helpers:[{name:'松村さん応援',section:'hard'},{name:'金子店長応援',section:'hobby'},
              {name:'大垣さん応援',section:'hobby'},{name:'原田さん応援',section:'none'}],
     eventPresets:['棚卸','駐車場警備','セール','入金当番','会議','研修'],
@@ -3382,6 +3401,12 @@ function migrate(){
   if(!S.rules._secV2){if(!(S.rules.minHobby>1))S.rules.minHobby=2;S.rules._secV2=true;}
   if(S.rules.monthEndDays==null)S.rules.monthEndDays=1;
   if(S.rules.minOff==null)S.rules.minOff=2;
+  if(!S.rules._busySec){
+    S.rules._busySec=true;
+    if(S.rules.minHardBusy==null)S.rules.minHardBusy=2;
+    if(S.rules.minHobbyBusy==null)S.rules.minHobbyBusy=2;
+    if(S.rules.minOffBusy==null)S.rules.minOffBusy=2;
+  }
   if(!Array.isArray(S.meta.secs)||!S.meta.secs.length){
     const used=SECS.filter(x=>S.staff.some(st=>secOf(st)===x.k)).map(x=>x.k);
     S.meta.secs=used.length?used:['hard'];
@@ -3584,9 +3609,9 @@ function roll(tries,avoid,scope){
     r._seed=seed;
     // 人数不足の日をいちばん少なくしたい（部門ごとも含めて数える）
     let bad=0;
-    r.perDay.forEach(p=>{
+    r.perDay.forEach((p,di)=>{
       if(p.full<p.need)bad++;
-      activeSecs().forEach(x=>{if((p.sec?p.sec[x.k]:0)<(Number(S.rules[x.r])||0))bad++;});
+      activeSecs().forEach(x=>{if((p.sec?p.sec[x.k]:0)<secNeed(x,r.days[di]))bad++;});
     });
     r._bad=bad;
     cands.push(r);
@@ -3668,9 +3693,9 @@ function generate(shuffle){
     refreshAll();b.disabled=false;b.textContent=lb;persist();
     const n=VIEW?VIEW.warnings.length:0;
     let bad=0;
-    if(VIEW)VIEW.perDay.forEach(p=>{
+    if(VIEW)VIEW.perDay.forEach((p,d)=>{
       let ng=p.full<p.need;
-      activeSecs().forEach(x=>{if((p.sec[x.k]||0)<(Number(S.rules[x.r])||0))ng=true;});
+      activeSecs().forEach(x=>{if((p.sec[x.k]||0)<secNeed(x,VIEW.days[d]))ng=true;});
       if(ng)bad++;});
     const head=shuffle?(scope==='all'?'別の組み合わせにしました':secName(scope)+'側を振り直しました'):'できました';
     toast(bad?head+'。人数が足りない日が'+bad+'日あります':(n?head+'（気になる点が'+n+'件）':head+'。条件はすべて満たしています'));
@@ -3717,7 +3742,7 @@ function recompute(days,cells,closing,morning){
   perDay.forEach((p,d)=>{
     if(p.full<p.need)warnings.push({lv:1,d:d,sec:'all',short:'全体'+p.full+'名（必要'+p.need+'）'});
     activeSecs().forEach(x=>{
-      const need=Number(rules[x.r])||0,cnt=p.sec[x.k]||0;
+      const need=secNeed(x,days[d]),cnt=p.sec[x.k]||0;
       if(cnt<need)warnings.push({lv:1,d:d,sec:x.k,short:x.n+cnt+'名（必要'+need+'）'});
     });
   });
@@ -3866,15 +3891,17 @@ function renderSheet(){
   let h=head+'<table class="gr"><colgroup>'+
     '<col class="cDay"><col class="cDow"><col class="cMemo"><col class="cNum"><col class="cNum">'+
     S.staff.map(()=>'<col class="cWho">').join('')+
-    '<col class="cAsa">'+activeSecs().map(()=>'<col class="cNum">').join('')+'</colgroup>';
+    '<col class="cAsa">'+activeSecs().map(()=>'<col class="cSec">').join('')+'</colgroup>';
   h+='<thead><tr>'+
-      '<th class="day">日</th><th class="dow">曜日</th><th>イベント・備考</th>'+
-      '<th>フル</th><th>ハーフ</th>'+
+      '<th class="day"><span class="hl">日</span></th>'+
+      '<th class="dow"><span class="hl">曜日</span></th>'+
+      '<th><span class="hl">イベント・備考</span></th>'+
+      '<th><span class="hl">フル</span></th><th><span class="hl">ハーフ</span></th>'+
       S.staff.map((st,i)=>'<th class="wh s-'+secOf(st)+'" data-who="'+i+'" title="'+esc((st.rank||'')+' ／ クリックで設定')+'">'+
         '<span class="cd">'+esc(st.code||'　')+'</span>'+
         '<span class="nm">'+esc(st.name||'（未入力）')+'</span></th>').join('')+
-      '<th>朝礼当番</th>'+
-      activeSecs().map(x=>'<th>'+x.n+'出勤<br><span class="req">'+(Number(S.rules[x.r])||0)+'名以上</span></th>').join('')+
+      '<th>朝礼<br>当番</th>'+
+      activeSecs().map(x=>'<th>'+x.n+'<br>出勤<br><span class="req">'+secNeedLabel(x)+'</span></th>').join('')+
      '</tr></thead><tbody>';
   v.days.forEach((day,d)=>{
     const p=v.perDay[d],mt=memoText(day.key,day);
@@ -3889,7 +3916,7 @@ function renderSheet(){
       h+='<td class="cell '+clsOf(c)+pin+'" data-s="'+s+'" data-d="'+d+'">'+esc(c)+'</td>';
     });
     h+='<td>'+esc(v.morning[d]>=0?shortName(S.staff[v.morning[d]]):'')+'</td>'+
-       activeSecs().map(x=>{const need=Number(S.rules[x.r])||0,cnt=p.sec[x.k]||0;
+       activeSecs().map(x=>{const need=secNeed(x,day),cnt=p.sec[x.k]||0;
          return '<td class="n'+(cnt<need?' short':'')+'" title="'+x.n+'側 必要'+need+'名">'+cnt+'</td>';}).join('')+
        '</tr>';
   });
@@ -4357,8 +4384,9 @@ function renderSecPick(){
   }).join('');
   // 必要人数の欄も、使う部門だけ出す
   SECS.forEach(x=>{
-    const el=$('#r_'+x.r);
-    if(el&&el.parentElement)el.parentElement.style.display=activeSecs().some(y=>y.k===x.k)?'':'none';
+    const on=activeSecs().some(y=>y.k===x.k);
+    [x.r,x.rb].forEach(key=>{const el=$('#r_'+key);
+      if(el&&el.parentElement)el.parentElement.style.display=on?'':'none';});
   });
 }
 $('#secPick').addEventListener('change',e=>{
@@ -4730,6 +4758,7 @@ function packMonth(){
     hf:VIEW.perDay.map(p=>num(p.half)).join(''),
     nd:VIEW.perDay.map(p=>num(p.need)).join(''),
     sc:activeSecs().map(x=>({n:x.n,r:Number(S.rules[x.r])||0,
+        rv:VIEW.days.map(day=>num(secNeed(x,day))).join(''),
         v:VIEW.perDay.map(p=>num(p.sec[x.k]||0)).join('')})),
     e:e
   };
@@ -4830,7 +4859,8 @@ function drawSheet(p){
     txt((ai&&ai!=='-')?(sn[+ai]||''):'',cx+wAsa/2,y+rh/2,'center','#5C625A',12);cx+=wAsa;
     secs.forEach(sx=>{
       const v=numAt(sx.v,d);
-      if(v!=null&&v<sx.r){g.fillStyle='#B23B2E';g.fillRect(cx,y,wSec,rh);
+      const rq=sx.rv?(numAt(sx.rv,d)||0):sx.r;
+      if(v!=null&&v<rq){g.fillStyle='#B23B2E';g.fillRect(cx,y,wSec,rh);
         txt(String(v),cx+wSec/2,y+rh/2,'center','#fff',13,true);}
       else txt(v==null?'':String(v),cx+wSec/2,y+rh/2,'center','#5C625A',13);
       cx+=wSec;

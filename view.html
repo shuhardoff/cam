@@ -614,7 +614,8 @@ function drawSheet(p){
     txt((ai&&ai!=='-')?(sn[+ai]||''):'',cx+wAsa/2,y+rh/2,'center','#5C625A',12);cx+=wAsa;
     secs.forEach(sx=>{
       const v=numAt(sx.v,d);
-      if(v!=null&&v<sx.r){g.fillStyle='#B23B2E';g.fillRect(cx,y,wSec,rh);
+      const rq=sx.rv?(numAt(sx.rv,d)||0):sx.r;
+      if(v!=null&&v<rq){g.fillStyle='#B23B2E';g.fillRect(cx,y,wSec,rh);
         txt(String(v),cx+wSec/2,y+rh/2,'center','#fff',13,true);}
       else txt(v==null?'':String(v),cx+wSec/2,y+rh/2,'center','#5C625A',13);
       cx+=wSec;
