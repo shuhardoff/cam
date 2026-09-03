@@ -535,7 +535,7 @@ function drawSheet(p){
   const dowN=['日','月','火','水','木','金','土'];
   const days=E.buildDays(p.y,p.m);
   const memos=p.e||{},hasMemo=Object.keys(memos).length>0;
-  const sn=p.k||p.n;
+  const sn=p.k||p.n.map(x=>String(x||'').replace(/[（(].*$/,'').split(/[\s　]/)[0].slice(0,2));
   const dec=ch=>{
     if(ch===' ')return '';if(ch==='D')return '当番';if(ch==='O')return '〇';
     if(ch==='A')return '◎';if(ch==='P')return '有休';
@@ -558,7 +558,10 @@ function drawSheet(p){
   // 見出し
   const cols=[{w:wDay,t:'日'},{w:wDow,t:'曜日'}];
   if(hasMemo)cols.push({w:wMemo,t:'行事・備考'});
-  p.n.forEach((n,i)=>cols.push({w:wWho,t:n,sec:(p.g||[])[i]||'hard'}));
+  const secAt=i=>{const g=p.g;if(!g)return 'hard';
+    if(typeof g==='string'){const v=g.charAt(i);return v==='b'?'hobby':v==='o'?'off':'hard';}
+    return g[i]||'hard';};
+  p.n.forEach((n,i)=>cols.push({w:wWho,t:n,sec:secAt(i)}));
   cols.push({w:wAsa,t:'朝礼当番'});
   let x=0;
   cols.forEach(c=>{
@@ -599,7 +602,6 @@ function drawSheet(p){
   g.strokeStyle='#8E958A';g.strokeRect(0.5,title+0.5,W-1,H-title-6.5);
   return cv;
 }
-
 function payload(){
   var q=location.search||'',h=location.hash||'';
   var m=q.match(/[?&]v=([^&]+)/);
@@ -636,7 +638,7 @@ function packFrom(st,key){
     if(t&&t!==day.holidayName)e[d]=t;});
   return {s:(st.meta&&st.meta.store)||'',y:y,m:m,
     n:st.staff.map(function(p){return p.name;}),k:st.staff.map(sh),
-    g:st.staff.map(function(p){return p.section||'hard';}),
+    g:st.staff.map(function(p){return ({hard:'h',hobby:'b',off:'o'})[p.section||'hard']||'h';}).join(''),
     c:cells,t:times,
     a:days.map(function(day,d){var v=res.morning[d];return (v>=0&&v!=null)?String(v):'-';}).join(''),e:e};
 }
