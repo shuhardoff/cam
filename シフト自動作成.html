@@ -167,7 +167,7 @@ tfoot tr.cond td{font-size:calc(11px*var(--z));line-height:1.2;white-space:norma
 #qDrawer.on{transform:translate(-50%,-50%)}
 #qDrawer h2{text-align:center}
 #qDrawer .sub{text-align:center}
-#qrBox canvas{width:min(440px,88vw)!important;height:auto!important;image-rendering:pixelated}
+#qrBox canvas{image-rendering:pixelated;display:block;max-width:100%}
 .qbtns{display:flex;gap:8px;margin-top:14px}
 .qbtns .btn{flex:1;padding:9px 4px;font-size:12.5px}
 .qmore{display:block;width:100%;text-align:center;font-size:12px;color:var(--ink2);
@@ -3294,7 +3294,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v15';
+const APP_VER='v16';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 部門の定義（キー・表示名・最低人数の設定名） */
 const SECS=[{k:'hard',n:'ハード',f:'ハードオフ',r:'minHard'},
@@ -4227,7 +4227,7 @@ function applyRequests(){
 function openDrawer(el){$('#scrim').classList.add('on');el.classList.add('on');el.setAttribute('aria-hidden','false');}
 function closeDrawers(){$('#scrim').classList.remove('on');$$('.drawer').forEach(d=>{d.classList.remove('on');d.setAttribute('aria-hidden','true');});}
 $('#scrim').addEventListener('click',closeDrawers);
-$$('[data-close]').forEach(b=>b.addEventListener('click',closeDrawers));
+document.addEventListener('click',e=>{ if(e.target.closest('[data-close]'))closeDrawers(); });
 document.addEventListener('click',e=>{const b=e.target.closest('[data-who]');if(b)openPerson(+b.dataset.who);});
 
 function openPerson(i){
@@ -4820,7 +4820,9 @@ function drawQR(url,box,size){
   const scale=Math.max(2,Math.floor((size||300)/(n+quiet*2)));
   const px=(n+quiet*2)*scale;
   const cv=document.createElement('canvas');
-  cv.width=px;cv.height=px;cv.style.width=px+'px';cv.style.height=px+'px';
+  cv.width=px;cv.height=px;
+  const show=Math.min(size||300,px*2);
+  cv.style.width=show+'px';cv.style.height=show+'px';
   const g=cv.getContext('2d');
   g.fillStyle='#fff';g.fillRect(0,0,px,px);
   g.fillStyle='#000';
@@ -4837,6 +4839,7 @@ function qrError(msg){
 $('#btnQR').addEventListener('click',()=>{
   openDrawer($('#qDrawer'));
   $('#qrTitle').textContent=S.meta.year+'年'+S.meta.month+'月を スマホに送る';
+  $('#qrSub').textContent='スマホのカメラで読み取ってください（'+APP_VER+'）';
   $('#qrVer').innerHTML='このファイルのバージョン：<b>'+esc(APP_VER)+'</b>';
   $('#qrBase').value=(DB&&DB.viewerURL)||'';
   $('#qrDetail').hidden=true;
