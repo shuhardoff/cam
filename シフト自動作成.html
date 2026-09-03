@@ -162,9 +162,12 @@ tfoot tr.cond td{font-size:calc(11px*var(--z));line-height:1.2;white-space:norma
 .drawer{position:fixed;top:0;right:0;bottom:0;width:min(410px,100%);background:#fff;z-index:85;
   box-shadow:0 8px 28px rgba(0,0,0,.22);transform:translateX(100%);transition:transform .18s;overflow:auto;padding:18px 20px 40px}
 .drawer.on{transform:none}
+.drawer[aria-hidden="true"]{pointer-events:none}
+.drawer.on[aria-hidden="false"]{pointer-events:auto}
 #qDrawer{top:50%;left:50%;right:auto;bottom:auto;width:min(520px,96vw);max-height:94vh;
-  transform:translate(-50%,-46%);border-radius:4px;padding:18px 20px 22px}
-#qDrawer.on{transform:translate(-50%,-50%)}
+  transform:translate(-50%,-46%);border-radius:4px;padding:18px 20px 22px;
+  opacity:0;visibility:hidden;pointer-events:none}
+#qDrawer.on{transform:translate(-50%,-50%);opacity:1;visibility:visible;pointer-events:auto}
 #qDrawer h2{text-align:center}
 #qDrawer .sub{text-align:center}
 #qrBox canvas{image-rendering:pixelated;display:block;max-width:100%}
@@ -3294,7 +3297,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v17';
+const APP_VER='v18';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 部門の定義（キー・表示名・最低人数の設定名） */
 const SECS=[{k:'hard',n:'ハード',f:'ハードオフ',r:'minHard'},
