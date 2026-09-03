@@ -3294,7 +3294,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v14';
+const APP_VER='v15';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 部門の定義（キー・表示名・最低人数の設定名） */
 const SECS=[{k:'hard',n:'ハード',f:'ハードオフ',r:'minHard'},
@@ -4829,20 +4829,30 @@ function drawQR(url,box,size){
   box.appendChild(cv);
   return px;
 }
-$('#btnQR').addEventListener('click',async()=>{
-  if(!VIEW){toast('先にシフトを作ってください');return;}
-  const url=qrURL();
+function qrError(msg){
+  $('#qrBox').innerHTML='<div class="hint" style="text-align:center;line-height:1.8">'+
+    'QRコードを作れませんでした。<br><span style="color:var(--red)">'+esc(msg)+'</span><br>'+
+    '下の「画像で保存」「リンクをコピー」はお使いいただけます。</div>';
+}
+$('#btnQR').addEventListener('click',()=>{
+  openDrawer($('#qDrawer'));
+  $('#qrTitle').textContent=S.meta.year+'年'+S.meta.month+'月を スマホに送る';
+  $('#qrVer').innerHTML='このファイルのバージョン：<b>'+esc(APP_VER)+'</b>';
+  $('#qrBase').value=(DB&&DB.viewerURL)||'';
+  $('#qrDetail').hidden=true;
   $('#qrBox').innerHTML='<span class="hint">作成中…</span>';
+  let url=null;
+  try{
+    if(!VIEW){qrError('この月のシフトがまだありません');$('#qrUrl').value='';return;}
+    url=qrURL();
+  }catch(e){ qrError('データの作成でつまずきました：'+(e&&e.message||e)); $('#qrUrl').value=''; return; }
+  $('#qrUrl').value=url||'';
   $('#qrNote').textContent=qrBase().indexOf('file:')===0
     ? '読み取り先がパソコン内のファイルです。下の「読み取り先」に view.html のURL（https://…）を入れてください。'
     : '読み取ると勤務表が出ます。長押しして「写真に追加」';
-  $('#qrTitle').textContent=S.meta.year+'年'+S.meta.month+'月を スマホに送る';
-  $('#qrBase').value=DB.viewerURL||'';
-  $('#qrUrl').value=url;
-  $('#qrDetail').hidden=true;
-  $('#qrVer').innerHTML='このファイルのバージョン：<b>'+esc(APP_VER)+'</b>';
-  openDrawer($('#qDrawer'));
-  M_qr(url);
+  if(!url){qrError('リンクを作れませんでした');return;}
+  try{ drawQR(url,$('#qrBox'),440); }
+  catch(e){ qrError((e&&e.message)||String(e)); }
 });
 function M_qr(url){
   try{ drawQR(url,$('#qrBox'),440); }
@@ -4927,6 +4937,9 @@ function viewPayload(){
   if(!m)m=q.match(/[?&]v=([^&]+)/);
   return m?m[1]:null;
 }
+window.addEventListener('error',function(ev){
+  try{ if(document.getElementById('toast')) toast('エラー：'+(ev.message||'')); }catch(e){}
+});
 (async function init(){
   const pay=viewPayload();
   if(pay){
