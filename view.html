@@ -16,7 +16,7 @@ img{width:100%;height:auto;display:block}
 </style>
 </head>
 <body>
-<div class="tip" id="tip">画像を長押しして「"写真"に追加」<small id="tipsub">スマホを横向きにすると大きく見えます</small></div>
+<div class="tip" id="tip">画像を長押しして「"写真"に追加」<small id="tipsub">指を広げると拡大できます</small></div>
 <div class="bar" id="bar" hidden></div>
 <img id="img" alt="勤務予定表" hidden>
 <div class="msg" id="msg" hidden></div>
@@ -532,12 +532,10 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function clsOf(){return '';}
 function unb64(str){return decodeURIComponent(escape(atob(str.replace(/-/g,'+').replace(/_/g,'/'))));}
-function drawSheet(p,opt){
-  opt=opt||{};
-  const split=Math.max(1,opt.split||1);
+function drawSheet(p){
   const dowN=['日','月','火','水','木','金','土'];
   const days=E.buildDays(p.y,p.m);
-  const memos=p.e||{},hasMemo=Object.keys(memos).length>0&&split===1;
+  const memos=p.e||{};
   const sn=p.k||p.n.map(x=>String(x||'').replace(/[（(].*$/,'').split(/[\s　]/)[0].slice(0,2));
   const dec=ch=>{
     if(ch===' ')return '';if(ch==='D')return '当番';if(ch==='O')return '〇';
@@ -547,12 +545,12 @@ function drawSheet(p,opt){
   const secAt=i=>{const g=p.g;if(!g)return 'hard';
     if(typeof g==='string'){const v=g.charAt(i);return v==='b'?'hobby':v==='o'?'off':'hard';}
     return g[i]||'hard';};
-  const wDay=split>1?32:38,wDow=split>1?30:34,wMemo=hasMemo?150:0;
-  const wWho=split>1?78:86,wAsa=split>1?48:54,rh=28,head=34,title=38,gap=14;
-  const blockW=wDay+wDow+wMemo+wWho*p.n.length+wAsa;
-  const per=Math.ceil(days.length/split);
-  const W=blockW*split+gap*(split-1);
-  const H=title+head+rh*per+8;
+  const numAt=(str,d)=>{ if(!str)return null; const ch=str.charAt(d); return ch===''?null:parseInt(ch,36); };
+  const secs=p.sc||[];
+  const wDay=34,wDow=32,wMemo=158,wNum=36,wWho=86,wAsa=56,wSec=62;
+  const rh=27,head=36,title=34,sub=20;
+  const W=wDay+wDow+wMemo+wNum*2+wWho*p.n.length+wAsa+wSec*secs.length;
+  const H=title+sub+head+rh*days.length+8;
   const cv=document.createElement('canvas');
   const R=Math.min(2,(window.devicePixelRatio||1)*2);
   cv.width=W*R;cv.height=H*R;
@@ -563,58 +561,75 @@ function drawSheet(p,opt){
     g.fillStyle=color||'#1A1A1A';g.font=(bold?'bold ':'')+(size||13)+'px '+F;
     g.textAlign=align||'center';g.textBaseline='middle';g.fillText(t,x,y);
   };
-  txt(p.s+'　'+p.y+'年'+p.m+'月　勤務予定表',W/2,title/2,'center','#1A1A1A',17,true);
-  const cols=[];
-  cols.push({w:wDay,t:'日'});cols.push({w:wDow,t:'曜日'});
-  if(hasMemo)cols.push({w:wMemo,t:'行事・備考'});
-  p.n.forEach((n,i)=>cols.push({w:wWho,t:n,sec:secAt(i)}));
+  /* 上の見出し（会社名・部署・店名・年度） */
+  txt(p.co||'',6,title*0.42,'left','#1A1A1A',12,true);
+  txt('部署 '+(p.dp||'')+'　'+(p.s||''),6,title*0.82,'left','#5C625A',11.5);
+  txt(p.y+'年'+p.m+'月　勤務予定表',W/2,title*0.6,'center','#1A1A1A',17,true);
+  txt((p.m>=4?p.y:p.y-1)+'年度',W-6,title*0.6,'right','#5C625A',11);
+  /* 見出し行 */
+  const cols=[{w:wDay,t:'日'},{w:wDow,t:'曜日'},{w:wMemo,t:'イベント・備考'},
+              {w:wNum,t:'フル'},{w:wNum,t:'ハーフ'}];
+  p.n.forEach((n,i)=>cols.push({w:wWho,t:n,sec:secAt(i),code:true}));
   cols.push({w:wAsa,t:'朝礼当番'});
-  for(let b=0;b<split;b++){
-    const ox=b*(blockW+gap);
-    let x=ox;
-    cols.forEach(c=>{
-      const isName=c.sec!==undefined;
-      g.fillStyle=isName?(c.sec==='hobby'?'#B23B2E':c.sec==='off'?'#2F6B33':'#0070C0'):'#EFF1EC';
-      g.fillRect(x,title,c.w,head);
-      txt(c.t,x+c.w/2,title+head/2,'center',isName?'#fff':'#5C625A',isName?(split>1?12:13):11,true);
-      x+=c.w;
-    });
-    for(let k=0;k<per;k++){
-      const d=b*per+k;
-      const y=title+head+rh*k;
-      if(d>=days.length){g.fillStyle='#fff';g.fillRect(ox,y,blockW,rh);continue;}
-      const day=days[d];
-      const bg=day.isSun||day.isHoliday?'#FCE4E4':day.isSat?'#DDEBF7':'#fff';
-      g.fillStyle=bg;g.fillRect(ox,y,blockW,rh);
-      let cx=ox;
-      const dcol=day.isSun||day.isHoliday?'#B23B2E':day.isSat?'#1F6FB2':'#1A1A1A';
-      txt(String(day.d),cx+wDay/2,y+rh/2,'center',dcol,14,true);cx+=wDay;
-      txt(dowN[day.dow],cx+wDow/2,y+rh/2,'center',dcol,13,true);cx+=wDow;
-      if(hasMemo){
-        g.save();g.beginPath();g.rect(cx,y,wMemo,rh);g.clip();
-        txt(memos[d]||day.holidayName||'',cx+4,y+rh/2,'left','#1A1A1A',11);g.restore();cx+=wMemo;
-      }
-      p.n.forEach((n,si)=>{
-        const c=dec((p.c[si]||'')[d]||' ');
-        if(c==='〇'||c==='◎'||c==='有休'){g.fillStyle='#EDEEEA';g.fillRect(cx,y,wWho,rh);}
-        const size=(c==='◎')?19:(c==='〇')?17:(c.indexOf('～')>=0?11:13);
-        txt(c,cx+wWho/2,y+rh/2,'center','#1A1A1A',size,c==='当番'||c==='◎');
-        cx+=wWho;
-      });
-      const ai=(p.a||'')[d];
-      txt((ai&&ai!=='-')?(sn[+ai]||''):'',cx+wAsa/2,y+rh/2,'center','#5C625A',12);
+  secs.forEach(x=>cols.push({w:wSec,t:x.n,t2:'出勤',need:x.r}));
+  let x=0;
+  const top=title+sub;
+  cols.forEach(c=>{
+    const isName=c.sec!==undefined;
+    g.fillStyle=isName?(c.sec==='hobby'?'#B23B2E':c.sec==='off'?'#2F6B33':'#0070C0'):'#EFF1EC';
+    g.fillRect(x,top-sub,c.w,sub+head);
+    if(isName)txt(c.t,x+c.w/2,top+head/2-2,'center','#fff',12.5,true);
+    else if(c.t2!=null){
+      txt(c.t,x+c.w/2,top+head/2-11,'center','#5C625A',11,true);
+      txt(c.t2,x+c.w/2,top+head/2+1,'center','#5C625A',11,true);
+      txt(c.need+'名以上',x+c.w/2,top+head/2+13,'center','#8A9287',9);
     }
-    // 罫線
-    g.strokeStyle='#BFC5BB';g.lineWidth=1;
-    let gx=ox;cols.forEach(c=>{gx+=c.w;g.beginPath();g.moveTo(gx-0.5,title);g.lineTo(gx-0.5,H-8);g.stroke();});
-    g.beginPath();g.moveTo(ox,title+0.5);g.lineTo(ox+blockW,title+0.5);g.stroke();
-    for(let k=0;k<=per;k++){const y=title+head+rh*k+0.5;
-      g.beginPath();g.moveTo(ox,y);g.lineTo(ox+blockW,y);g.stroke();}
-    g.strokeStyle='#8E958A';g.strokeRect(ox+0.5,title+0.5,blockW-1,H-title-8.5);
-  }
+    else txt(c.t,x+c.w/2,top+head/2-2,'center','#5C625A',11,true);
+    x+=c.w;
+  });
+  /* 明細 */
+  days.forEach((day,d)=>{
+    const y=top+head+rh*d;
+    const bg=day.isSun||day.isHoliday?'#FCE4E4':day.isSat?'#DDEBF7':'#fff';
+    g.fillStyle=bg;g.fillRect(0,y,W,rh);
+    let cx=0;
+    const dcol=day.isSun||day.isHoliday?'#B23B2E':day.isSat?'#1F6FB2':'#1A1A1A';
+    txt(String(day.d),cx+wDay/2,y+rh/2,'center',dcol,14,true);cx+=wDay;
+    txt(dowN[day.dow],cx+wDow/2,y+rh/2,'center',dcol,13,true);cx+=wDow;
+    g.save();g.beginPath();g.rect(cx,y,wMemo,rh);g.clip();
+    txt(memos[d]||day.holidayName||'',cx+5,y+rh/2,'left','#1A1A1A',11);g.restore();cx+=wMemo;
+    const full=numAt(p.f,d),half=numAt(p.hf,d),need=numAt(p.nd,d);
+    if(full!=null&&need!=null&&full<need){g.fillStyle='#B23B2E';g.fillRect(cx,y,wNum,rh);
+      txt(String(full),cx+wNum/2,y+rh/2,'center','#fff',13,true);}
+    else txt(full==null?'':String(full),cx+wNum/2,y+rh/2,'center','#5C625A',13);
+    cx+=wNum;
+    txt(half==null?'':String(half),cx+wNum/2,y+rh/2,'center','#5C625A',13);cx+=wNum;
+    p.n.forEach((n,si)=>{
+      const c=dec((p.c[si]||'')[d]||' ');
+      if(c==='〇'||c==='◎'||c==='有休'){g.fillStyle='#EDEEEA';g.fillRect(cx,y,wWho,rh);}
+      const size=(c==='◎')?19:(c==='〇')?17:(c.indexOf('～')>=0?11:13);
+      txt(c,cx+wWho/2,y+rh/2,'center','#1A1A1A',size,c==='当番'||c==='◎');
+      cx+=wWho;
+    });
+    const ai=(p.a||'')[d];
+    txt((ai&&ai!=='-')?(sn[+ai]||''):'',cx+wAsa/2,y+rh/2,'center','#5C625A',12);cx+=wAsa;
+    secs.forEach(sx=>{
+      const v=numAt(sx.v,d);
+      if(v!=null&&v<sx.r){g.fillStyle='#B23B2E';g.fillRect(cx,y,wSec,rh);
+        txt(String(v),cx+wSec/2,y+rh/2,'center','#fff',13,true);}
+      else txt(v==null?'':String(v),cx+wSec/2,y+rh/2,'center','#5C625A',13);
+      cx+=wSec;
+    });
+  });
+  /* 罫線 */
+  g.strokeStyle='#BFC5BB';g.lineWidth=1;
+  let gx=0;cols.forEach(c=>{gx+=c.w;g.beginPath();g.moveTo(gx-0.5,top-sub);g.lineTo(gx-0.5,H-8);g.stroke();});
+  g.beginPath();g.moveTo(0,top+0.5);g.lineTo(W,top+0.5);g.stroke();
+  for(let d=0;d<=days.length;d++){const y=top+head+rh*d+0.5;
+    g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}
+  g.strokeStyle='#8E958A';g.strokeRect(0.5,top-sub+0.5,W-1,H-(top-sub)-8.5);
   return cv;
 }
-
 function payload(){
   var q=location.search||'',h=location.hash||'';
   var m=q.match(/[?&]v=([^&]+)/);
@@ -634,10 +649,17 @@ function loadStore(){
     keys.sort();return {st:st,keys:keys};
   }catch(e){return null;}
 }
+var SECDEF=[{k:'hard',n:'ハード',r:'minHard'},{k:'hobby',n:'ホビー',r:'minHobby'},{k:'off',n:'オフハウス',r:'minOff'}];
 function packFrom(st,key){
   var parts=key.split('-'),y=+parts[0],m=+parts[1];
   var days=E.buildDays(y,m),res=st.months[key].result,times=[];
+  var rules=st.rules||{};
+  var secOf=function(p){var v=(p&&p.section)||'hard';return v;};
   var sh=function(p){return p.short||String(p.name||'').replace(/[（(].*$/,'').split(/[\s　]/)[0].slice(0,2);};
+  var isOff=function(c){return c==='〇'||c==='◎'||c==='有休';};
+  var isHalf=function(c){return typeof c==='string'&&c.indexOf('～')>=0;};
+  var used=SECDEF.filter(function(x){return st.staff.some(function(p){return secOf(p)===x.k;});});
+  if(!used.length)used=[SECDEF[0]];
   var cells=st.staff.map(function(p,si){
     return days.map(function(day,d){
       var c=(res.cells[si]||[])[d]||'';
@@ -645,55 +667,69 @@ function packFrom(st,key){
       var i=times.indexOf(c);if(i<0){times.push(c);i=times.length-1;}
       return String.fromCharCode(49+i);}).join('');});
   var e={},dd=st.months[key].days||{};
+  var full=[],half=[],need=[],secv={};
+  used.forEach(function(x){secv[x.k]=[];});
+  var num=function(v){return Math.max(0,Math.min(35,v||0)).toString(36);};
   days.forEach(function(day,d){
     var info=dd[day.key];
     var t=info?((info.h||[]).concat(info.note?[info.note]:[]).join('・')):'';
-    if(t&&t!==day.holidayName)e[d]=t;});
-  return {s:(st.meta&&st.meta.store)||'',y:y,m:m,
+    if(t&&t!==day.holidayName)e[d]=t;
+    var f=0,hf=0,cnt={};used.forEach(function(x){cnt[x.k]=0;});
+    st.staff.forEach(function(p,si){
+      var c=(res.cells[si]||[])[d]||'';
+      if(isOff(c))return;
+      if(isHalf(c))hf++;else f++;
+      if(cnt[secOf(p)]!=null)cnt[secOf(p)]++;
+    });
+    var sup=(info&&info.h)?info.h:[];
+    (sup||[]).forEach(function(nm){
+      var h=(st.helpers||[]).filter(function(z){return z.name===nm;})[0];
+      if(h&&h.section&&cnt[h.section]!=null){cnt[h.section]++;f++;}
+    });
+    var nd=day.isHoliday?rules.minHoliday:day.isSun?rules.minSun:day.isSat?rules.minSat:rules.minWeekday;
+    if(info&&info.need!=null&&info.need!=='')nd=+info.need;
+    full.push(num(f));half.push(num(hf));need.push(num(nd||0));
+    used.forEach(function(x){secv[x.k].push(num(cnt[x.k]));});
+  });
+  return {co:(st.meta&&st.meta.company)||'',dp:(st.meta&&st.meta.dept)||'',
+    s:(st.meta&&st.meta.store)||'',y:y,m:m,
     n:st.staff.map(function(p){return p.name;}),k:st.staff.map(sh),
-    g:st.staff.map(function(p){return ({hard:'h',hobby:'b',off:'o'})[p.section||'hard']||'h';}).join(''),
+    g:st.staff.map(function(p){return ({hard:'h',hobby:'b',off:'o'})[secOf(p)]||'h';}).join(''),
     c:cells,t:times,
-    a:days.map(function(day,d){var v=res.morning[d];return (v>=0&&v!=null)?String(v):'-';}).join(''),e:e};
+    a:days.map(function(day,d){var v=res.morning[d];return (v>=0&&v!=null)?String(v):'-';}).join(''),
+    f:full.join(''),hf:half.join(''),nd:need.join(''),
+    sc:used.map(function(x){return {n:x.n,r:Number(rules[x.r])||0,v:secv[x.k].join('')};}),
+    e:e};
 }
-var DATA=null,SPLIT=1;
+var DATA=null;
 function render(){
   if(!DATA)return;
   document.title=DATA.s+' '+DATA.y+'年'+DATA.m+'月';
   $('#msg').hidden=true;
   var img=$('#img');
-  img.src=drawSheet(DATA,{split:SPLIT}).toDataURL('image/png');
+  img.src=drawSheet(DATA).toDataURL('image/png');
   img.hidden=false;
-  var bs=document.querySelectorAll('#bar button[data-split]');
-  for(var i=0;i<bs.length;i++)bs[i].setAttribute('aria-pressed',+bs[i].dataset.split===SPLIT);
-  $('#tipsub').textContent=SPLIT>1?'スマホを横向きにすると大きく見えます':'指を広げると拡大できます／横向きにすると2列も選べます';
 }
 function fail(t){
   $('#img').hidden=true;$('#tip').hidden=true;$('#bar').hidden=true;
   $('#msg').hidden=false;$('#msg').innerHTML=t;
 }
-function setupBar(extra){
-  var bar=$('#bar');bar.hidden=false;
-  bar.innerHTML='<button data-split="1">1枚</button><button data-split="2">2列（横向き用）</button>'+(extra||'');
-  bar.addEventListener('click',function(ev){
-    var b=ev.target.closest('button[data-split]');
-    if(b){SPLIT=+b.dataset.split;render();return;}
-    var k=ev.target.closest('button[data-k]');
-    if(k&&window.__store){DATA=packFrom(window.__store.st,k.dataset.k);render();
-      var ks=document.querySelectorAll('#bar button[data-k]');
-      for(var i=0;i<ks.length;i++)ks[i].setAttribute('aria-pressed',ks[i].dataset.k===k.dataset.k);}
-  });
-}
 try{
   var pay=payload();
-  if(pay){ DATA=JSON.parse(unb64(decodeURIComponent(pay))); setupBar(); render(); }
+  if(pay){ DATA=JSON.parse(unb64(decodeURIComponent(pay))); render(); }
   else{
     var S=loadStore();
     if(S){
-      window.__store=S;
-      var keys=S.keys.slice(-6);
-      setupBar(keys.map(function(k){var p=k.split('-');
-        return '<button data-k="'+k+'">'+(+p[1])+'月</button>';}).join(''));
-      DATA=packFrom(S.st,keys[keys.length-1]);render();
+      var keys=S.keys.slice(-6),bar=$('#bar');
+      bar.hidden=false;
+      bar.innerHTML=keys.map(function(k){var p=k.split('-');
+        return '<button data-k="'+k+'">'+(+p[1])+'月</button>';}).join('');
+      var draw=function(k){DATA=packFrom(S.st,k);render();
+        var bs=document.querySelectorAll('#bar button[data-k]');
+        for(var i=0;i<bs.length;i++)bs[i].setAttribute('aria-pressed',bs[i].dataset.k===k);};
+      bar.addEventListener('click',function(ev){
+        var b=ev.target.closest('button[data-k]');if(b)draw(b.dataset.k);});
+      draw(keys[keys.length-1]);
     }else{
       fail('勤務表のデータが渡されていません。<br>パソコンの「QRコード」から読み取ってください。');
     }
