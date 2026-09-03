@@ -3294,7 +3294,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v16';
+const APP_VER='v17';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 部門の定義（キー・表示名・最低人数の設定名） */
 const SECS=[{k:'hard',n:'ハード',f:'ハードオフ',r:'minHard'},
@@ -4831,44 +4831,51 @@ function drawQR(url,box,size){
   box.appendChild(cv);
   return px;
 }
-function qrError(msg){
-  $('#qrBox').innerHTML='<div class="hint" style="text-align:center;line-height:1.8">'+
-    'QRコードを作れませんでした。<br><span style="color:var(--red)">'+esc(msg)+'</span><br>'+
+function qrError(step,msg){
+  const box=document.getElementById('qrBox');
+  if(!box)return;
+  box.innerHTML='<div class="hint" style="text-align:center;line-height:1.9">'+
+    'QRコードを作れませんでした（'+esc(step)+'）<br>'+
+    '<span style="color:var(--red)">'+esc(msg)+'</span><br>'+
     '下の「画像で保存」「リンクをコピー」はお使いいただけます。</div>';
 }
-$('#btnQR').addEventListener('click',()=>{
-  openDrawer($('#qDrawer'));
-  $('#qrTitle').textContent=S.meta.year+'年'+S.meta.month+'月を スマホに送る';
-  $('#qrSub').textContent='スマホのカメラで読み取ってください（'+APP_VER+'）';
-  $('#qrVer').innerHTML='このファイルのバージョン：<b>'+esc(APP_VER)+'</b>';
-  $('#qrBase').value=(DB&&DB.viewerURL)||'';
-  $('#qrDetail').hidden=true;
-  $('#qrBox').innerHTML='<span class="hint">作成中…</span>';
-  let url=null;
+$('#btnQR').addEventListener('click',function(){
+  const box=document.getElementById('qrBox');
+  const put=function(id,val){
+    try{const el=document.getElementById(id);
+      if(!el)return;
+      if(el.tagName==='INPUT')el.value=val;else el.textContent=val;}catch(e){}
+  };
+  try{ openDrawer(document.getElementById('qDrawer')); }catch(e){}
+  if(box)box.innerHTML='<span class="hint">作成中…</span>';
+
+  /* まずQRを出す（他の表示でつまずいてもQRは出す） */
+  let url=null,step='準備';
   try{
-    if(!VIEW){qrError('この月のシフトがまだありません');$('#qrUrl').value='';return;}
-    url=qrURL();
-  }catch(e){ qrError('データの作成でつまずきました：'+(e&&e.message||e)); $('#qrUrl').value=''; return; }
-  $('#qrUrl').value=url||'';
-  $('#qrNote').textContent=qrBase().indexOf('file:')===0
+    step='シフトの読み込み';
+    if(!VIEW)throw new Error('この月のシフトがまだありません');
+    step='データの作成';
+    const p=packMonth();
+    if(!p)throw new Error('この月のデータを作れません');
+    step='リンクの作成';
+    url=qrBase()+'?v='+b64(JSON.stringify(p));
+    step='QRの描画';
+    if(!window.qrcode)throw new Error('QR部品が読み込まれていません');
+    drawQR(url,box,440);
+  }catch(e){
+    qrError(step,(e&&e.message)||String(e));
+  }
+
+  /* 表示まわりは個別に（失敗してもQRに影響しない） */
+  put('qrTitle',S.meta.year+'年'+S.meta.month+'月を スマホに送る');
+  put('qrSub','スマホのカメラで読み取ってください（'+APP_VER+'）');
+  put('qrUrl',url||'');
+  put('qrBase',(typeof DB!=='undefined'&&DB.viewerURL)||'');
+  put('qrNote',(url&&qrBase().indexOf('file:')===0)
     ? '読み取り先がパソコン内のファイルです。下の「読み取り先」に view.html のURL（https://…）を入れてください。'
-    : '読み取ると勤務表が出ます。長押しして「写真に追加」';
-  if(!url){qrError('リンクを作れませんでした');return;}
-  try{ drawQR(url,$('#qrBox'),440); }
-  catch(e){ qrError((e&&e.message)||String(e)); }
-});
-function M_qr(url){
-  try{ drawQR(url,$('#qrBox'),440); }
-  catch(e){ $('#qrBox').innerHTML='<span class="hint">QRコードを作れませんでした。「画像で保存」または「リンクをコピー」をお使いください。</span>'; }
-}
-$('#qrBase').addEventListener('change',e=>{
-  DB.viewerURL=e.target.value.trim();persist();
-  const u=qrURL();
-  if(u){$('#qrUrl').value=u;M_qr(u);}
-  $('#qrNote').textContent=qrBase().indexOf('file:')===0
-    ? '読み取り先がパソコン内のファイルです。上の「読み取り先」に view.html のURL（https://…）を入れてください。'
-    : '読み取ると勤務表が出ます。長押しして「写真に追加」';
-  toast(DB.viewerURL?'読み取り先を設定しました':'いま開いているページを使います');
+    : '読み取ると勤務表が出ます。長押しして「写真に追加」');
+  try{const dt=document.getElementById('qrDetail');if(dt)dt.hidden=true;}catch(e){}
+  try{const v=document.getElementById('qrVer');if(v)v.innerHTML='このファイルのバージョン：<b>'+esc(APP_VER)+'</b>';}catch(e){}
 });
 $('#btnQROpen').addEventListener('click',()=>{const u=qrURL();if(u)window.open(u,'_blank');});
 $('#btnPng').addEventListener('click',()=>{
