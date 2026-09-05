@@ -604,7 +604,9 @@ function drawSheet(p){
   /* 明細 */
   days.forEach((day,d)=>{
     const y=top+head+rh*d;
-    const bg=day.isPeak?'#EDE4F3':day.isSun||day.isHoliday?'#FCE4E4':day.isSat?'#DDEBF7':'#fff';
+    const ck=(p.cl&&p.cl.charAt(d)!=='-')?p.cl.charAt(d):'';
+    const cc=ck?({p:'#E9DFF2',g:'#DFF0DC',o:'#FBE4D0',y:'#FBF2C9',b:'#DAEDF6',r:'#F9DDE2'}[ck]||''):'';
+    const bg=cc||(day.isPeak?'#EDE4F3':day.isSun||day.isHoliday?'#FCE4E4':day.isSat?'#DDEBF7':'#fff');
     g.fillStyle=bg;g.fillRect(0,y,W,rh);
     let cx=0;
     const dcol=day.isPeak?'#5D3D80':day.isSun||day.isHoliday?'#B23B2E':day.isSat?'#1F6FB2':'#1A1A1A';
@@ -616,6 +618,8 @@ function drawSheet(p){
     const full=numAt(p.f,d),half=numAt(p.hf,d),need=numAt(p.nd,d);
     if(full!=null&&need!=null&&full<need){g.fillStyle='#B23B2E';g.fillRect(cx,y,wNum,rh);
       txt(String(full),cx+wNum/2,y+rh/2,'center','#fff',13,true);}
+    else if(full!=null&&need!=null&&full>need){g.fillStyle='#FBF2C9';g.fillRect(cx,y,wNum,rh);
+      txt(String(full),cx+wNum/2,y+rh/2,'center','#1A1A1A',13,true);}
     else txt(full==null?'':String(full),cx+wNum/2,y+rh/2,'center','#5C625A',13);
     cx+=wNum;
     txt(half==null?'':String(half),cx+wNum/2,y+rh/2,'center','#5C625A',13);cx+=wNum;
@@ -632,6 +636,8 @@ function drawSheet(p){
       const rq=sx.rv?(numAt(sx.rv,d)||0):sx.r;
       if(v!=null&&v<rq){g.fillStyle='#B23B2E';g.fillRect(cx,y,wSec,rh);
         txt(String(v),cx+wSec/2,y+rh/2,'center','#fff',13,true);}
+      else if(v!=null&&v>rq){g.fillStyle='#FBF2C9';g.fillRect(cx,y,wSec,rh);
+        txt(String(v),cx+wSec/2,y+rh/2,'center','#1A1A1A',13,true);}
       else txt(v==null?'':String(v),cx+wSec/2,y+rh/2,'center','#5C625A',13);
       cx+=wSec;
     });
@@ -712,6 +718,7 @@ function packFrom(st,key){
     g:st.staff.map(function(p){return ({hard:'h',hobby:'b',off:'o'})[secOf(p)]||'h';}).join(''),
     c:cells,t:times,
     a:days.map(function(day,d){var v=res.morning[d];return (v>=0&&v!=null)?String(v):'-';}).join(''),
+    cl:days.map(function(day){var i=dd[day.key];return (i&&i.color)?i.color:'-';}).join(''),
     f:full.join(''),hf:half.join(''),nd:need.join(''),
     sc:used.map(function(x){return {n:x.n,r:Number(rules[x.r])||0,v:secv[x.k].join('')};}),
     e:e};

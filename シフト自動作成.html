@@ -100,6 +100,8 @@ td.day{left:0} td.dow{left:calc(42px*var(--z));color:var(--ink2)}
 thead th.day{left:0} thead th.dow{left:calc(42px*var(--z))}
 tr.sat td{background:var(--sat)} tr.sun td{background:var(--sun)}
 tr.peak td{background:#EDE4F3}
+tr.c-p td{background:#E9DFF2} tr.c-g td{background:#DFF0DC} tr.c-o td{background:#FBE4D0}
+tr.c-y td{background:#FBF2C9} tr.c-b td{background:#DAEDF6} tr.c-r td{background:#F9DDE2}
 tr.peak td.day,tr.peak td.dow{color:#5D3D80}
 tr.peak td.memo{color:#5D3D80}
 tr.sat td.dow{color:var(--blue)} tr.sun td.dow{color:var(--red)}
@@ -125,6 +127,7 @@ tbody tr:hover td{box-shadow:inset 0 1px 0 #7FA8C6,inset 0 -1px 0 #7FA8C6}
 tbody tr:hover td.cell:hover{box-shadow:inset 0 0 0 2px var(--navy)}
 td.colhi{box-shadow:inset 1px 0 0 #7FA8C6,inset -1px 0 0 #7FA8C6}
 td.n.short{color:#fff;font-weight:700;background:var(--red)}
+td.n.over{background:#FBF2C9;font-weight:700}
 .req{display:block;font-weight:400;font-size:calc(9.5px*var(--z));color:var(--ink2);line-height:1.1}
 .hl{display:block;line-height:1.15}
 body.rich td.n.exact{background:#FFF2CC}
@@ -3351,8 +3354,14 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v26';
+const APP_VER='v27';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
+/* 日ごとに付けられる色 */
+const DAYCOLORS=[{k:'',n:'なし',c:''},
+  {k:'p',n:'むらさき',c:'#E9DFF2'},{k:'g',n:'みどり',c:'#DFF0DC'},
+  {k:'o',n:'オレンジ',c:'#FBE4D0'},{k:'y',n:'きいろ',c:'#FBF2C9'},
+  {k:'b',n:'みずいろ',c:'#DAEDF6'},{k:'r',n:'ピンク',c:'#F9DDE2'}];
+const dayColor=k=>{const x=DAYCOLORS.find(z=>z.k===k);return x?x.c:'';};
 /* 部門の定義（キー・表示名・最低人数の設定名） */
 const SECS=[{k:'hard',n:'ハード',f:'ハードオフ',r:'minHard',rb:'minHardBusy'},
             {k:'hobby',n:'ホビー',f:'ホビーオフ',r:'minHobby',rb:'minHobbyBusy'},
@@ -3952,10 +3961,11 @@ function renderSheet(){
      '</tr></thead><tbody>';
   v.days.forEach((day,d)=>{
     const p=v.perDay[d],mt=memoText(day.key,day);
-    h+='<tr class="'+(day.isPeak?'peak':day.isSun||day.isHoliday?'sun':day.isSat?'sat':'')+'">'+
+    const dcl=dayInfo(day.key).color||'';
+    h+='<tr class="'+(dcl?('c-'+dcl):day.isPeak?'peak':day.isSun||day.isHoliday?'sun':day.isSat?'sat':'')+'">'+
        '<td class="day">'+day.d+'</td><td class="dow">'+day.dowLabel+'</td>'+
        '<td class="memo" data-memo="'+day.key+'" title="クリックで応援・行事を入れる">'+(mt?esc(mt):'<span class="ph">＋</span>')+'</td>'+
-       '<td class="n'+(p.full<p.need?' short':p.full===p.need?' exact':'')+(dayInfo(day.key).need!=null?' fixed':'')+
+       '<td class="n'+(p.full<p.need?' short':p.full>p.need?' over':'')+(dayInfo(day.key).need!=null?' fixed':'')+
          '" title="必要'+p.need+'名'+(dayInfo(day.key).need!=null?'（この日だけ指定）':'')+'">'+p.full+'</td>'+
        '<td class="n">'+p.half+'</td>';
     S.staff.forEach((st,s)=>{
@@ -3964,7 +3974,7 @@ function renderSheet(){
     });
     h+='<td>'+esc(v.morning[d]>=0?shortName(S.staff[v.morning[d]]):'')+'</td>'+
        activeSecs().map(x=>{const need=secNeed(x,day),cnt=p.sec[x.k]||0;
-         return '<td class="n'+(cnt<need?' short':'')+'" title="'+x.n+'側 必要'+need+'名">'+cnt+'</td>';}).join('')+
+         return '<td class="n'+(cnt<need?' short':cnt>need?' over':'')+'" title="'+x.n+'側 必要'+need+'名">'+cnt+'</td>';}).join('')+
        '</tr>';
   });
   h+='</tbody></table>';
@@ -4111,6 +4121,9 @@ function openDayMenu(td){
       '<div class="sec">行事</div><div class="tg" data-k="e">'+
         (S.eventPresets||[]).filter(Boolean).map(x=>'<button data-e="'+esc(x)+'" aria-pressed="'+(info.note.indexOf(x)>=0)+'">'+esc(x)+'</button>').join('')+'</div>'+
       '<div class="free"><input type="text" id="dayNote" value="'+esc(info.note)+'" placeholder="自由に書けます"></div>'+
+      '<div class="sec">この日の色</div><div class="tg" data-k="c">'+
+        DAYCOLORS.map(x=>'<button data-col="'+x.k+'" aria-pressed="'+((info.color||'')===x.k)+'"'+
+          (x.c?' style="background:'+x.c+'"':'')+'>'+esc(x.n)+'</button>').join('')+'</div>'+
       '<div class="sec">この日だけ必要人数を変える</div>'+
       '<div class="tm"><input type="number" id="dayNeed" min="0" max="12" value="'+(info.need==null?'':esc(info.need))+'" placeholder="自動"><span>名（空欄なら自動）</span>'+
       '<button data-needset="1">決定</button></div>';
@@ -4123,6 +4136,16 @@ function openDayMenu(td){
       const info=dayInfo(key,true);
       if(v===''||v==null)delete info.need;else info.need=Math.max(0,Number(v)||0);
       refreshAll();persist();closeMenu();
+      return;
+    }
+    const cb=e.target.closest('[data-col]');
+    if(cb){
+      snapshot();
+      const info=dayInfo(key,true);
+      const v=cb.dataset.col;
+      if(v)info.color=v;else delete info.color;
+      draw();refreshAll();persist();
+      const el2=$('#sheet td[data-memo="'+key+'"]');if(el2)el2.classList.add('sel');
       return;
     }
     const hb=e.target.closest('[data-n]');
@@ -4693,7 +4716,9 @@ async function writeXlsx(ExcelJS){
   const R0=6;
   v.days.forEach((day,d)=>{
     const r=R0+d;ws.getRow(r).height=16;
-    const bg=day.isPeak?'FFEDE4F3':day.isHoliday||day.isSun?'FFFCE4E4':day.isSat?'FFDDEBF7':null;
+    const ck=dayInfo(day.key).color||'';
+    const cc=ck?({p:'FFE9DFF2',g:'FFDFF0DC',o:'FFFBE4D0',y:'FFFBF2C9',b:'FFDAEDF6',r:'FFF9DDE2'}[ck]||null):null;
+    const bg=cc||(day.isPeak?'FFEDE4F3':day.isHoliday||day.isSun?'FFFCE4E4':day.isSat?'FFDDEBF7':null);
     const df=day.isPeak?{color:{argb:'FF5D3D80'},bold:true}
             :day.isHoliday||day.isSun?{color:{argb:'FFB23B2E'},bold:true}
             :day.isSat?{color:{argb:'FF1F6FB2'},bold:true}:{bold:true};
@@ -4701,7 +4726,7 @@ async function writeXlsx(ExcelJS){
     set(r,3,memoText(day.key,day),{h:'left',fill:bg});
     const p=v.perDay[d];
     set(r,4,p.full,p.full<p.need?{fill:'FFB23B2E',font:{bold:true,color:{argb:'FFFFFFFF'}}}
-        :{fill:(S.meta.colors&&p.full===p.need?'FFFFF2CC':bg)});
+        :p.full>p.need?{fill:'FFFBF2C9',font:{bold:true}}:{fill:bg});
     set(r,5,p.half,{fill:bg});
     S.staff.forEach((st,s)=>{const c=v.cells[s][d];
       const f=!S.meta.colors?bg:isOff(c)?'FFEDEEEA':c==='当番'?'FFFFF2CC':isHalf(c)?'FFE2EFDA':bg;
@@ -4712,7 +4737,8 @@ async function writeXlsx(ExcelJS){
     const shortF={bold:true,color:{argb:'FFFFFFFF'}};
     SEC.forEach((x,i)=>{
       const need=secNeed(x,day),cnt=p.sec[x.k]||0;
-      set(r,C0+n+1+i,cnt,cnt<need?{fill:'FFB23B2E',font:shortF}:{fill:bg});
+      set(r,C0+n+1+i,cnt,cnt<need?{fill:'FFB23B2E',font:shortF}
+          :cnt>need?{fill:'FFFBF2C9',font:{bold:true}}:{fill:bg});
     });
   });
   const F0=R0+v.days.length;
@@ -4940,6 +4966,7 @@ function packMonth(){
     s:S.meta.store,y:S.meta.year,m:S.meta.month,
     n:S.staff.map(st=>st.name),g:S.staff.map(st=>({hard:'h',hobby:'b',off:'o'}[secOf(st)]||'h')).join(''),c:cells,t:times,
     a:VIEW.days.map((day,d)=>VIEW.morning[d]>=0?String(VIEW.morning[d]):'-').join(''),
+    cl:VIEW.days.map(day=>dayInfo(day.key).color||'-').join(''),
     f:VIEW.perDay.map(p=>num(p.full)).join(''),
     hf:VIEW.perDay.map(p=>num(p.half)).join(''),
     nd:VIEW.perDay.map(p=>num(p.need)).join(''),
@@ -5021,7 +5048,9 @@ function drawSheet(p){
   /* 明細 */
   days.forEach((day,d)=>{
     const y=top+head+rh*d;
-    const bg=day.isPeak?'#EDE4F3':day.isSun||day.isHoliday?'#FCE4E4':day.isSat?'#DDEBF7':'#fff';
+    const ck=(p.cl&&p.cl.charAt(d)!=='-')?p.cl.charAt(d):'';
+    const cc=ck?({p:'#E9DFF2',g:'#DFF0DC',o:'#FBE4D0',y:'#FBF2C9',b:'#DAEDF6',r:'#F9DDE2'}[ck]||''):'';
+    const bg=cc||(day.isPeak?'#EDE4F3':day.isSun||day.isHoliday?'#FCE4E4':day.isSat?'#DDEBF7':'#fff');
     g.fillStyle=bg;g.fillRect(0,y,W,rh);
     let cx=0;
     const dcol=day.isPeak?'#5D3D80':day.isSun||day.isHoliday?'#B23B2E':day.isSat?'#1F6FB2':'#1A1A1A';
@@ -5033,6 +5062,8 @@ function drawSheet(p){
     const full=numAt(p.f,d),half=numAt(p.hf,d),need=numAt(p.nd,d);
     if(full!=null&&need!=null&&full<need){g.fillStyle='#B23B2E';g.fillRect(cx,y,wNum,rh);
       txt(String(full),cx+wNum/2,y+rh/2,'center','#fff',13,true);}
+    else if(full!=null&&need!=null&&full>need){g.fillStyle='#FBF2C9';g.fillRect(cx,y,wNum,rh);
+      txt(String(full),cx+wNum/2,y+rh/2,'center','#1A1A1A',13,true);}
     else txt(full==null?'':String(full),cx+wNum/2,y+rh/2,'center','#5C625A',13);
     cx+=wNum;
     txt(half==null?'':String(half),cx+wNum/2,y+rh/2,'center','#5C625A',13);cx+=wNum;
@@ -5049,6 +5080,8 @@ function drawSheet(p){
       const rq=sx.rv?(numAt(sx.rv,d)||0):sx.r;
       if(v!=null&&v<rq){g.fillStyle='#B23B2E';g.fillRect(cx,y,wSec,rh);
         txt(String(v),cx+wSec/2,y+rh/2,'center','#fff',13,true);}
+      else if(v!=null&&v>rq){g.fillStyle='#FBF2C9';g.fillRect(cx,y,wSec,rh);
+        txt(String(v),cx+wSec/2,y+rh/2,'center','#1A1A1A',13,true);}
       else txt(v==null?'':String(v),cx+wSec/2,y+rh/2,'center','#5C625A',13);
       cx+=wSec;
     });
