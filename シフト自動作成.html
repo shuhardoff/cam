@@ -275,6 +275,7 @@ body.printing .sumbox{display:none}
   <button class="btn" id="btnFit" aria-pressed="true" title="1か月ぶんを画面に収めます">全体表示</button>
   <button class="btn" id="btnXlsx">Excelで出す</button>
   <button class="btn pri" id="btnPush" title="この内容を店内の全パソコンに反映します">共有保存</button>
+  <button class="btn" id="btnPull" title="ほかのパソコンで保存された内容を取り込みます">最新に更新</button>
   <button class="btn" id="btnQR">QRコード</button>
   <button class="btn" id="btnPrint">印刷</button>
   <button class="btn" id="btnSettings">設定</button>
@@ -3354,7 +3355,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v30';
+const APP_VER='v31';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 日ごとに付けられる色 */
 const DAYCOLORS=[{k:'',n:'なし',c:''},
@@ -3961,11 +3962,14 @@ function renderSheet(){
       '<div class="ttl" id="sTitle">'+S.meta.year+'年'+S.meta.month+'月　勤務予定表</div>'+
       '<div class="dept">'+fyOf(S.meta.year,S.meta.month)+'年度</div></div>';
   if(!VIEW){
-    sheet.innerHTML=head+'<div class="empty">'+S.meta.month+'月はまだ作っていません。'+
+    const fresh0=document.createElement('div');
+    fresh0.className='sheet';fresh0.id='sheet';
+    fresh0.innerHTML=head+'<div class="empty">'+S.meta.month+'月はまだ作っていません。'+
       '<ol><li>もらった<b>希望休</b>を表に入れる（あとでもOK）</li><li><b>シフトを作る</b>を押す</li>'+
       '<li>気になる所を直して<b>Excelで出す</b></li></ol>'+
       '<div style="margin-top:18px"><button class="btn" id="btnPullHere">ほかのパソコンで作ったシフトを取り込む</button>'+
       '<div class="hint" style="margin-top:6px">別の端末で作成済みなら、これで表示できます</div></div></div>';
+    sheet.replaceWith(fresh0);
     bindTitle();return;
   }
   const v=VIEW;
@@ -4003,7 +4007,10 @@ function renderSheet(){
        '</tr>';
   });
   h+='</tbody></table>';
-  sheet.innerHTML=h;
+  const fresh=document.createElement('div');
+  fresh.className='sheet';fresh.id='sheet';
+  fresh.innerHTML=h;
+  sheet.replaceWith(fresh);                    // 入れ物ごと差し替えて古い描画を残さない
   renderSummary(v);
   bindTitle();
 }
@@ -4885,7 +4892,7 @@ function mergeFromShared(data){
   });
   return n;
 }
-async function pullShared(silent){
+async function pullShared(silent,force){
   const url=shareBase();
   if(location.protocol==='file:'){
     if(!silent)shareInfo('パソコン内のファイルを開いているため、取り込みできません（https:// で開いてください）');
@@ -4897,6 +4904,18 @@ async function pullShared(silent){
     const data=await res.json();
     if(!(data&&(data.stores||(data.staff&&data.meta))))throw new Error('形式がちがいます');
     const remote=Number(data.updatedAt||0),local=Number(DB.updatedAt||0);
+    if(!silent&&!force&&remote<=local&&window.confirm(
+        '共有ファイル（'+stamp(remote)+'）は、この端末（'+stamp(local)+'）より古いです。\n'+
+        'それでも共有ファイルの内容に合わせますか？\n（この端末の変更は消えます）')){
+      const keepURL=DB.shareURL,keepAuto=DB.autoSync,keepView=DB.viewerURL,keepGh=DB.gh;
+      adoptData(data);
+      DB.shareURL=keepURL;DB.autoSync=keepAuto;if(keepView)DB.viewerURL=keepView;if(keepGh)DB.gh=keepGh;
+      DB.updatedAt=remote||Date.now();
+      renderStores();refreshAll();await store.save(DB);
+      shareInfo('共有ファイルの内容に合わせました（'+stamp(remote)+'）');
+      toast('共有データを取り込みました');
+      return true;
+    }
     if(silent&&remote<=local){
       /* 共有のほうが古くても、この端末に無い月があれば足す */
       const added=mergeFromShared(data);
@@ -4908,6 +4927,7 @@ async function pullShared(silent){
         return true;
       }
       shareInfo('共有ファイル（'+stamp(remote)+'）より、この端末（'+stamp(local)+'）が新しいので取り込みませんでした');
+      if(!silent)toast('この端末のほうが新しいため、取り込みませんでした（共有：'+stamp(remote)+'）');
       return false;
     }
     const keepURL=DB.shareURL,keepAuto=DB.autoSync,keepView=DB.viewerURL;
@@ -4926,6 +4946,20 @@ async function pullShared(silent){
   }
 }
 $('#btnShareIn').addEventListener('click',()=>pullShared(false));
+$('#btnPull').addEventListener('click',async()=>{
+  const b=$('#btnPull');b.disabled=true;b.textContent='取り込み中…';
+  await pullShared(false);
+  b.disabled=false;b.textContent='最新に更新';
+});
+let lastSync=0;
+function maybeSync(){
+  if(DB.autoSync===false||location.protocol==='file:')return;
+  const now=Date.now();
+  if(now-lastSync<20000)return;
+  lastSync=now;pullShared(true);
+}
+window.addEventListener('focus',maybeSync);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)maybeSync();});
 $('#btnPush').addEventListener('click',async()=>{
   const b=$('#btnPush');
   if(!ghReady()){
