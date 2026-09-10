@@ -3368,7 +3368,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v35';
+const APP_VER='v37';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 日ごとに付けられる色 */
 const DAYCOLORS=[{k:'',n:'なし',c:''},
@@ -3545,6 +3545,15 @@ function dropOldestMonth(){
   delete DB.stores[best.id].months[best.k];
   return best;
 }
+function localSaveVisible(){
+  const el=document.getElementById('saveState');
+  if(!el)return false;
+  const g=gh();
+  const sharing=!!((g.owner&&g.repo)||(DB.shareURL||'').trim())&&location.protocol!=='file:';
+  const on=!sharing;
+  el.style.display=on?'':'none';
+  return on;
+}
 const persist=()=>{
   clearTimeout(saveTimer);
   saveTimer=setTimeout(async()=>{
@@ -3557,6 +3566,10 @@ const persist=()=>{
       if(!gone)break;
       dropped++;
       ok=await store.save(DB);
+    }
+    if(!localSaveVisible()){                 // 共有を使うときは、こちらの表示は出さない
+      if(!ok)showSave('保存できません','ng');
+      return;
     }
     if(ok){
       if(dropped){
@@ -4920,7 +4933,33 @@ function mergeFromShared(data){
   });
   return n;
 }
-async function pullShared(silent,force){
+/* 共有ファイルを取りに行く（GitHubのAPI経由＝すぐ反映。だめなら通常のURL） */
+async function fetchShared(preferRaw){
+  const g=gh();
+  if(g.owner&&g.repo&&!preferRaw){
+    const api='https://api.github.com/repos/'+g.owner+'/'+g.repo+'/contents/'+g.path+
+              '?ref='+encodeURIComponent(g.branch)+'&t='+Date.now();
+    const h={'Accept':'application/vnd.github.raw'};
+    const t=ghToken();if(t)h['Authorization']='Bearer '+t;
+    try{
+      const r=await fetch(api,{headers:h,cache:'no-store'});
+      if(r.ok){
+        const txt=await r.text();
+        try{return JSON.parse(txt);}catch(e){
+          const j=JSON.parse(txt);                 // 念のため
+          if(j&&j.content)return JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))));
+          throw e;
+        }
+      }
+      if(r.status===404)throw new Error('見つかりません（404）');
+    }catch(e){ if(/404/.test(e&&e.message))throw e; }
+  }
+  const url=shareBase();
+  const r2=await fetch(url+(url.indexOf('?')>=0?'&':'?')+'t='+Date.now(),{cache:'no-store'});
+  if(!r2.ok)throw new Error('見つかりません（'+r2.status+'）');
+  return await r2.json();
+}
+async function pullShared(silent,force,preferRaw){
   const url=shareBase();
   if(location.protocol==='file:'){
     setSync('共有：使えません（パソコン内のファイルを開いています）','ng');
@@ -4929,9 +4968,7 @@ async function pullShared(silent,force){
   }
   setSync('同期中…','',true);
   try{
-    const res=await fetch(url+(url.indexOf('?')>=0?'&':'?')+'t='+Date.now(),{cache:'no-store'});
-    if(!res.ok)throw new Error('見つかりません（'+res.status+'）');
-    const data=await res.json();
+    const data=await fetchShared(preferRaw);
     if(!(data&&(data.stores||(data.staff&&data.meta))))throw new Error('形式がちがいます');
     const remote=Number(data.updatedAt||0),local=Number(DB.updatedAt||0);
     if(force){
@@ -5002,14 +5039,16 @@ $('#btnPull').addEventListener('click',async()=>{
   b.disabled=false;b.textContent='最新に更新';
 });
 let lastSync=0;
-function maybeSync(){
+function maybeSync(gap,preferRaw){
   if(DB.autoSync===false||location.protocol==='file:')return;
   const now=Date.now();
-  if(now-lastSync<20000)return;
-  lastSync=now;pullShared(true,isViewerDevice());
+  if(now-lastSync<(gap==null?3000:gap))return;
+  lastSync=now;pullShared(true,isViewerDevice(),preferRaw);
 }
-window.addEventListener('focus',maybeSync);
+window.addEventListener('focus',()=>maybeSync());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)maybeSync();});
+/* 見るだけの端末は、開いている間もときどき確認する */
+setInterval(()=>{ if(!document.hidden&&isViewerDevice())maybeSync(25000,true); },10000);
 $('#btnPush').addEventListener('click',async()=>{
   const b=$('#btnPush');
   if(!ghReady()){
@@ -5407,6 +5446,7 @@ window.addEventListener('error',function(ev){
   }
   showSave(store.ok?'自動保存':'保存できません',store.ok?'':'ng');
   const vt=document.getElementById('verTag');if(vt)vt.textContent=APP_VER;
+  localSaveVisible();
   if(location.protocol==='file:')setSync('共有：使えません（ファイルを直接開いています）','ng');
   else setSync('同期中…','',true);
   adoptData(await store.load());
