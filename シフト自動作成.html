@@ -128,7 +128,7 @@ tbody tr:hover td.cell:hover{box-shadow:inset 0 0 0 2px var(--navy)}
 td.colhi{box-shadow:inset 1px 0 0 #7FA8C6,inset -1px 0 0 #7FA8C6}
 td.n.short{color:#fff;font-weight:700;background:var(--red)}
 td.n.over{background:#FBF2C9;font-weight:700}
-.req{display:block;font-weight:400;font-size:calc(9.5px*var(--z));color:var(--ink2);line-height:1.1}
+.needlab{display:block;font-weight:400;font-size:calc(9.5px*var(--z));color:var(--ink2);line-height:1.1}
 .hl{display:block;line-height:1.15}
 body.rich td.n.exact{background:#FFF2CC}
 td.n.fixed{box-shadow:inset 0 0 0 2px var(--navy)}
@@ -473,6 +473,9 @@ body.printing .sumbox{display:none}
       このリポジトリに対し「Contents: Read and write」を付けて作ってください。</p>
   </div>
   <label class="chk"><input type="checkbox" id="shareAuto"><span>開いたときに自動で最新を取り込む</span></label>
+  <label class="chk"><input type="checkbox" id="viewerDevice"><span>この端末は見るだけ（開くたび共有の内容に戻す）</span></label>
+  <p class="hint" style="margin:6px 0 0">シフトを作る親のパソコンでは、これを外してください。
+    アクセストークンを入れていない端末は、はじめから入った状態になります。</p>
   <div class="fld" style="margin-top:10px"><button class="btn wide" id="btnShareIn">いますぐ最新を取り込む</button></div>
   <p class="hint" id="shareState" style="margin:-6px 0 0"></p>
   <hr>
@@ -3355,7 +3358,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v31';
+const APP_VER='v33';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 日ごとに付けられる色 */
 const DAYCOLORS=[{k:'',n:'なし',c:''},
@@ -3986,7 +3989,7 @@ function renderSheet(){
         '<span class="cd">'+esc(st.code||'　')+'</span>'+
         '<span class="nm">'+esc(st.name||'（未入力）')+'</span></th>').join('')+
       '<th>朝礼<br>当番</th>'+
-      activeSecs().map(x=>'<th>'+x.n+'<br>出勤<br><span class="req">'+secNeedLabel(x)+'</span></th>').join('')+
+      activeSecs().map(x=>'<th>'+x.n+'<br>出勤<br><span class="needlab">'+secNeedLabel(x)+'</span></th>').join('')+
      '</tr></thead><tbody>';
   v.days.forEach((day,d)=>{
     const p=v.perDay[d],mt=memoText(day.key,day);
@@ -4557,6 +4560,7 @@ $('#btnSettings').addEventListener('click',()=>{
   $('#ghToken').value=ghToken();
   $('#shareURL').value=DB.shareURL||'';
   $('#shareAuto').checked=DB.autoSync!==false;
+  $('#viewerDevice').checked=isViewerDevice();
   shareInfo('取り込み先：'+shareBase()+'　／　この端末の最終更新：'+stamp(DB.updatedAt));
   renderSecPick();renderHelpers();renderEvents();renderStaffList();
   updateUsage();
@@ -4825,6 +4829,10 @@ function gh(){
           branch:(g.branch||'main').trim(),path:(g.path||'shift-data.json').trim()};
 }
 function ghReady(){const g=gh();return !!(g.owner&&g.repo&&ghToken());}
+/* 見るだけの端末（共有保存をしない端末）は、開くたび共有の内容に戻す */
+function isViewerDevice(){
+  return (DB.viewerDevice==null)?!ghReady():!!DB.viewerDevice;
+}
 function b64json(o){return btoa(unescape(encodeURIComponent(JSON.stringify(o))));}
 async function ghPush(){
   const g=gh(),t=ghToken();
@@ -4873,6 +4881,10 @@ $('#btnShareOut').addEventListener('click',()=>{
 });
 $('#shareURL').addEventListener('change',e=>{DB.shareURL=e.target.value.trim();persist();
   shareInfo('取り込み先：'+shareBase());});
+$('#viewerDevice').addEventListener('change',e=>{
+  DB.viewerDevice=e.target.checked;persist();
+  toast(e.target.checked?'この端末は、開くたび共有の内容に戻ります':'この端末の内容を保ちます');
+});
 $('#shareAuto').addEventListener('change',e=>{DB.autoSync=e.target.checked;persist();
   toast(e.target.checked?'開いたときに自動で取り込みます':'自動の取り込みをやめました');});
 /* 共有側にあって、この端末に無い月だけを取り込む */
@@ -4904,7 +4916,18 @@ async function pullShared(silent,force){
     const data=await res.json();
     if(!(data&&(data.stores||(data.staff&&data.meta))))throw new Error('形式がちがいます');
     const remote=Number(data.updatedAt||0),local=Number(DB.updatedAt||0);
-    if(!silent&&!force&&remote<=local&&window.confirm(
+    if(force){
+      const kU=DB.shareURL,kA=DB.autoSync,kV=DB.viewerURL,kG=DB.gh,kD=DB.viewerDevice;
+      adoptData(data);
+      DB.shareURL=kU;DB.autoSync=kA;if(kV)DB.viewerURL=kV;if(kG)DB.gh=kG;
+      if(kD!=null)DB.viewerDevice=kD;
+      DB.updatedAt=remote||Date.now();
+      renderStores();refreshAll();await store.save(DB);
+      shareInfo('共有の内容を表示しています（'+stamp(remote)+'）');
+      if(!silent)toast('共有データを取り込みました');
+      return true;
+    }
+    if(!silent&&remote<=local&&window.confirm(
         '共有ファイル（'+stamp(remote)+'）は、この端末（'+stamp(local)+'）より古いです。\n'+
         'それでも共有ファイルの内容に合わせますか？\n（この端末の変更は消えます）')){
       const keepURL=DB.shareURL,keepAuto=DB.autoSync,keepView=DB.viewerURL,keepGh=DB.gh;
@@ -4956,7 +4979,7 @@ function maybeSync(){
   if(DB.autoSync===false||location.protocol==='file:')return;
   const now=Date.now();
   if(now-lastSync<20000)return;
-  lastSync=now;pullShared(true);
+  lastSync=now;pullShared(true,isViewerDevice());
 }
 window.addEventListener('focus',maybeSync);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)maybeSync();});
@@ -5013,6 +5036,7 @@ function adoptData(saved){
   if(saved&&saved.viewerURL)DB.viewerURL=saved.viewerURL;
   if(saved&&saved.shareURL)DB.shareURL=saved.shareURL;
   if(saved&&saved.gh)DB.gh=saved.gh;
+  if(saved&&saved.viewerDevice!=null)DB.viewerDevice=saved.viewerDevice;
   if(saved&&saved.autoSync!=null)DB.autoSync=saved.autoSync;
   if(saved&&saved.updatedAt)DB.updatedAt=saved.updatedAt;
   S=DB.stores[DB.cur];
@@ -5355,7 +5379,8 @@ window.addEventListener('error',function(ev){
   const vt=document.getElementById('verTag');if(vt)vt.textContent=APP_VER;
   adoptData(await store.load());
   brushLabel();renderStores();refreshAll();
-  if(DB.autoSync!==false&&location.protocol!=='file:')setTimeout(()=>pullShared(true),300);
+  if(DB.autoSync!==false&&location.protocol!=='file:')
+    setTimeout(()=>pullShared(true,isViewerDevice()),300);
 })();
 })();
 </script>
