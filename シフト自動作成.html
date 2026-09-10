@@ -124,6 +124,7 @@ td.cell.req{font-weight:700;font-size:calc(20px*var(--z));line-height:1}
 td.cell.paid{font-size:calc(12px*var(--z))}
 td.cell.duty{font-weight:700}
 td.cell.eve{font-size:calc(11px*var(--z))}
+td.cell.small{font-size:calc(11px*var(--z));line-height:1.15}
 body.rich td.cell.off{background:var(--off)}
 body.rich td.cell.req{background:var(--off);color:var(--red)}
 body.rich td.cell.paid{background:var(--paid)}
@@ -660,6 +661,12 @@ body.printing .sumbox{display:none}
       const need = (ctx.needs && ctx.needs[d] != null) ? ctx.needs[d] : requiredFor(days[d], rules);
       if (total < need) { cost += rules.wShort * (need - total) ** 2; detail.short.push(d); }
       if (rules.maxPerDay && total > rules.maxPerDay) cost += rules.wOver * (total - rules.maxPerDay);
+      /* 余った人手は、平日ではなく土日祝・繁忙期に寄せる */
+      const extra = total - need;
+      if (extra > 0) {
+        if (days[d].isBusy) cost -= rules.wBusyBonus * Math.min(extra, 2);
+        else cost += rules.wWeekdaySurplus * extra;
+      }
       const busy = days[d].isBusy;
       const pick = (w, b) => (busy && rules[b] != null) ? rules[b] : rules[w];
       const mins = { hard: pick('minHard', 'minHardBusy'),
@@ -1014,7 +1021,7 @@ body.printing .sumbox{display:none}
     minWeekday: 4, minSat: 5, minSun: 5, minHoliday: 5,
     minHard: 2, minHobby: 2, minOff: 2, maxPerDay: 6,
     maxConsecutive: 6, maxConsecutiveOff: 1, softConsecutive: 5,
-    wShort: 120, wSection: 130, wCloser: 90, wMorning: 30, wOver: 6,
+    wShort: 120, wSection: 130, wBusyBonus: 10, wWeekdaySurplus: 8, wCloser: 90, wMorning: 30, wOver: 6,
     wRun: 25, wRunSoft: 7, wRunOff: 22, wIsolated: 6,
     wDowPref: 14, wHolidayPref: 12, wFair: 7, wWeekendWork: 16
   };
@@ -3368,7 +3375,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v37';
+const APP_VER='v40';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 日ごとに付けられる色 */
 const DAYCOLORS=[{k:'',n:'なし',c:''},
@@ -3430,6 +3437,7 @@ function defaultState(){
     helpers:[{name:'松村さん応援',section:'hard'},{name:'金子店長応援',section:'hobby'},
              {name:'大垣さん応援',section:'hobby'},{name:'原田さん応援',section:'none'}],
     eventPresets:['棚卸','駐車場警備','セール','入金当番','会議','研修'],
+    cellPresets:['出張','棚卸応援','会議','研修','健康診断','面接'],
     advanced:false,
     staff:[
       {id:'s1',code:'0003', name:'吉田　幸一',  short:'吉田',rank:'店長',        section:'hard', canClose:true, canMorning:true,preferOffDow:[],holidayOff:false,paidGrant:5,note:'',defTarget:8, weekendWork:90,paidExtra:true},
@@ -3502,6 +3510,7 @@ function migrate(){
   });
   if(!S.helpers)S.helpers=defaultState().helpers;
   if(!S.eventPresets)S.eventPresets=defaultState().eventPresets;
+  if(!S.cellPresets)S.cellPresets=defaultState().cellPresets;
   S.staff.forEach(st=>{
     if(st.paidGrant==null)st.paidGrant=(st.paidLeft!=null?st.paidLeft:5);
     if(st.weekendWork==null)st.weekendWork=50;
@@ -3748,7 +3757,9 @@ function engineRequests(req){
     out[id]={};
     Object.keys(req[id]||{}).forEach(k=>{
       const v=req[id][k];
-      out[id][k]=v&&v.indexOf('late@')===0?'eve':(v&&v.indexOf('early@')===0?'early':v);
+      out[id][k]=v&&v.indexOf('late@')===0?'eve'
+                :(v&&v.indexOf('early@')===0?'early'
+                :(v&&v.indexOf('t|')===0?'work':v));
     });
   });
   return out;
@@ -3967,6 +3978,12 @@ $('#chips').addEventListener('click',e=>{
 
 const CLS={'〇':'off','◎':'req','有休':'paid','当番':'duty'};
 function clsOf(c){return CLS[c]||(typeof c==='string'&&c.indexOf('～')>=0?'eve':'');}
+/* そのマスの自由入力の色 */
+function cellColorOf(stId,key){
+  const v=((month().requests||{})[stId]||{})[key];
+  const f=freeOf(v);
+  return f?f.color:'';
+}
 
 function forceRelayout(){
   const wrap=document.querySelector('.sheetwrap');
@@ -4025,7 +4042,10 @@ function renderSheet(){
        '<td class="n">'+p.half+'</td>';
     S.staff.forEach((st,s)=>{
       const c=v.cells[s][d],pin=(mo.requests[st.id]||{})[day.key]?' pin':'';
-      h+='<td class="cell '+clsOf(c)+pin+'" data-s="'+s+'" data-d="'+d+'">'+esc(c)+'</td>';
+      const fc=cellColorOf(st.id,day.key);
+      const sty=fc?(' style="background:'+dayColor(fc)+'"'):'';
+      const lng=(typeof c==='string'&&c.length>=4)?' small':'';
+      h+='<td class="cell '+clsOf(c)+lng+pin+'"'+sty+' data-s="'+s+'" data-d="'+d+'">'+esc(c)+'</td>';
     });
     h+='<td>'+esc(v.morning[d]>=0?shortName(S.staff[v.morning[d]]):'')+'</td>'+
        activeSecs().map(x=>{const need=secNeed(x,day),cnt=p.sec[x.k]||0;
@@ -4097,8 +4117,14 @@ const OPTS=[
 ];
 const LATE=['11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
 const EARLY=['13:00','14:00','15:00','16:00','17:00','18:00'];
+function freeOf(v){
+  if(typeof v!=='string'||v.indexOf('t|')!==0)return null;
+  const i=v.indexOf('|',2);
+  return {color:v.slice(2,i),text:v.slice(i+1)};
+}
 function symOf(v){
   if(!v)return '';
+  const f=freeOf(v);if(f)return f.text;
   if(v==='shift_off')return '〇';
   if(v==='off')return '◎';
   if(v==='paid')return '有休';
@@ -4108,6 +4134,7 @@ function symOf(v){
 }
 function labelOf(v){
   if(!v)return '自動でおまかせ';
+  const f0=freeOf(v);if(f0)return f0.text;
   if(v==='work')return '出勤';
   if(v==='shift_off')return '休み 〇';
   if(v==='off')return '希望休 ◎';
@@ -4138,6 +4165,7 @@ function openCellMenu(td){
   const m=document.createElement('div');m.className='menu';
   const curLate=(cur&&cur.indexOf('late@')===0)?cur.slice(5):'16:00';
   const curEarly=(cur&&cur.indexOf('early@')===0)?cur.slice(6):'15:00';
+  const curFree=freeOf(cur);
   m.innerHTML='<div class="hd">'+esc(st.name)+'　'+day.d+'日('+day.dowLabel+')'+
       (cur?'　<span class="now">いま：'+esc(labelOf(cur))+'</span>':'')+'</div>'+
     OPTS.map(o=>'<button class="mi" data-v="'+o.v+'"><i>'+esc(o.sym)+'</i>'+esc(o.label)+(o.v===cur?'　✓':'')+'</button>').join('')+
@@ -4146,6 +4174,12 @@ function openCellMenu(td){
       '<button data-tset="late">決定</button></div>'+
     '<div class="tm"><input type="time" id="tEarly" value="'+esc(curEarly)+'" step="300"><span>まで出勤</span>'+
       '<button data-tset="early">決定</button></div>'+
+    '<div class="sec">自由に入力（出張・会議など）</div>'+
+    '<div class="tg">'+(S.cellPresets||[]).map(x=>'<button data-fp="'+esc(x)+'">'+esc(x)+'</button>').join('')+'</div>'+
+    '<div class="tm"><input type="text" id="freeTxt" value="'+esc(curFree?curFree.text:'')+'" placeholder="例：出張">'+
+      '<button data-fset="1">決定</button></div>'+
+    '<div class="tg">'+DAYCOLORS.map(x=>'<button data-fcol="'+x.k+'"'+(x.c?' style="background:'+x.c+'"':'')+
+      ' title="この色で入れる">'+esc(x.n)+'</button>').join('')+'</div>'+
     '<button class="mi clr" data-v="">指定を解除（自動にもどす）</button>';
   placeMenu(m,td);
   m.addEventListener('keydown',e=>{
@@ -4156,6 +4190,18 @@ function openCellMenu(td){
     const b=m.querySelector('[data-tset="'+kind+'"]');if(b)b.click();
   });
   m.addEventListener('click',e=>{
+    const fp=e.target.closest('[data-fp]');
+    if(fp){const t=m.querySelector('#freeTxt');if(t){t.value=fp.dataset.fp;t.focus();}return;}
+    const fs=e.target.closest('[data-fset]'),fc=e.target.closest('[data-fcol]');
+    if(fs||fc){
+      const t=(m.querySelector('#freeTxt').value||'').trim();
+      if(!t){toast('文字を入れてください');return;}
+      const col=fc?fc.dataset.fcol:'';
+      const val='t|'+col+'|'+t;
+      snapshot();setReq(s,d,val);brush=val;brushLabel();
+      applyRequests();refreshAll();persist();closeMenu();
+      return;
+    }
     const tb=e.target.closest('[data-tset]');if(!tb)return;
     const kind=tb.dataset.tset;
     const t=m.querySelector(kind==='late'?'#tLate':'#tEarly').value;
@@ -4285,6 +4331,7 @@ function applyRequests(){
   const canDo=(s,d,kind)=>{
     const c=cells[s][d];
     if(isOff(c))return false;
+    if(kind==='close'&&freeOf(((mo.requests[S.staff[s].id]||{})[days[d].key])))return false;
     if(kind==='close'&&isHalf(c))return false;
     if(isHalf(c))return false;
     return kind==='close'?!!S.staff[s].canClose:!!S.staff[s].canMorning;
@@ -4804,7 +4851,9 @@ async function writeXlsx(ExcelJS){
         :p.full>p.need?{fill:'FFFBF2C9',font:{bold:true}}:{fill:bg});
     set(r,5,p.half,{fill:bg});
     S.staff.forEach((st,s)=>{const c=v.cells[s][d];
-      const f=!S.meta.colors?bg:isOff(c)?'FFEDEEEA':c==='当番'?'FFFFF2CC':isHalf(c)?'FFE2EFDA':bg;
+      const fk2=cellColorOf(st.id,day.key);
+      const fcx=fk2?({p:'FFE9DFF2',g:'FFDFF0DC',o:'FFFBE4D0',y:'FFFBF2C9',b:'FFDAEDF6',r:'FFF9DDE2'}[fk2]||null):null;
+      const f=fcx||(!S.meta.colors?bg:isOff(c)?'FFEDEEEA':c==='当番'?'FFFFF2CC':isHalf(c)?'FFE2EFDA':bg);
       const big=(c==='◎'||c==='〇');
       set(r,C0+s,c,{fill:f,font:{bold:c==='◎'||c==='当番',size:big?11:9,
         color:{argb:(S.meta.colors&&c==='◎')?'FFB23B2E':'FF1A1A1A'}}});});
@@ -5164,6 +5213,8 @@ function packMonth(){
     n:S.staff.map(st=>st.name),g:S.staff.map(st=>({hard:'h',hobby:'b',off:'o'}[secOf(st)]||'h')).join(''),c:cells,t:times,
     a:VIEW.days.map((day,d)=>VIEW.morning[d]>=0?String(VIEW.morning[d]):'-').join(''),
     cl:VIEW.days.map(day=>dayInfo(day.key).color||'-').join(''),
+    fc:(function(){const o={};S.staff.forEach((st,si)=>VIEW.days.forEach((day,d)=>{
+        const c=cellColorOf(st.id,day.key);if(c)o[si+'-'+d]=c;}));return o;})(),
     f:VIEW.perDay.map(p=>num(p.full)).join(''),
     hf:VIEW.perDay.map(p=>num(p.half)).join(''),
     nd:VIEW.perDay.map(p=>num(p.need)).join(''),
@@ -5266,7 +5317,10 @@ function drawSheet(p){
     txt(half==null?'':String(half),cx+wNum/2,y+rh/2,'center','#5C625A',13);cx+=wNum;
     p.n.forEach((n,si)=>{
       const c=dec((p.c[si]||'')[d]||' ');
-      const size=(c==='◎')?19:(c==='〇')?17:(c.indexOf('～')>=0?11:13);
+      const fk=(p.fc||{})[si+'-'+d];
+      if(fk){g.fillStyle=({p:'#E9DFF2',g:'#DFF0DC',o:'#FBE4D0',y:'#FBF2C9',b:'#DAEDF6',r:'#F9DDE2'}[fk]||'#fff');
+        g.fillRect(cx,y,wWho,rh);}
+      const size=(c==='◎')?19:(c==='〇')?17:(c.length>=4?10:(c.indexOf('～')>=0?11:13));
       txt(c,cx+wWho/2,y+rh/2,'center','#1A1A1A',size,c==='当番'||c==='◎');
       cx+=wWho;
     });
