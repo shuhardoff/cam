@@ -3354,7 +3354,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v29';
+const APP_VER='v30';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 日ごとに付けられる色 */
 const DAYCOLORS=[{k:'',n:'なし',c:''},
@@ -3944,10 +3944,15 @@ function clsOf(c){return CLS[c]||(typeof c==='string'&&c.indexOf('～')>=0?'eve'
 function forceRelayout(){
   const wrap=document.querySelector('.sheetwrap');
   if(!wrap)return;
+  const sheet=document.getElementById('sheet');
+  if(sheet)sheet.innerHTML='';                  // いったん空にして古い描画を捨てる
   const prev=wrap.style.display;
   wrap.style.display='none';
-  void wrap.offsetHeight;                       // ブラウザに描き直させる
+  void wrap.offsetHeight;
   wrap.style.display=prev||'';
+  const again=()=>{ refreshAll(); void wrap.offsetHeight; };
+  if(window.requestAnimationFrame)requestAnimationFrame(()=>requestAnimationFrame(again));
+  else setTimeout(again,30);
 }
 function renderSheet(){
   const sheet=$('#sheet'),mo=month();
