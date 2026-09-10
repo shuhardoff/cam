@@ -45,6 +45,15 @@ button{cursor:pointer;border:none;background:none}
 .save.ng{color:var(--red);font-weight:700}
 .save.on{color:#2F6B33}
 .ver{font-size:11px;color:var(--ink3);border:1px solid var(--line);border-radius:9px;padding:1px 7px}
+.sync{font-size:11.5px;color:var(--ink2);border:1px solid var(--gl2);border-radius:11px;
+  padding:3px 10px;background:#fff;white-space:nowrap;max-width:270px;overflow:hidden;text-overflow:ellipsis}
+.sync:hover{background:#E3EDF5;border-color:var(--navy)}
+.sync.ok{color:#2F6B33;border-color:#B6D0B4;background:#EDF5EC}
+.sync.ng{color:var(--red);border-color:#DFB4AC;background:#FBEAE7;font-weight:700}
+.sync .spin{display:inline-block;width:11px;height:11px;margin-right:6px;vertical-align:-1px;
+  border:2px solid #CBD2C7;border-top-color:var(--navy);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.sync .spin{animation:none}}
 .zoom button{width:26px;height:26px;border:1px solid var(--gl2);background:#fff;border-radius:2px}
 
 .diag{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:5px 14px;background:#F7F8F5;
@@ -280,6 +289,7 @@ body.printing .sumbox{display:none}
   <button class="btn" id="btnPrint">印刷</button>
   <button class="btn" id="btnSettings">設定</button>
   <span class="save" id="saveState" title="入力するたびに自動保存します"></span>
+  <button class="sync" id="syncState" title="押すと共有ファイルを読みに行きます"><span class="spin"></span>同期中…</button>
   <span class="ver" id="verTag" title="このファイルの版"></span>
 </div>
 
@@ -3358,7 +3368,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v33';
+const APP_VER='v35';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 日ごとに付けられる色 */
 const DAYCOLORS=[{k:'',n:'なし',c:''},
@@ -4872,6 +4882,12 @@ function stamp(t){
     String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 }
 function shareInfo(msg){const el=$('#shareState');if(el)el.textContent=msg;}
+function setSync(msg,cls,busy){
+  const el=document.getElementById('syncState');
+  if(!el)return;
+  el.innerHTML=(busy?'<span class="spin"></span>':'')+esc(msg);
+  el.className='sync '+(cls||'');
+}
 $('#btnShareOut').addEventListener('click',()=>{
   DB.stores[DB.cur]=S;DB.updatedAt=Date.now();
   download(new Blob([JSON.stringify(DB)],{type:'application/json'}),'shift-data.json');
@@ -4907,9 +4923,11 @@ function mergeFromShared(data){
 async function pullShared(silent,force){
   const url=shareBase();
   if(location.protocol==='file:'){
+    setSync('共有：使えません（パソコン内のファイルを開いています）','ng');
     if(!silent)shareInfo('パソコン内のファイルを開いているため、取り込みできません（https:// で開いてください）');
     return false;
   }
+  setSync('同期中…','',true);
   try{
     const res=await fetch(url+(url.indexOf('?')>=0?'&':'?')+'t='+Date.now(),{cache:'no-store'});
     if(!res.ok)throw new Error('見つかりません（'+res.status+'）');
@@ -4924,6 +4942,7 @@ async function pullShared(silent,force){
       DB.updatedAt=remote||Date.now();
       renderStores();refreshAll();await store.save(DB);
       shareInfo('共有の内容を表示しています（'+stamp(remote)+'）');
+      setSync('共有：'+stamp(remote)+' の内容を表示中','ok');
       if(!silent)toast('共有データを取り込みました');
       return true;
     }
@@ -4946,10 +4965,12 @@ async function pullShared(silent,force){
         DB.stores[DB.cur]=S;S=DB.stores[DB.cur];
         renderStores();refreshAll();await store.save(DB);
         shareInfo('共有から'+added+'か月ぶんを取り込みました');
+        setSync('共有：'+added+'か月ぶんを取り込みました','ok');
         toast('共有にあったシフトを取り込みました');
         return true;
       }
       shareInfo('共有ファイル（'+stamp(remote)+'）より、この端末（'+stamp(local)+'）が新しいので取り込みませんでした');
+      setSync('共有：'+stamp(remote)+'（この端末のほうが新しい）','');
       if(!silent)toast('この端末のほうが新しいため、取り込みませんでした（共有：'+stamp(remote)+'）');
       return false;
     }
@@ -4960,17 +4981,23 @@ async function pullShared(silent,force){
     renderStores();refreshAll();
     await store.save(DB);
     shareInfo('取り込みました（共有ファイルの更新：'+stamp(remote)+'）');
+    setSync('共有：'+stamp(remote)+' を取り込みました','ok');
     if(!silent)toast('共有データを取り込みました');
     else toast('共有データを取り込みました（'+stamp(remote)+'）');
     return true;
   }catch(e){
-    if(!silent)shareInfo('取り込めませんでした：'+((e&&e.message)||e)+'　場所：'+url);
+    const msg=(e&&e.message)||String(e);
+    setSync('共有：読めません（'+msg+'）','ng');
+    shareInfo('取り込めませんでした：'+msg+'　場所：'+url);
+    if(!silent)toast('共有ファイルを読めませんでした：'+msg);
     return false;
   }
 }
 $('#btnShareIn').addEventListener('click',()=>pullShared(false));
+$('#syncState').addEventListener('click',()=>{const b=$('#btnPull');if(b)b.click();});
 $('#btnPull').addEventListener('click',async()=>{
   const b=$('#btnPull');b.disabled=true;b.textContent='取り込み中…';
+  setSync('同期中…','',true);
   await pullShared(false);
   b.disabled=false;b.textContent='最新に更新';
 });
@@ -4992,13 +5019,16 @@ $('#btnPush').addEventListener('click',async()=>{
     return;
   }
   b.disabled=true;b.textContent='保存中…';
+  setSync('共有に保存中…','',true);
   try{
     await ghPush();
     toast('共有しました。ほかのパソコンでも最新になります');
     shareInfo('共有しました（'+stamp(DB.updatedAt)+'）');
+    setSync('共有：'+stamp(DB.updatedAt)+' に保存しました','ok');
   }catch(e){
     toast('共有できませんでした：'+((e&&e.message)||e));
     shareInfo('共有できませんでした：'+((e&&e.message)||e));
+    setSync('共有：保存できませんでした','ng');
   }finally{b.disabled=false;b.textContent='共有保存';}
 });
 ['ghOwner','ghRepo','ghBranch','ghPath'].forEach(id=>{
@@ -5377,6 +5407,8 @@ window.addEventListener('error',function(ev){
   }
   showSave(store.ok?'自動保存':'保存できません',store.ok?'':'ng');
   const vt=document.getElementById('verTag');if(vt)vt.textContent=APP_VER;
+  if(location.protocol==='file:')setSync('共有：使えません（ファイルを直接開いています）','ng');
+  else setSync('同期中…','',true);
   adoptData(await store.load());
   brushLabel();renderStores();refreshAll();
   if(DB.autoSync!==false&&location.protocol!=='file:')
