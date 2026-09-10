@@ -3354,7 +3354,7 @@ const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const pad=n=>String(n).padStart(2,'0');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='shift-manager:v1';
-const APP_VER='v27';
+const APP_VER='v29';
 const isOff=c=>c==='〇'||c==='◎'||c==='有休';
 /* 日ごとに付けられる色 */
 const DAYCOLORS=[{k:'',n:'なし',c:''},
@@ -3763,7 +3763,17 @@ function currentView(){
   const mo=month();DAYS=E.buildDays(S.meta.year,S.meta.month);
   if(!mo.result)return null;
   const c=mo.result.cells;
-  if(!c||c.length!==S.staff.length||(c[0]||[]).length!==DAYS.length)return null;
+  if(!c||c.length!==S.staff.length)return null;
+  for(let i=0;i<c.length;i++){
+    if(!Array.isArray(c[i]))return null;
+    if(c[i].length<DAYS.length){                 // 足りない分は空欄で埋める
+      while(c[i].length<DAYS.length)c[i].push('');
+    }else if(c[i].length>DAYS.length)c[i].length=DAYS.length;
+  }
+  if(!Array.isArray(mo.result.closing)||mo.result.closing.length!==DAYS.length)
+    mo.result.closing=DAYS.map((x,i)=>(mo.result.closing&&mo.result.closing[i]!=null)?mo.result.closing[i]:-1);
+  if(!Array.isArray(mo.result.morning)||mo.result.morning.length!==DAYS.length)
+    mo.result.morning=DAYS.map((x,i)=>(mo.result.morning&&mo.result.morning[i]!=null)?mo.result.morning[i]:-1);
   return recompute(DAYS,c,mo.result.closing,mo.result.morning);
 }
 function recompute(days,cells,closing,morning){
@@ -3931,6 +3941,14 @@ $('#chips').addEventListener('click',e=>{
 const CLS={'〇':'off','◎':'req','有休':'paid','当番':'duty'};
 function clsOf(c){return CLS[c]||(typeof c==='string'&&c.indexOf('～')>=0?'eve':'');}
 
+function forceRelayout(){
+  const wrap=document.querySelector('.sheetwrap');
+  if(!wrap)return;
+  const prev=wrap.style.display;
+  wrap.style.display='none';
+  void wrap.offsetHeight;                       // ブラウザに描き直させる
+  wrap.style.display=prev||'';
+}
 function renderSheet(){
   const sheet=$('#sheet'),mo=month();
   const head='<div class="shead">'+
@@ -3940,7 +3958,9 @@ function renderSheet(){
   if(!VIEW){
     sheet.innerHTML=head+'<div class="empty">'+S.meta.month+'月はまだ作っていません。'+
       '<ol><li>もらった<b>希望休</b>を表に入れる（あとでもOK）</li><li><b>シフトを作る</b>を押す</li>'+
-      '<li>気になる所を直して<b>Excelで出す</b></li></ol></div>';
+      '<li>気になる所を直して<b>Excelで出す</b></li></ol>'+
+      '<div style="margin-top:18px"><button class="btn" id="btnPullHere">ほかのパソコンで作ったシフトを取り込む</button>'+
+      '<div class="hint" style="margin-top:6px">別の端末で作成済みなら、これで表示できます</div></div></div>';
     bindTitle();return;
   }
   const v=VIEW;
@@ -4000,6 +4020,12 @@ function renderSummary(v){
     }).join('')+'</tbody></table>';
 }
 function bindTitle(){
+  const pb=document.getElementById('btnPullHere');
+  if(pb)pb.addEventListener('click',async()=>{
+    pb.disabled=true;pb.textContent='取り込み中…';
+    const ok=await pullShared(false);
+    if(!ok){pb.disabled=false;pb.textContent='ほかのパソコンで作ったシフトを取り込む';}
+  });
   const t=$('#sTitle');if(!t)return;
   t.addEventListener('click',()=>{
     clearTimeout(titleTimer);titleHits++;
@@ -4416,7 +4442,7 @@ function after(){applyRequests();refreshAll();persist();if(PIDX>=0){updatePaidHi
 $('#pDelete').addEventListener('click',()=>{
   if(S.staff.length<=1){toast('最後の1人は消せません');return;}
   if(!confirm(pS().name+' を削除します。シフトは作り直しになります。'))return;
-  removeStaffAt(PIDX);applyRequests();closeDrawers();refreshAll();persist();toast('削除しました');
+  removeStaffAt(PIDX);applyRequests();closeDrawers();refreshAll();forceRelayout();persist();toast('削除しました');
 });
 
 /* ---- 設定 ---- */
@@ -4559,7 +4585,13 @@ function addStaff(){
   month();
 }
 function removeStaffAt(i){
+  const gone=S.staff[i];
   S.staff.splice(i,1);
+  if(gone)Object.keys(S.months||{}).forEach(k=>{
+    const mo=S.months[k];
+    if(mo&&mo.requests)delete mo.requests[gone.id];
+    if(mo&&mo.targets)delete mo.targets[gone.id];
+  });
   eachResult(mo=>{
     if(mo.result.cells.length<=i)return;
     mo.result.cells.splice(i,1);
@@ -4581,17 +4613,17 @@ function moveStaff(i,dir){
 }
 $('#slist').addEventListener('click',e=>{
   const mv=e.target.closest('[data-mv]');
-  if(mv){moveStaff(+mv.dataset.mv,+mv.dataset.dir);renderStaffList();refreshAll();persist();return;}
+  if(mv){moveStaff(+mv.dataset.mv,+mv.dataset.dir);renderStaffList();refreshAll();forceRelayout();persist();return;}
   const dl=e.target.closest('[data-sdel]');
   if(dl){
     const i=+dl.dataset.sdel;
     if(S.staff.length<=1){toast('最後の1人は消せません');return;}
     if(!confirm((S.staff[i].name||'このスタッフ')+' を削除します。よろしいですか？'))return;
-    removeStaffAt(i);applyRequests();renderStaffList();refreshAll();persist();toast('削除しました');
+    removeStaffAt(i);applyRequests();renderStaffList();refreshAll();forceRelayout();persist();toast('削除しました');
   }
 });
 $('#btnAddStaff').addEventListener('click',()=>{
-  addStaff();renderStaffList();refreshAll();persist();
+  addStaff();renderStaffList();refreshAll();forceRelayout();persist();
   closeDrawers();openPerson(S.staff.length-1);
   toast('追加しました。目標休日数を決めて「シフトを作る」を押してください');
 });
@@ -4601,7 +4633,11 @@ $('#btnClearReq').addEventListener('click',()=>{
 });
 
 /* ---- 月移動・表示 ---- */
-function shiftMonth(k){let y=S.meta.year,m=S.meta.month+k;if(m<1){m=12;y--;}if(m>12){m=1;y++;}S.meta.year=y;S.meta.month=m;month();refreshAll();persist();}
+function shiftMonth(k){
+  let y=S.meta.year,m=S.meta.month+k;if(m<1){m=12;y--;}if(m>12){m=1;y++;}
+  S.meta.year=y;S.meta.month=m;month();refreshAll();persist();
+  if(!VIEW&&DB.autoSync!==false&&location.protocol!=='file:')pullShared(true);
+}
 $('#prevM').addEventListener('click',()=>shiftMonth(-1));
 $('#nextM').addEventListener('click',()=>shiftMonth(1));
 $('#btnGen').addEventListener('click',()=>generate(false));
@@ -4827,6 +4863,23 @@ $('#shareURL').addEventListener('change',e=>{DB.shareURL=e.target.value.trim();p
   shareInfo('取り込み先：'+shareBase());});
 $('#shareAuto').addEventListener('change',e=>{DB.autoSync=e.target.checked;persist();
   toast(e.target.checked?'開いたときに自動で取り込みます':'自動の取り込みをやめました');});
+/* 共有側にあって、この端末に無い月だけを取り込む */
+function mergeFromShared(data){
+  let n=0;
+  const rs=(data&&data.stores)||null;
+  if(!rs)return 0;
+  Object.keys(rs).forEach(id=>{
+    const R=rs[id];
+    if(!DB.stores[id]){DB.stores[id]=Object.assign(defaultState(),R);n+=Object.keys((R&&R.months)||{}).length;return;}
+    const L=DB.stores[id];
+    L.months=L.months||{};
+    Object.keys((R&&R.months)||{}).forEach(k=>{
+      const rm=R.months[k],lm=L.months[k];
+      if(rm&&rm.result&&!(lm&&lm.result)){L.months[k]=rm;n++;}
+    });
+  });
+  return n;
+}
 async function pullShared(silent){
   const url=shareBase();
   if(location.protocol==='file:'){
@@ -4839,7 +4892,19 @@ async function pullShared(silent){
     const data=await res.json();
     if(!(data&&(data.stores||(data.staff&&data.meta))))throw new Error('形式がちがいます');
     const remote=Number(data.updatedAt||0),local=Number(DB.updatedAt||0);
-    if(silent&&remote<=local){shareInfo('共有ファイル（'+stamp(remote)+'）より、この端末（'+stamp(local)+'）が新しいので取り込みませんでした');return false;}
+    if(silent&&remote<=local){
+      /* 共有のほうが古くても、この端末に無い月があれば足す */
+      const added=mergeFromShared(data);
+      if(added){
+        DB.stores[DB.cur]=S;S=DB.stores[DB.cur];
+        renderStores();refreshAll();await store.save(DB);
+        shareInfo('共有から'+added+'か月ぶんを取り込みました');
+        toast('共有にあったシフトを取り込みました');
+        return true;
+      }
+      shareInfo('共有ファイル（'+stamp(remote)+'）より、この端末（'+stamp(local)+'）が新しいので取り込みませんでした');
+      return false;
+    }
     const keepURL=DB.shareURL,keepAuto=DB.autoSync,keepView=DB.viewerURL;
     adoptData(data);
     DB.shareURL=keepURL;DB.autoSync=keepAuto;if(keepView)DB.viewerURL=keepView;
