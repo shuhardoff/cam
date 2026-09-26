@@ -443,7 +443,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v15.20</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v15.22</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -523,7 +523,18 @@
                   </select></div>
                 <label class="toggle boldtgl"><input type="checkbox" id="dispBold" checked> 太字</label>
               </div>
-              <div class="hint" style="margin-top:7px"><b>品名</b>の書体・文字サイズ・太字を変えられます（ジャンル名・コメント・価格・型番・QRは標準のまま）。区分「ジャンク品」等の帯はポップ体で印字されます。</div>
+              <div class="hint" style="margin-top:7px"><b>品名</b>の書体・文字サイズ・太字を変えられます（ジャンル名・コメント・価格・型番・QRは標準のまま）。区分「ジャンク品」等の帯もこの書体で印字されます。</div>
+            </div>
+          </details>
+          <details class="fontdetails">
+            <summary>日付の見た目（書体・太字）</summary>
+            <div class="dd">
+              <div class="fontbar">
+                <div class="f" style="flex:1 1 180px"><label>日付の書体</label>
+                  <select id="dateFontSel"></select></div>
+                <label class="toggle boldtgl"><input type="checkbox" id="dateBold" checked> 太字</label>
+              </div>
+              <div class="hint" style="margin-top:7px">右上などに入る<b>日付</b>だけの書体・太字を、品名とは別に変えられます。文字がつぶれて読みにくいときはここを変更してください。</div>
             </div>
           </details>
         </div>
@@ -3932,20 +3943,34 @@ function mm(v){return v*DPMM;}
 function jpFont(px,w){return `${w||""} ${Math.round(px)}px "Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP","Meiryo",sans-serif`;}
 /* ラベルの「品名・ジャンル名・コメント」用の可変書体（価格/型番/QR等は jpFont 固定で読み取り重視）。
    太字ON/OFF は weight で全描画に反映。サイズは文字サイズ(FS)で全体スケール。 */
-var LABELFONT={disp:'"BIZ UDPGothic","BIZ UDGothic","Yu Gothic","游ゴシック","Hiragino Kaku Gothic ProN",sans-serif'};
+var LABELFONT={disp:'"BIZ UDPGothic","BIZ UDGothic","Yu Gothic","游ゴシック","Hiragino Kaku Gothic ProN",sans-serif',
+               date:'"BIZ UDPGothic","BIZ UDGothic","Yu Gothic","游ゴシック","Hiragino Kaku Gothic ProN",sans-serif'};
 var PNAME_WEIGHT="900"; /* 太字トグルは品名だけに反映（ジャンル名・コメントは常に太字） */
+var DATE_WEIGHT="900";  /* 太字トグルは日付だけに反映（品名の太字トグルとは別） */
 function dispFont(px,w){return (w||"900")+" "+Math.round(px)+"px "+LABELFONT.disp;}
+function dateFont(px,w){return (w||DATE_WEIGHT)+" "+Math.round(px)+"px "+LABELFONT.date;}
 function buildFontSel(){
-  var s=$("dispFontSel"); if(!s||s.options.length) return;
-  FONT_LIST.forEach(function(f){ var o=document.createElement("option"); o.value=f.key; o.textContent=f.nm; o.style.fontFamily=f.ff; s.appendChild(o); });
-  s.value=DEFAULT_FONT_KEY;
+  var s=$("dispFontSel");
+  if(s&&!s.options.length){
+    FONT_LIST.forEach(function(f){ var o=document.createElement("option"); o.value=f.key; o.textContent=f.nm; o.style.fontFamily=f.ff; s.appendChild(o); });
+    s.value=DEFAULT_FONT_KEY;
+  }
+  var d=$("dateFontSel");
+  if(d&&!d.options.length){
+    FONT_LIST.forEach(function(f){ var o=document.createElement("option"); o.value=f.key; o.textContent=f.nm; o.style.fontFamily=f.ff; d.appendChild(o); });
+    d.value=DEFAULT_FONT_KEY;
+  }
 }
 function applyFont(){
   var key=($("dispFontSel")&&$("dispFontSel").value)||DEFAULT_FONT_KEY;
   var ff=FONT_MAP[key]||FONT_MAP[DEFAULT_FONT_KEY];
   var bold=$("dispBold")?$("dispBold").checked:true;
   LABELFONT.disp=ff; PNAME_WEIGHT=bold?"900":"500";
-  document.documentElement.style.setProperty("--jp-display",ff);
+  /* 品名の書体はラベル印字だけに使う。画面のUI（見出しなど）の書体は変えない */
+  var dkey=($("dateFontSel")&&$("dateFontSel").value)||DEFAULT_FONT_KEY;
+  var dff=FONT_MAP[dkey]||FONT_MAP[DEFAULT_FONT_KEY];
+  var dbold=$("dateBold")?$("dateBold").checked:true;
+  LABELFONT.date=dff; DATE_WEIGHT=dbold?"900":"500";
 }
 /* 印刷設定（向き・サイズ）のセグメント表示同期。縦はサイズ固定→グレーアウト */
 function syncPrintSet(){
@@ -4248,13 +4273,13 @@ function paint(measureOnly){
     ctx.fillStyle=dark; ctx.fillRect(mx,y,cw,bandH);
     if(kub){ let fpx=mm(3.4);
       // 日付と重ならないよう、区分は「日付の左端 − 余白」までに収まるサイズへ自動縮小
-      let dateW=0; if(slash){ ctx.font=monoFont(mm(2.0),"900"); dateW=ctx.measureText(slash).width+Math.round(mm(2.6)); }
+      let dateW=0; if(slash){ ctx.font=dateFont(mm(2.0)); dateW=ctx.measureText(slash).width+Math.round(mm(2.6)); }
       const kx=mx+Math.round(mm(1.6));
       const availW=(W8-mx-Math.round(mm(1.2)))-dateW-kx;
-      ctx.font=kubunFont(fpx,"900",kub);
-      while(fpx>mm(1.8) && ctx.measureText(kub).width>availW){ fpx*=0.94; ctx.font=kubunFont(fpx,"900",kub); }
+      ctx.font=dispFont(fpx,PNAME_WEIGHT);
+      while(fpx>mm(1.8) && ctx.measureText(kub).width>availW){ fpx*=0.94; ctx.font=dispFont(fpx,PNAME_WEIGHT); }
       ctx.textBaseline="middle"; ctx.fillStyle="#fff"; ctx.strokeStyle="#fff"; ctx.lineJoin="round"; ctx.lineWidth=Math.max(1.2,mm(0.18)); const ky=y+bandH/2; ctx.strokeText(kub,kx,ky); ctx.fillText(kub,kx,ky); }
-    { const fpx=mm(2.0); ctx.font=monoFont(fpx,"900"); ctx.textBaseline="middle"; ctx.fillStyle="#fff"; ctx.strokeStyle="#fff"; ctx.lineJoin="round"; ctx.lineWidth=Math.max(1,mm(0.14)); const tw=ctx.measureText(slash).width; const dx=W8-mx-tw-Math.round(mm(1.2)), dy=y+bandH/2; ctx.strokeText(slash,dx,dy); ctx.fillText(slash,dx,dy); }
+    { const fpx=mm(2.0); ctx.font=dateFont(fpx); ctx.textBaseline="middle"; ctx.fillStyle="#fff"; ctx.strokeStyle="#fff"; ctx.lineJoin="round"; ctx.lineWidth=Math.max(1,mm(0.14)); const tw=ctx.measureText(slash).width; const dx=W8-mx-tw-Math.round(mm(1.2)), dy=y+bandH/2; ctx.strokeText(slash,dx,dy); ctx.fillText(slash,dx,dy); }
     ctx.fillStyle=dark; ctx.textBaseline="top";
   }
   y+=bandH+Math.round(mm(1.4));
@@ -9602,8 +9627,8 @@ function importSettings(file){
   }catch(e){ ioMsg("読み込みに失敗しました。正しい設定ファイル（.json）を選んでください。"); } };
   r.readAsText(file);
 }
-function persist(){store.set("genre",$("genre").value);store.set("cfg",{w:$("setW").value,dpi:$("setDpi").value,fs:$("setFs").value,qr:$("setQr").value,store:$("setStore").value,ip:$("printerIp").value,orient:orient(),code:codeType(),scale:($("setScale")&&$("setScale").value),shift:($("setShiftX")&&$("setShiftX").value),shiftY:($("setShiftY")&&$("setShiftY").value),proxy:($("setProxy")&&$("setProxy").value),sites:($("setSites")&&$("setSites").value),dispFont:($("dispFontSel")&&$("dispFontSel").value),dispBold:($("dispBold")?$("dispBold").checked:true),dispSize:($("dispSize")&&$("dispSize").value),layout:($("setLayout")&&$("setLayout").value),headSeek:($("setHeadSeek")&&$("setHeadSeek").checked?1:0),simpleLen:($("setSimpleLen")&&$("setSimpleLen").value)});}
-function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);if($("setLayout"))$("setLayout").value=(c.layout==="simple")?"simple":((c.layout==="cond")?"cond":"std");if($("setHeadSeek"))$("setHeadSeek").checked=!!c.headSeek;if($("setSimpleLen"))$("setSimpleLen").value=c.simpleLen||"21";}
+function persist(){store.set("genre",$("genre").value);store.set("cfg",{w:$("setW").value,dpi:$("setDpi").value,fs:$("setFs").value,qr:$("setQr").value,store:$("setStore").value,ip:$("printerIp").value,orient:orient(),code:codeType(),scale:($("setScale")&&$("setScale").value),shift:($("setShiftX")&&$("setShiftX").value),shiftY:($("setShiftY")&&$("setShiftY").value),proxy:($("setProxy")&&$("setProxy").value),sites:($("setSites")&&$("setSites").value),dispFont:($("dispFontSel")&&$("dispFontSel").value),dispBold:($("dispBold")?$("dispBold").checked:true),dispSize:($("dispSize")&&$("dispSize").value),dateFont:($("dateFontSel")&&$("dateFontSel").value),dateBold:($("dateBold")?$("dateBold").checked:true),layout:($("setLayout")&&$("setLayout").value),headSeek:($("setHeadSeek")&&$("setHeadSeek").checked?1:0),simpleLen:($("setSimpleLen")&&$("setSimpleLen").value)});}
+function restore(){const c=store.get("cfg",null);if(!c)return;$("setW").value=c.w||"35";$("setDpi").value=c.dpi||"203";$("setFs").value=c.fs||"1";$("setQr").value=c.qr||"12";$("setStore").value=c.store||"HARD-OFF";$("printerIp").value=c.ip||"";if($("setOrient"))$("setOrient").value=c.orient||"portrait";if($("setCode"))$("setCode").value=c.code||"qr";if($("setScale"))$("setScale").value=c.scale||"1";if($("setScale")){var sv=String(c.scale||"1");if(["0.7","0.85","1"].indexOf(sv)<0){var fv=parseFloat(sv)||1;sv=(fv<0.78?"0.7":(fv<0.93?"0.85":"1"));}$("setScale").value=sv;}if($("setShiftX"))$("setShiftX").value=c.shift||"0";if($("setShiftY"))$("setShiftY").value=c.shiftY||"0";if($("setProxy"))$("setProxy").value=c.proxy||"";if($("setSites"))$("setSites").value=(c.sites!==undefined&&c.sites!=="")?c.sites:defaultSitesText();if($("dispFontSel")&&c.dispFont&&FONT_MAP[c.dispFont])$("dispFontSel").value=c.dispFont;if($("dispBold"))$("dispBold").checked=(c.dispBold!==false);if($("dispSize")&&c.dispSize&&[...$("dispSize").options].some(o=>o.value===String(c.dispSize)))$("dispSize").value=String(c.dispSize);if($("dateFontSel")&&c.dateFont&&FONT_MAP[c.dateFont])$("dateFontSel").value=c.dateFont;if($("dateBold"))$("dateBold").checked=(c.dateBold!==false);if($("setLayout"))$("setLayout").value=(c.layout==="simple")?"simple":((c.layout==="cond")?"cond":"std");if($("setHeadSeek"))$("setHeadSeek").checked=!!c.headSeek;if($("setSimpleLen"))$("setSimpleLen").value=c.simpleLen||"21";}
 function histGet(){return store.get("histLines",[]);}
 function curGenreKey(){ return brandGenrePrefix()+String(($("genre")&&$("genre").value)||""); }
 function histAdd(line){
@@ -9759,6 +9784,8 @@ function wire(){
   if($("dispFontSel")) $("dispFontSel").addEventListener("change",()=>{draw();});
   if($("dispBold")) $("dispBold").addEventListener("change",()=>{draw();});
   if($("dispSize")) $("dispSize").addEventListener("change",()=>{ draw(); });
+  if($("dateFontSel")) $("dateFontSel").addEventListener("change",()=>{draw();});
+  if($("dateBold")) $("dateBold").addEventListener("change",()=>{draw();});
   if($("autoFillBtn")) $("autoFillBtn").onclick=autoFill;
   if($("addSiteBtn")) $("addSiteBtn").onclick=function(){ var inp=addSiteRow("",""); if(inp) inp.focus(); };
   if($("janCode")) $("janCode").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); autoFill(); } });
