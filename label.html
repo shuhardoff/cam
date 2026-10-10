@@ -443,7 +443,7 @@
 <div id="bgfx" class="bgfx" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
 <div class="app">
   <header class="bar">
-    <div class="logo">ラベル作成 <span class="appver">v15.23</span></div>
+    <div class="logo">ラベル作成 <span class="appver">v15.24</span></div>
     <div id="genrePill" class="gpill" title="選択中のジャンル">
       <span id="gpIcon" class="gpicon"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2 2 7l10 5 10-5-10-5Zm0 13L2 10v7l10 5 10-5v-7l-10 5Z"/></svg></span>
       <span id="gpName" class="gpname">—</span>
@@ -4663,7 +4663,8 @@ function genreTheme(no){
   };
   return M[genreCat(no)]||M.def;
 }
-/* v15.23：ジャンルごとの区分（ハードオフ・ホビーオフ）。ここに無いジャンルは今までどおりの決め方 */
+/* v15.23：ジャンルごとの区分（ハードオフだけ）。ここに無いジャンルは今までどおりの決め方
+   v15.24：HOBBY-OFF・OFF HOUSE はレジ番号の割り振りが違うので、この表は使わない（HOBBY-OFF は全部 中古品） */
 const GENRE_KUBUN={
   3:"中古品",6:"中古品",9:"中古品",10:"新品",15:"ジャンク品",16:"中古品",17:"中古品",22:"中古品",25:"中古品",26:"中古品",
   29:"中古品",30:"中古品",32:"ジャンク品",33:"ジャンク品",34:"ジャンク品",37:"中古品",38:"中古品",
@@ -4672,7 +4673,7 @@ const GENRE_KUBUN={
 function autoKubunForGenre(){
   const no=parseInt($("genre").value,10)||0;
   const sel=$("kubun"); if(!sel) return;
-  if(!isOffHouse() && GENRE_KUBUN[no]){
+  if(!isOffHouse() && !isHobbyOff() && GENRE_KUBUN[no]){
     const w=GENRE_KUBUN[no];
     if(![...sel.options].some(o=>o.value===w)){ const o=document.createElement("option"); o.value=w; o.textContent=w; sel.insertBefore(o, sel.firstChild); }
     sel.value=w; return;
